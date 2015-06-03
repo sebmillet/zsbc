@@ -1,0 +1,109 @@
+
+   zsbc, a portable integer calculator using gmp
+   =============================================
+
+Date: 2015-06-03 23:12 +0200
+
+Contents:
+
+      I. WHAT IS ZSBC?
+     II. WHY ZSBC?
+    III. LICENCE
+     IV. COMPILATION AND INSTALLATION
+
+
+
+I.    WHAT IS ZSBC?
+
+It is a calculator supporting simple arithmetic along with big integers, as
+provided by the GNU MP library.
+It is similar to bc and one goal of this program is to be compatible with bc
+scripts, so long as they keep scale set to 0.
+zsbc stands for "Zero Scale bc": no real number management, only integers.
+
+
+
+II.   WHY ZSBC?
+
+To have fun.
+To do some tests and checks around cryptography.
+To deal with big integers in particular, you have bc, PARI/GP, python, ...
+
+
+
+III.  LICENCE
+
+See COPYING file that comes along with the package the program belongs to.
+
+
+
+IV.   COMPILATION AND INSTALLATION
+
+- Linux
+
+1) GMP library
+
+You need GMP lib available on your system to compile zsbc. GMP lib is the GNU
+Multi Precision Arithmetic Library.
+The debian package name is libgmp-dev.
+
+The GMP library homepage:
+	https://gmplib.org
+
+2) Compilation
+
+The file of name INSTALL, distributed with zsbc source files, gives
+instructions to compile and install the program, using the usual
+    ./configure
+    make
+    make install
+sequence.
+This INSTALL file is the one provided by default by autotools.
+
+- Windows
+
+Mingw is to be used to successfully compile zsbc.
+Tested with both 32-bit (mingw) and 64-bit (mingw-w64) compiler.
+
+The GNU MP (libgmp) library is necessary to build zsbc. There does not seem to
+be Windows-ready libgmp binaries around.
+This part - buid libgmp Windows binaries and link zsbc with - is the main
+factor of complexity.
+Only static linking with libgmp, using mingw compiler, was done.
+
+Note about MSVC
+	It was not possible to build zsbc.exe with msvc (Microsoft Visual C++
+	12.0). The compilation would eventually produce an error
+		unresolved reference __chkstk
+	at link time, inside libgmp objects.
+
+** BUILD STEP 1
+
+At first you have to download and install Mingw *along with msys*.
+
+//FIXME//To be detailed
+
+Mingw homepage:
+    http://www.mingw.org
+
+** BUILD STEP 2 **
+
+You have to download the source of the GNU Multi Precision Arithmetic Library
+and build it with the source.
+Build needs be done from an msys terminal, using mingw gcc compiler.
+
+The GMP library homepage:
+	https://gmplib.org
+
+** BUILD STEP 3 **
+
+You have to tune makefile.mingw depending on how you built the GMP library.
+Note you will also have to tune it a little bit if you wish to dynamically
+link libgmp to zsbc (with a .dll) instead of static linking as is Today.
+Dynamic linking was not tested.
+
+** BUILD STEP 4 **
+
+Enter top source directory and run
+    mingw32-make.exe -f makefile.mingw
+

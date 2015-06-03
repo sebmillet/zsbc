@@ -1,0 +1,51 @@
+# makefile.mingw
+
+# "zsbc" makefile for Mingw
+
+# Sébastien Millet, Februay, May 2015
+
+GCC = gcc.exe
+BUILD = build
+LIBGMP = C:\libgmp
+CPPFLAGS = -Wall -I$(LIBGMP)\include
+LINKERFLAGS = -Wall -L$(LIBGMP)\lib -lgmp
+
+all : build libgmpwarning
+
+libgmpwarning :
+	$(info ****************************************************)
+	$(info *                      IMPORTANT                   *)
+	$(info ****************************************************)
+	$(info * This makefile.mingw is configured for the GNU    *)
+	$(info * Multi Precision Arithmetic Library located here: *)
+	$(info *   $(LIBGMP))
+	$(info * Therefore to compile successfully, the following *)
+	$(info * files should exist:                              *)
+	$(info *   $(LIBGMP)\include\gmp.h)
+	$(info *   $(LIBGMP)\lib\libgmp.a)
+	$(info * Note the compilation is done with static linking *)
+	$(info * to libgmp.                                       *)
+	$(info ****************************************************)
+
+build :
+	-if not exist $(BUILD) mkdir $(BUILD)
+
+all : $(BUILD)\zsbc.exe
+
+$(BUILD)\zsbc.exe : $(BUILD)\lexer.o $(BUILD)\parser.o
+	$(GCC) $(BUILD)\lexer.o $(BUILD)\parser.o -o $(BUILD)\zsbc.exe $(LINKERFLAGS)
+
+$(BUILD)\lexer.o : src\lexer.c
+	$(GCC) -c src\lexer.c -o $(BUILD)\lexer.o $(CPPFLAGS)
+
+$(BUILD)\parser.o : src\parser.c
+	$(GCC) -c src\parser.c -o $(BUILD)\parser.o $(CPPFLAGS)
+
+mrproper : clean
+
+.PHONY : all clean
+
+clean :
+	-if exist $(BUILD)\*.o del $(BUILD)\*.o
+	-if exist $(BUILD)\zsbc.exe del $(BUILD)\zsbc.exe
+
