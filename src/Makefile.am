@@ -7,6 +7,8 @@ AM_YFLAGS = -d
 
 bin_PROGRAMS = zsbc
 
+check_PROGRAMS = zsbc
+
 zsbc_SOURCES = parser.y lexer.l common.h
 zsbc_LDFLAGS = 
 zsbc_LDADD = -lgmp

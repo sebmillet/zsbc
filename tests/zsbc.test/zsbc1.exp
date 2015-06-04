@@ -1,0 +1,25 @@
+set timeout 3
+
+set test "Hello world"
+spawn echo "Hello World"
+expect {
+	"Hello World" { pass "$test" }
+	default { fail "== HW =="}
+}
+
+spawn src/zsbc
+
+set test "GMP version"
+expect {
+	-re "GMP library version:.*" { pass "$test" }
+	default { fail "Could not get GMP library version" }
+}
+
+set test "Basic Arithmetic"
+send "1+1\n"
+expect {
+	"2" { pass "$test" }
+	default { fail "$test" }
+}
+
+send "quit\n"

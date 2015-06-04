@@ -1,5 +1,8 @@
 # Makefile.am
 
+AUTOMAKE_OPTIONS = dejagnu
+RUNTESTDEFAULTFLAGS = --all --tool zsbc --srcdir $$srcdir/tests
+
 SUBDIRS = src
 ACLOCAL_AMFLAGS = -I admin
 
