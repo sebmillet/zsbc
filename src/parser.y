@@ -1,10 +1,10 @@
-/* parser.y */
+/* parser.y
 
-/* Expression parser... */
-/* Copied from */
-/*   http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/ */
+Expression parser.
+Inspired from
+   http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
 
-/* Sébastien Millet 2015 */
+Sébastien Millet 2015 */
 
 %{
 
@@ -17,6 +17,13 @@
 #include <string.h>
 
 extern int yylex();
+
+	/* OL stands for Out Level (no link with Olympic Lyonnais) */
+typedef enum {OL_QUIET = 0, OL_NORMAL = 1, OL_VERBOSE = 2, OL_VERYVERBOSE = 3} out_level_t;
+out_level_t opt_ol = OL_NORMAL;
+
+int out(const char *fmt, ...);
+int out_err(const char *fmt, ...);
 
 struct vars_t {
 	char *name;
@@ -99,11 +106,17 @@ void expr_error(const char *fmt, ...);
 
 input:
 	%empty
-	| oneliner input
+	| instruction input
 ;
 
-oneliner:
+instruction:
 	NEWLINE { loc_reset(); }
+	| IDENTIFIER '=' expression NEWLINE {
+		vars_set_value($1, $3);
+/*        MPZ_CREATE_SET($$, *$3);*/
+		free($1);
+		MPZ_DISCARD1($3);
+	}
 	| expression NEWLINE {
 		display_int($1);
 		printf("\n");
@@ -119,13 +132,11 @@ expression:
 	| IDENTIFIER {
 		mpz_t *v = vars_get_value($1);
 		if (v == NULL) {
-			expr_error("Unknown variable: %s", $1);
-			free($1);
-			YYERROR;
+			MPZ_CREATE($$);
 		} else {
 			MPZ_CREATE_SET($$, *v);
-			free($1);
 		}
+		free($1);
 	}
 	| IDENTIFIER '=' expression {
 		vars_set_value($1, $3);
@@ -213,6 +224,41 @@ statement:
 
 %%
 
+int out(const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int r = vprintf(fmt, args);
+	va_end(args);
+	return r;
+}
+
+int out_err(const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int r = vfprintf(stderr, fmt, args);
+	va_end(args);
+	return r;
+}
+
+void usage()
+{
+	out_err("Usage: %s [options] [file ...]\n", PACKAGE_NAME);
+	out_err("  -h  -help     print this usage and exit\n");
+	out_err("  -V  -verbose  verbose output\n");
+	out_err("  -q  -quiet    don't print initial banner\n");
+	out_err("  -v  -version  print version information and exit\n");
+	out_err("  --            end of parameters, next options are file names\n");
+	exit(-1);
+}
+
+void version()
+{
+	out(PACKAGE_STRING "\n");
+	out("Copyright 2015 Sébastien Millet\n");
+}
+
 #ifdef COUNT_MPZ
 long int count_mpz = 0;
 
@@ -228,8 +274,10 @@ long int count_mpz_get()
 
 void count_mpz_output_report()
 {
-	fprintf(stderr, "MPZ COUNT (SHOULD BE NULL): %li\n", count_mpz_get());
-	fprintf(stderr, "%s\n", count_mpz_get() ? "****  ERROR  ****" : "OK");
+	if (opt_ol >= OL_VERBOSE || count_mpz_get() != 0) {
+		fprintf(stderr, "MPZ COUNT (SHOULD BE NULL): %li\n", count_mpz_get());
+		fprintf(stderr, "%s\n", count_mpz_get() ? "****  ERROR  ****" : "OK");
+	}
 }
 #else /* COUNT_MPZ */
 
@@ -325,14 +373,68 @@ void display_int(mpz_t* const mp)
 		printf("_%i", opt_output_base);
 }
 
-int main()
+void opt_check(int n, const char *opt)
+{
+	static int defined_options[2] = {0, 0};
+
+	if (defined_options[n]) {
+		out_err("Option %s already set\n", opt);
+		exit(-2);
+	} else
+		defined_options[n] = 1;
+}
+
+int main(int argc, char *argv[])
 {
 
 #ifdef BISON_DEBUG
 	yydebug = 1;
 #endif
 
-	printf("GMP library version: %s\n", gmp_version);
+	int optset_verbose = 0;
+	int optset_quiet = 0;
+
+	int a = 1;
+	while (a >= 1 && a < argc) {
+		if (!strcmp(argv[a], "-help") || !strcmp(argv[a], "-h")) {
+			usage();
+		} else if (!strcmp(argv[a], "-version") || !strcmp(argv[a], "-v")) {
+			version();
+			exit(0);
+		} else if (!strcmp(argv[a], "-verbose") || !strcmp(argv[a], "-V")) {
+			opt_check(0, argv[a]);
+			optset_verbose = 1;
+			opt_ol = OL_VERBOSE;
+		} else if (!strcmp(argv[a], "-quiet") || !strcmp(argv[a], "-q")) {
+			opt_check(1, argv[a]);
+			optset_quiet = 1;
+			opt_ol = OL_QUIET;
+		} else if (argv[a][0] == '-') {
+			if (strcmp(argv[a], "--")) {
+				out_err("%s: invalid option -- '%s'\n", PACKAGE_NAME, argv[a]);
+				a = -1;
+				break;
+			} else {
+				++a;
+				break;
+			}
+		} else {
+			break;
+		}
+		if (a >= 1)
+			++a;
+	}
+
+	if (optset_verbose && optset_quiet) {
+		opt_ol = OL_NORMAL;
+	}
+	if (a < 0)
+		usage();
+
+	if (opt_ol >= OL_NORMAL) {
+		version();
+		out("GMP library version %s\n", gmp_version);
+	}
 
 	vars_init();
 

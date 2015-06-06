@@ -1,0 +1,5 @@
+# tests/config/unix.exp
+
+set P "zsbc"
+set ZSBC "src/zsbc"
+

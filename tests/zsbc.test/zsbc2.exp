@@ -1,0 +1,36 @@
+# tests/zsbc.test/zsbc2.exp
+
+set timeout 3
+
+spawn "$ZSBC" -q
+
+set test "Syntax error '101+'"
+send "101+\n"
+expect {
+	-re "syntax error.*" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Syntax error '101++102'"
+send "101++202\n"
+expect {
+	-re "syntax error.*" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Syntax error '^101'"
+send "^101\n"
+expect {
+	-re "syntax error.*" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Illegal character"
+send "@\n"
+expect {
+	-re "illegal character.*" { pass "$test" }
+	default { fail "$test" }
+}
+
+send "quit\n"
+

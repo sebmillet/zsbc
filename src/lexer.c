@@ -572,8 +572,8 @@ char *yytext;
 #line 1 "lexer.l"
 /* lexer.l
 
-Expression lexer...
-Copied from
+Expression lexer.
+Inspired from
    http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
 
 Sébastien Millet 2015 */
@@ -1046,7 +1046,7 @@ YY_RULE_SETUP
 case 26:
 YY_RULE_SETUP
 #line 123 "lexer.l"
-{ yyerror("Illegal character: %s", yytext); }
+{ yyerror("illegal character: %s", yytext); }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
@@ -2039,7 +2039,7 @@ void yyerror(char *s, ...)
 	va_start(ap, s);
 
 	if(yylloc.first_line) {
-		fprintf(stderr, "%d.%d-%d.%d: error: ", yylloc.first_line, yylloc.first_column,
+		fprintf(stderr, "%d.%d-%d.%d: ", yylloc.first_line, yylloc.first_column,
 		yylloc.last_line, yylloc.last_column);
 	}
 	vfprintf(stderr, s, ap);

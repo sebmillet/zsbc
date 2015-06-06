@@ -1,25 +1,45 @@
+# tests/zsbc.test/zsbc1.exp
+
 set timeout 3
 
-set test "Hello world"
-spawn echo "Hello World"
-expect {
-	"Hello World" { pass "$test" }
-	default { fail "== HW =="}
-}
+set tmp [exec $ZSBC -v]
+regexp "$P *(\[^\n\]*)\n.*" $tmp tmp version
+send_user "Using $P version $version, executable is $ZSBC\n"
 
-spawn src/zsbc
-
-set test "GMP version"
+spawn "$ZSBC"
+set test "Get GMP Library version"
 expect {
-	-re "GMP library version:.*" { pass "$test" }
+	-nocase "gmp library" { pass "$test" }
 	default { fail "Could not get GMP library version" }
 }
 
 set test "Basic Arithmetic"
-send "1+1\n"
+send "101+101\n"
 expect {
-	"2" { pass "$test" }
+	"202" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Expression"
+send "1-(3+2^(5+8)/5)\n"
+expect {
+	-- "\-1640" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Variable assignment"
+send "a=101\n"
+expect {
+	"" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Variable reading"
+send "a+1\n"
+expect {
+	"102" { pass "$test" }
 	default { fail "$test" }
 }
 
 send "quit\n"
+
