@@ -114,7 +114,7 @@ out				return OUTPUT;
 {identifier}	{
 	unsigned int l = strlen(yytext) + 1;
 	yylval.id = (char *)malloc(l);
-	strncpy(yylval.id, yytext, l);
+	s_strncpy(yylval.id, yytext, l);
 	return IDENTIFIER;
 }
 

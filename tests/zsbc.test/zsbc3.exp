@@ -25,5 +25,13 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Multiple variables assignment"
+send "a=1\nb=2\nc=3\ndef=4\na0=5\nbb1=6\ncharlie=7\ndelta=8\ne=9\nf=10\ng=11\ngolf=12\nzeta=13\n"
+send "zeta\ngolf\ng\nf\ne\ndelta\ncharlie\nbb1\na0\ndef\nc\nb\na\n"
+expect {
+	-re "13.*12.*11.*10.*9.*8.*7.*6.*5.*4.*3.*2.*1.*" { pass "$test" }
+	default { fail "$test" }
+}
+
 send "quit\n"
 

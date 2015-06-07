@@ -7,6 +7,8 @@ Sébastien Millet, May 2015
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <stdlib.h>
+
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #else
@@ -14,7 +16,9 @@ Sébastien Millet, May 2015
 #include "../extracfg.h"
 #endif
 
+#ifdef DEBUG
 #define COUNT_MPZ
+#endif
 
 #ifdef COUNT_MPZ
 
@@ -40,6 +44,8 @@ Sébastien Millet, May 2015
 
 void count_mpz_add(const long int delta);
 void yyerror(char *s, ...);
+
+char *s_strncpy(char *dest, const char *src, size_t n);
 
 #endif /* COMMON_H */
 

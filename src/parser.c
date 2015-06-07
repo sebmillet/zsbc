@@ -78,7 +78,7 @@ extern int yylex();
 void loc_reset();
 
 	/* OL stands for Out Level (no link with Olympic Lyonnais) */
-typedef enum {OL_QUIET = 0, OL_NORMAL = 1, OL_VERBOSE = 2, OL_VERYVERBOSE = 3} out_level_t;
+typedef enum {OL_QUIET = 0, OL_NORMAL = 1, OL_VERBOSE = 2} out_level_t;
 out_level_t opt_ol = OL_NORMAL;
 
 int out(const char *fmt, ...);
@@ -1958,6 +1958,13 @@ void expr_error(const char *fmt, ...)
 	fprintf(stderr, "\n");
 }
 
+char *s_strncpy(char *dest, const char *src, size_t n)
+{
+	char *r = strncpy(dest, src, n);
+	dest[n - 1] = '\0';
+	return r;
+}
+
 void vars_init()
 {
 	vars = NULL;
@@ -2002,7 +2009,7 @@ void vars_set_value(const char *name, mpz_t* const new_value)
 		}
 		int l = strlen(name) + 1;
 		vars[vars_nb - 1].name = (char *)malloc(l);
-		strncpy(vars[vars_nb - 1].name, name, l);
+		s_strncpy(vars[vars_nb - 1].name, name, l);
 		value = &(vars[vars_nb - 1].value);
 	} else {
 		mpz_clear(*value);
