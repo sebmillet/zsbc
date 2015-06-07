@@ -18,6 +18,8 @@ Sébastien Millet 2015 */
 
 extern int yylex();
 
+void loc_reset();
+
 	/* OL stands for Out Level (no link with Olympic Lyonnais) */
 typedef enum {OL_QUIET = 0, OL_NORMAL = 1, OL_VERBOSE = 2, OL_VERYVERBOSE = 3} out_level_t;
 out_level_t opt_ol = OL_NORMAL;
@@ -263,7 +265,11 @@ void usage()
 
 void version()
 {
+#if defined(DEBUG) || defined(BISON_DEBUG) || defined(FLEX_DEBUG)
+	out(PACKAGE_STRING "d\n");
+#else
 	out(PACKAGE_STRING "\n");
+#endif
 	out("Copyright 2015 Sébastien Millet\n");
 }
 
@@ -443,6 +449,8 @@ int main(int argc, char *argv[])
 		version();
 		out("GMP library version %s\n", gmp_version);
 	}
+
+	out_dbg("DEBUG mode activated\n");
 
 	vars_init();
 

@@ -5,6 +5,10 @@ SUFFIXES = .c .h .y .l
 AM_CPPFLAGS = -Wshadow -Wall
 AM_YFLAGS = -d
 
+if DEBUG_FLEX
+AM_LFLAGS = --debug
+endif
+
 bin_PROGRAMS = zsbc
 
 check_PROGRAMS = zsbc

@@ -276,6 +276,7 @@ top_srcdir = @top_srcdir@
 SUFFIXES = .c .h .y .l
 AM_CPPFLAGS = -Wshadow -Wall
 AM_YFLAGS = -d
+@DEBUG_FLEX_TRUE@AM_LFLAGS = --debug
 zsbc_SOURCES = parser.y lexer.l common.h
 zsbc_LDFLAGS = 
 zsbc_LDADD = -lgmp

@@ -10,6 +10,7 @@ Sébastien Millet, May 2015
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #else
+/* Defines some PACKAGE* constants in case config.h is not available */
 #include "../extracfg.h"
 #endif
 
@@ -30,10 +31,15 @@ Sébastien Millet, May 2015
 
 #endif /* COUNT_MPZ */
 
-void loc_reset();
-void yyerror(char *s, ...);
+#ifdef DEBUG
+#define out_dbg(...) \
+	out(__VA_ARGS__)
+#else
+#define out_dbg(...) ;
+#endif
 
 void count_mpz_add(const long int delta);
+void yyerror(char *s, ...);
 
 #endif /* COMMON_H */
 
