@@ -1,8 +1,8 @@
 # tests/zsbc.test/zsbc2.exp
 
 set timeout 3
-
 spawn "$ZSBC" -q
+send_user "***   Error cases tests\n"
 
 set test "Syntax error '101+'"
 send "101+\n"

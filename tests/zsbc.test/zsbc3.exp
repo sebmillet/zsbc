@@ -1,0 +1,29 @@
+# tests/zsbc.test/zsbc3.exp
+
+set timeout 3
+spawn "$ZSBC" -q
+send_user "***   Variable tests\n"
+
+set test "Variable assignment"
+send "5\na=101\n6\n"
+expect {
+	-re "5\[^0-9\]*6.+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Variable assignment as an expression"
+send "7\n(a=101)\n8\n"
+expect {
+	-re "7\[^0-9\]*101\[^0-9\]*8.+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Variable reading"
+send "a+1\n"
+expect {
+	-re "102.+" { pass "$test" }
+	default { fail "$test" }
+}
+
+send "quit\n"
+
