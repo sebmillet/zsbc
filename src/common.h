@@ -9,6 +9,8 @@ Sébastien Millet, May 2015
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
+#else
+#include "../extracfg.h"
 #endif
 
 #define COUNT_MPZ

@@ -8,5 +8,6 @@ zsbc
 zsbc.exe
 config.log
 config.status
-src/.deps
+src/.deps/
 site.exp
+build/
