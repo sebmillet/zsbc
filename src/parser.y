@@ -84,14 +84,14 @@ void expr_error(const char *fmt, ...);
 };
 
 %token <mp> INTEGER
-%type <mp> expression
+%type <mp> expression expr_assignment
 %token <id> IDENTIFIER
 
 %token QUIT OUTPUT VARS
 
 %token NEWLINE
 
-%precedence '='
+%right '='
 %left '-' '+'
 %left '*' '/' '%'
 %precedence NEG
@@ -111,12 +111,7 @@ input:
 
 instruction:
 	NEWLINE { loc_reset(); }
-	| IDENTIFIER '=' expression NEWLINE {
-		vars_set_value($1, $3);
-/*        MPZ_CREATE_SET($$, *$3);*/
-		free($1);
-		MPZ_DISCARD1($3);
-	}
+	| bare_assignment NEWLINE
 	| expression NEWLINE {
 		display_int($1);
 		printf("\n");
@@ -125,6 +120,24 @@ instruction:
 	}
 	| statement NEWLINE
 	| error NEWLINE { yyclearin; yyerrok; }
+;
+
+bare_assignment:
+	IDENTIFIER '=' expression {
+		vars_set_value($1, $3);
+/*        MPZ_CREATE_SET($$, *$3);*/
+		free($1);
+		MPZ_DISCARD1($3);
+	}
+;
+
+expr_assignment:
+	IDENTIFIER '=' expression {
+		vars_set_value($1, $3);
+		MPZ_CREATE_SET($$, *$3);
+		free($1);
+		MPZ_DISCARD1($3);
+	}
 ;
 
 expression:
@@ -138,12 +151,7 @@ expression:
 		}
 		free($1);
 	}
-	| IDENTIFIER '=' expression {
-		vars_set_value($1, $3);
-		MPZ_CREATE_SET($$, *$3);
-		free($1);
-		MPZ_DISCARD1($3);
-	}
+	| expr_assignment
 	| expression '+' expression { MPZ_CREATE($$); mpz_add(*$$, *$1, *$3); MPZ_DISCARD2($1, $3); }
 	| expression '-' expression { MPZ_CREATE($$); mpz_sub(*$$, *$1, *$3); MPZ_DISCARD2($1, $3); }
 	| expression '*' expression { MPZ_CREATE($$); mpz_mul(*$$, *$1, *$3); MPZ_DISCARD2($1, $3); }

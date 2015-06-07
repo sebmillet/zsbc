@@ -1,0 +1,12 @@
+zsbc-0.1.tar.gz
+Makefile
+config.h
+stamp-h1
+zsbc.log
+zsbc.sum
+zsbc
+zsbc.exe
+config.log
+config.status
+src/.deps
+site.exp
