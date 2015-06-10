@@ -96,7 +96,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_zsbc_OBJECTS = parser.$(OBJEXT) lexer.$(OBJEXT)
+am_zsbc_OBJECTS = expr.$(OBJEXT) parser.$(OBJEXT) lexer.$(OBJEXT)
 zsbc_OBJECTS = $(am_zsbc_OBJECTS)
 zsbc_DEPENDENCIES =
 zsbc_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(zsbc_LDFLAGS) $(LDFLAGS) \
@@ -277,7 +277,7 @@ SUFFIXES = .c .h .y .l
 AM_CPPFLAGS = -Wshadow -Wall
 AM_YFLAGS = -d
 @DEBUG_FLEX_TRUE@AM_LFLAGS = --debug
-zsbc_SOURCES = parser.y lexer.l common.h
+zsbc_SOURCES = expr.c expr.h parser.y lexer.l common.h
 zsbc_LDFLAGS = 
 zsbc_LDADD = -lgmp
 BUILT_SOURCES = parser.h
@@ -376,6 +376,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lexer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parser.Po@am__quote@
 

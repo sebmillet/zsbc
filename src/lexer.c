@@ -589,11 +589,13 @@ Inspired from
 Sébastien Millet 2015 */
 #line 10 "lexer.l"
 
-#include "common.h"
-#include <gmp.h>
 #include <string.h>
-#include "parser.h"
 #include <stdarg.h>
+#include <gmp.h>
+
+#include "common.h"
+#include "expr.h"
+#include "parser.h"
 
 #define YY_NO_INPUT
 #define YY_NO_UNISTD_H
@@ -605,13 +607,7 @@ void remove_newlines(char *s);
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
 
-#define BUILD_AND_RETURN_MP_INTEGER(m, t, b) \
-	m = (mpz_t *)malloc(sizeof(mpz_t)); \
-	mpz_init_set_str(*(m), t, b); \
-	COUNT_MPZ_INC; \
-	return INTEGER;
-
-#line 615 "lexer.c"
+#line 611 "lexer.c"
 
 #define INITIAL 0
 
@@ -823,10 +819,10 @@ YY_DECL
 		}
 
 	{
-#line 51 "lexer.l"
+#line 47 "lexer.l"
 
 
-#line 830 "lexer.c"
+#line 826 "lexer.c"
 
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
@@ -895,57 +891,57 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 53 "lexer.l"
+#line 49 "lexer.l"
 return '=';
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 54 "lexer.l"
+#line 50 "lexer.l"
 return '+';
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 55 "lexer.l"
+#line 51 "lexer.l"
 return '-';
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 56 "lexer.l"
+#line 52 "lexer.l"
 return '*';
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 57 "lexer.l"
+#line 53 "lexer.l"
 return '/';
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 58 "lexer.l"
+#line 54 "lexer.l"
 return '(';
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 59 "lexer.l"
+#line 55 "lexer.l"
 return ')';
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 60 "lexer.l"
+#line 56 "lexer.l"
 return '^';
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 61 "lexer.l"
+#line 57 "lexer.l"
 return '%';
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 63 "lexer.l"
-{ BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext + 2, 2); }
+#line 59 "lexer.l"
+{ yylval.mp = mpz_const_from_str(yytext + 2, 2); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 65 "lexer.l"
+#line 61 "lexer.l"
 {
 	unsigned int s = strlen(yytext);
 	if (s >= 4 && !strcmp(yytext + s - 4, "_bin")) {
@@ -953,17 +949,18 @@ YY_RULE_SETUP
 	} else if (s >= 2 && !strcmp(yytext + s - 2, "_b")) {
 		yytext[s - 2] = '\0';
 	}
-	BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext, 2);
+	yylval.mp = mpz_const_from_str(yytext, 2);
+	return INTEGER;
 }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 75 "lexer.l"
-{ BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext + 2, 8); }
+#line 72 "lexer.l"
+{ yylval.mp = mpz_const_from_str(yytext + 2, 8); return INTEGER; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 77 "lexer.l"
+#line 74 "lexer.l"
 {
 	unsigned int s = strlen(yytext);
 	if (s >= 4 && !strcmp(yytext + s - 4, "_oct")) {
@@ -971,29 +968,27 @@ YY_RULE_SETUP
 	} else if (s >= 2 && !strcmp(yytext + s - 2, "_o")) {
 		yytext[s - 2] = '\0';
 	}
-	BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext, 8);
+	yylval.mp = mpz_const_from_str(yytext, 8);
+	return INTEGER;
 }
 	YY_BREAK
 case 14:
 /* rule 14 can match eol */
 YY_RULE_SETUP
-#line 87 "lexer.l"
+#line 85 "lexer.l"
 {
-	yylval.mp = (mpz_t *)malloc(sizeof(mpz_t));
-	remove_newlines(yytext);
-	mpz_init_set_str(*(yylval.mp), yytext, 10);
-	COUNT_MPZ_INC;
+	yylval.mp = mpz_const_from_str(yytext, 10);
 	return INTEGER;
 }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 95 "lexer.l"
-{ BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext, 0); }
+#line 90 "lexer.l"
+{ yylval.mp = mpz_const_from_str(yytext, 0); return INTEGER; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 97 "lexer.l"
+#line 92 "lexer.l"
 {
 	unsigned int s = strlen(yytext);
 	if (s >= 4 && !strcmp(yytext + s - 4, "_hex")) {
@@ -1001,42 +996,43 @@ YY_RULE_SETUP
 	} else if (s >= 2 && !strcmp(yytext + s - 2, "_h")) {
 		yytext[s - 2] = '\0';
 	}
-	BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext, 16);
+	yylval.mp = mpz_const_from_str(yytext, 16);
+	return INTEGER;
 }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 107 "lexer.l"
+#line 103 "lexer.l"
 return QUIT;
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 108 "lexer.l"
+#line 104 "lexer.l"
 return QUIT;
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 109 "lexer.l"
+#line 105 "lexer.l"
 return OUTPUT;
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 110 "lexer.l"
+#line 106 "lexer.l"
 return OUTPUT;
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 111 "lexer.l"
+#line 107 "lexer.l"
 return VARS;
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 112 "lexer.l"
+#line 108 "lexer.l"
 return VARS;
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 114 "lexer.l"
+#line 110 "lexer.l"
 {
 	unsigned int l = strlen(yytext) + 1;
 	yylval.id = (char *)malloc(l);
@@ -1047,31 +1043,31 @@ YY_RULE_SETUP
 case 24:
 /* rule 24 can match eol */
 YY_RULE_SETUP
-#line 122 "lexer.l"
+#line 118 "lexer.l"
 { yycolumn = 1; return NEWLINE; }
 	YY_BREAK
 case 25:
 /* rule 25 can match eol */
 YY_RULE_SETUP
-#line 123 "lexer.l"
+#line 119 "lexer.l"
 
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 124 "lexer.l"
+#line 120 "lexer.l"
 { }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 125 "lexer.l"
+#line 121 "lexer.l"
 { yyerror("illegal character: %s", yytext); }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 127 "lexer.l"
+#line 123 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1075 "lexer.c"
+#line 1071 "lexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2037,7 +2033,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 126 "lexer.l"
+#line 122 "lexer.l"
 
 
 

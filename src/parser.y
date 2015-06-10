@@ -8,13 +8,14 @@ Sébastien Millet 2015 */
 
 %{
 
-#include "common.h"
-
 #include <stdio.h>
 #include <gmp.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "common.h"
+#include "expr.h"
 
 extern int yylex();
 
@@ -48,45 +49,30 @@ void display_int(mpz_t* const mp);
 
 void expr_error(const char *fmt, ...);
 
-#define MPZ_CREATE(a) \
-	a = (mpz_t *)malloc(sizeof(mpz_t)); \
-	COUNT_MPZ_INC; \
-	mpz_init(*a)
-
-#define MPZ_CREATE_SET(a, b) \
-	a = (mpz_t *)malloc(sizeof(mpz_t)); \
-	COUNT_MPZ_INC; \
-	mpz_init_set(*a, b)
-
-#define MPZ_DISCARD1(a) \
-	mpz_clear(*a); \
-	COUNT_MPZ_DEC; \
-	free(a)
-
-#define MPZ_DISCARD2(a, b) \
-	mpz_clear(*a); \
-	mpz_clear(*b); \
-	COUNT_MPZ_DEC; \
-	free(a); \
-	COUNT_MPZ_DEC; \
-	free(b)
-
 #ifdef BISON_DEBUG
 #define YYDEBUG 1
 #endif
 
 %}
 
+%code requires {
+mpz_t *mpz_const_from_str(const char *str, int base);
+mpz_t *mpz_const();
+mpz_t *mpz_const_from_mpz(mpz_t *from);
+void mpz_destruct(mpz_t *a);
+}
+
 %defines
 %locations
 
 %union {
 	mpz_t *mp;
+	expr_t *enode;
 	char *id;
 };
 
 %token <mp> INTEGER
-%type <mp> expression expr_assignment
+%type <enode> expression expr_assignment
 %token <id> IDENTIFIER
 
 %token QUIT OUTPUT VARS
@@ -99,8 +85,8 @@ void expr_error(const char *fmt, ...);
 %precedence NEG
 %right '^'
 
-%destructor { mpz_clear(*$$); free($$); COUNT_MPZ_DEC; } <mp>
-%destructor { free($$); } <id>
+/*%destructor { mpz_clear(*$$); free($$); COUNT_MPZ_DEC; } <mp>*/
+/*%destructor { free($$); } <id>*/
 
 %start input
 
@@ -115,9 +101,12 @@ instruction:
 	NEWLINE { loc_reset(); }
 	| bare_assignment NEWLINE
 	| expression NEWLINE {
-		display_int($1);
+		mpz_t *r = NULL;
+/*        = expr_eval($1);*/
+		display_int(r);
 		printf("\n");
-		MPZ_DISCARD1($1);
+		mpz_destruct(r);
+		expr_destruct($1);
 		loc_reset();
 	}
 	| statement NEWLINE
@@ -126,67 +115,32 @@ instruction:
 
 bare_assignment:
 	IDENTIFIER '=' expression {
-		vars_set_value($1, $3);
-/*        MPZ_CREATE_SET($$, *$3);*/
-		free($1);
-		MPZ_DISCARD1($3);
+		expr_t *enode = expr_const_setvar($1, $3);
+		mpz_t *r = NULL;
+/*        = expr_eval(enode);*/
+		mpz_destruct(r);
+		expr_destruct(enode);
 	}
 ;
 
 expr_assignment:
 	IDENTIFIER '=' expression {
-		vars_set_value($1, $3);
-		MPZ_CREATE_SET($$, *$3);
-		free($1);
-		MPZ_DISCARD1($3);
+		$$ = expr_const_setvar($1, $3);
 	}
 ;
 
 expression:
-    INTEGER { MPZ_CREATE_SET($$, *$1); MPZ_DISCARD1($1); }
-	| IDENTIFIER {
-		mpz_t *v = vars_get_value($1);
-		if (v == NULL) {
-			MPZ_CREATE($$);
-		} else {
-			MPZ_CREATE_SET($$, *v);
-		}
-		free($1);
-	}
+    INTEGER { $$ = expr_const_number($1); }
+	| IDENTIFIER { $$ = expr_const_getvar($1); }
 	| expr_assignment
-	| expression '+' expression { MPZ_CREATE($$); mpz_add(*$$, *$1, *$3); MPZ_DISCARD2($1, $3); }
-	| expression '-' expression { MPZ_CREATE($$); mpz_sub(*$$, *$1, *$3); MPZ_DISCARD2($1, $3); }
-	| expression '*' expression { MPZ_CREATE($$); mpz_mul(*$$, *$1, *$3); MPZ_DISCARD2($1, $3); }
-	| expression '/' expression {
-		if (!mpz_cmp_ui(*$3, 0)) {
-			expr_error("Division by 0");
-			MPZ_DISCARD2($1, $3);
-			YYERROR;
-		} else {
-			MPZ_CREATE($$);
-			mpz_tdiv_q(*$$, *$1, *$3);
-			MPZ_DISCARD2($1, $3);
-		}
-	}
-	| expression '^' expression {
-		unsigned long int exp = mpz_get_ui(*$3);
-		MPZ_CREATE($$);
-		mpz_pow_ui(*$$, *$1, exp);
-		MPZ_DISCARD2($1, $3);
-	}
-	| expression '%' expression {
-		if (!mpz_cmp_ui(*$3, 0)) {
-			expr_error("Division by 0");
-			MPZ_DISCARD2($1, $3);
-			YYERROR;
-		} else {
-			MPZ_CREATE($$);
-			mpz_mod(*$$, *$1, *$3);
-			MPZ_DISCARD2($1, $3);
-		}
-	}
-	| '-' expression %prec NEG { MPZ_CREATE($$); mpz_neg(*$$, *$2); MPZ_DISCARD1($2); }
-	| '(' expression ')' { MPZ_CREATE_SET($$, *$2); MPZ_DISCARD1($2); }
+	| expression '+' expression { $$ = expr_const_op2(FN_ADD, $1, $3); }
+	| expression '-' expression { $$ = expr_const_op2(FN_SUB, $1, $3); }
+	| expression '*' expression { $$ = expr_const_op2(FN_MUL, $1, $3); }
+	| expression '/' expression { $$ = expr_const_op2(FN_DIV, $1, $3); }
+	| expression '^' expression { $$ = expr_const_op2(FN_POW, $1, $3); }
+	| expression '%' expression { $$ = expr_const_op2(FN_MOD, $1, $3); }
+	| '-' expression %prec NEG { $$ = expr_const_op1(FN_NEG, $2); }
+	| '(' expression ')' { $$ = $2; }
 ;
 
 statement:
@@ -219,12 +173,12 @@ statement:
 		unsigned long int exp = mpz_get_ui(*$2);
 		if (exp < 2 || exp > 62) {
 			expr_error("Base value must be in the range [2, 62]");
-			MPZ_DISCARD1($2);
+			mpz_destruct($2);
 			YYERROR;
 		} else {
 			opt_output_base = exp;
 			display_base();
-			MPZ_DISCARD1($2);
+			mpz_destruct($2);
 		}
 	}
 	| VARS {
@@ -233,6 +187,12 @@ statement:
 ;
 
 %%
+
+void my_mpz_pow(mpz_t r, const mpz_t a, const mpz_t b)
+{
+	unsigned long int exp = mpz_get_ui(b);
+	mpz_pow_ui(r, a, exp);
+}
 
 int out(const char *fmt, ...)
 {
@@ -273,31 +233,46 @@ void version()
 	out("Copyright 2015 Sébastien Millet\n");
 }
 
-#ifdef COUNT_MPZ
-long int count_mpz = 0;
+int mpz_count_ref = 0;
 
-void count_mpz_add(const long int delta)
+mpz_t *mpz_const_from_str(const char *str, int base)
 {
-	count_mpz += delta;
+	mpz_t *r = (mpz_t *)malloc(sizeof(mpz_t));
+	mpz_init_set_str(*r, str, base);
+	++mpz_count_ref;
+	return r;
 }
 
-long int count_mpz_get()
+mpz_t *mpz_const()
 {
-	return count_mpz;
+	mpz_t *r = (mpz_t *)malloc(sizeof(mpz_t));
+	mpz_init(*r);
+	++mpz_count_ref;
+	return r;
+}
+
+mpz_t *mpz_const_from_mpz(mpz_t *from)
+{
+	mpz_t *r = (mpz_t *)malloc(sizeof(mpz_t));
+	mpz_init_set(*r, *from);
+	++mpz_count_ref;
+	return r;
+}
+
+void mpz_destruct(mpz_t *a)
+{
+	mpz_clear(*a);
+	free(a);
+	--mpz_count_ref;
 }
 
 void count_mpz_output_report()
 {
-	if (opt_ol >= OL_VERBOSE || count_mpz_get() != 0) {
-		fprintf(stderr, "MPZ COUNT (SHOULD BE NULL): %li\n", count_mpz_get());
-		fprintf(stderr, "%s\n", count_mpz_get() ? "****  ERROR  ****" : "OK");
+	if (opt_ol >= OL_VERBOSE || mpz_count_ref != 0) {
+		fprintf(stderr, "MPZ COUNT (SHOULD BE NULL): %i\n", mpz_count_ref);
+		fprintf(stderr, "%s\n", mpz_count_ref != 0 ? "****  ERROR  ****" : "OK");
 	}
 }
-#else /* COUNT_MPZ */
-
-#define count_mpz_output_report()
-
-#endif /* COUNT_MPZ */
 
 void expr_error(const char *fmt, ...)
 {
@@ -383,15 +358,15 @@ void display_base()
 
 void display_int(mpz_t* const mp)
 {
-	if (opt_output_base == 2)
-		printf("0b");
-	else if (opt_output_base == 8)
-		printf("0o");
-	else if (opt_output_base == 16)
-		printf("0x");
+/*    if (opt_output_base == 2)*/
+/*        printf("0b");*/
+/*    else if (opt_output_base == 8)*/
+/*        printf("0o");*/
+/*    else if (opt_output_base == 16)*/
+/*        printf("0x");*/
 	mpz_out_str(NULL, opt_output_base, *mp);
-	if (opt_output_base != 2 && opt_output_base != 8 && opt_output_base != 16 && opt_output_base != 10)
-		printf("_%i", opt_output_base);
+/*    if (opt_output_base != 2 && opt_output_base != 8 && opt_output_base != 16 && opt_output_base != 10)*/
+/*        printf("_%i", opt_output_base);*/
 }
 
 void opt_check(int n, const char *opt)

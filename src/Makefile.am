@@ -13,7 +13,7 @@ bin_PROGRAMS = zsbc
 
 check_PROGRAMS = zsbc
 
-zsbc_SOURCES = parser.y lexer.l common.h
+zsbc_SOURCES = expr.c expr.h parser.y lexer.l common.h
 zsbc_LDFLAGS = 
 zsbc_LDADD = -lgmp
 

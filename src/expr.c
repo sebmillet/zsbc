@@ -7,59 +7,95 @@
 #include <gmp.h>
 #include <string.h>
 
-char *copystr(char *dest, const char *src)
+int expr_count_ref = 0;
+
+static void destruct_number(expr_t *e)
 {
-	if (src == NULL) {
-		dest = NULL;
-	} else {
-		size_t l = strlen(src) + 1;
-		dest = (char *)malloc(l);
-		s_strncpy(dest, src, l);
-	}
-	return dest;
+	mpz_clear(*e->mp);
+
+	free(e->mp);
+	e->mp = NULL;
 }
 
-expr_t *expr_create_integer(mpz_t *mp)
+static void destruct_variable(expr_t *e) { }
+
+static void destruct_builtin_function(expr_t *e) { }
+
+static void (*table_destruct[])(expr_t *e) = {
+	destruct_number,			/* TNODE_NUMBER */
+	destruct_variable,			/* TNODE_VARIABLE */
+	destruct_builtin_function	/* TNODE_BUILTIN_FUNCTION */
+};
+
+void expr_destruct(expr_t *e)
 {
-	expr_t *enode = (expr_t *)malloc(sizeof(expr_t));
-	enode->type = TNODE_INTEGER;
-	enode->mp = mp;
-	return enode;
+	int i;
+	for (i = 0; i < e->nb_args; ++i)
+		expr_destruct(e->args[i]);
+
+	(table_destruct[e->type])(e);
+
+	free(e);
+	e = NULL;
+
+	--expr_count_ref;
 }
 
-expr_t *expr_create_var(const char *varname)
+static expr_t *expr_construct(expr_node_t type, int nb_args)
 {
-	expr_t *enode = (expr_t *)malloc(sizeof(expr_t));
-	enode->type = TNODE_VARIABLE;
-	copystr(enode->name, varname);
+	expr_t *e = (expr_t *)malloc(sizeof(expr_t));
+	e->type = type;
+	e->nb_args = nb_args;
+	int i;
+	for (i = 0; i < nb_args; ++i)
+		e->args[i] = NULL;
+	++expr_count_ref;
+	return e;
 }
 
-expr_t *expr_create_builtin1(const char *name,
-		void (*f)(mpz_t a, const mpz_t b), expr_t *e)
+expr_t *expr_const_number(mpz_t *mp)
 {
-	expr_t *enode = (expr_t *)malloc(sizeof(expr_t));
-	enode->type = TNODE_BUILTIN_FUNCTION;
-	enode->mpz_func1 = f;
-	enode->args[0] = e;
+	expr_t *e = expr_construct(TNODE_NUMBER, 0);
+	e->mp = mp;
+	return e;
 }
 
-expr_t *expr_create_builtin(const char *name,
-		void (*f)(mpz_t a, const mpz_t b, const mpz_t), expr_t *e1, expr_t *e2)
+expr_t *expr_const_getvar(char *varname)
 {
-	expr_t *enode = (expr_t *)malloc(sizeof(expr_t));
-	enode->type = TNODE_BUILTIN_FUNCTION;
-	enode->mpz_func = f;
-	enode->args[0] = e1;
-	enode->args[1] = e2;
+	expr_t *e =  expr_construct(TNODE_GETVAR, 0);
+	e->varname = varname;
+	return e;
 }
 
-expr_t *expr_create_builtin_ui(const char *name,
-		void (*f)(mpz_t a, const mpz_t b, unsigned long int c), expr_t *e1, expr_t *e2)
+expr_t *expr_const_setvar(char *varname, expr_t *e1)
 {
-	expr_t *enode = (expr_t *)malloc(sizeof(expr_t));
-	enode->type = TNODE_BUILTIN_FUNCTION;
-	enode->mpz_func_ui = f;
-	enode->args[0] = e1;
-	enode->args[1] = e2;
+	expr_t *e = expr_construct(TNODE_SETVAR, 1);
+	e->varname = varname;
+	e->args[0] = e1;
+	return e;
+}
+
+expr_t *expr_const_op1(function_t fn, expr_t *e1)
+{
+	expr_t *e = expr_construct(TNODE_BUILTIN_OP, 1);
+	e->fn = fn;
+	e->args[0] = e1;
+	return e;
+}
+
+expr_t *expr_const_op2(function_t fn, expr_t *e1, expr_t *e2)
+{
+	expr_t *e = expr_construct(TNODE_BUILTIN_OP, 2);
+	e->fn = fn;
+	e->args[0] = e1;
+	e->args[1] = e2;
+	return e;
+}
+
+expr_t *expr_const_op2_and_setvar(char *varname, function_t fn, expr_t *e)
+{
+	expr_t *evar = expr_const_getvar(varname);
+	expr_t *etop = expr_const_op2(fn, evar, e);
+	return expr_const_setvar(varname, etop);
 }
 

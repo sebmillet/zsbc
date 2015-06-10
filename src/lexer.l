@@ -8,11 +8,13 @@ Sébastien Millet 2015 */
 
 %{
 
-#include "common.h"
-#include <gmp.h>
 #include <string.h>
-#include "parser.h"
 #include <stdarg.h>
+#include <gmp.h>
+
+#include "common.h"
+#include "expr.h"
+#include "parser.h"
 
 #define YY_NO_INPUT
 #define YY_NO_UNISTD_H
@@ -23,12 +25,6 @@ void remove_newlines(char *s);
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
-
-#define BUILD_AND_RETURN_MP_INTEGER(m, t, b) \
-	m = (mpz_t *)malloc(sizeof(mpz_t)); \
-	mpz_init_set_str(*(m), t, b); \
-	COUNT_MPZ_INC; \
-	return INTEGER;
 
 %}
 
@@ -60,7 +56,7 @@ identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})*
 "^"		return '^';
 "%"		return '%';
 
-{binint1}	{ BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext + 2, 2); }
+{binint1}	{ yylval.mp = mpz_const_from_str(yytext + 2, 2); }
 
 {binint2}	{
 	unsigned int s = strlen(yytext);
@@ -69,10 +65,11 @@ identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})*
 	} else if (s >= 2 && !strcmp(yytext + s - 2, "_b")) {
 		yytext[s - 2] = '\0';
 	}
-	BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext, 2);
+	yylval.mp = mpz_const_from_str(yytext, 2);
+	return INTEGER;
 }
 
-{octint1}	{ BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext + 2, 8); }
+{octint1}	{ yylval.mp = mpz_const_from_str(yytext + 2, 8); return INTEGER; }
 
 {octint2}	{
 	unsigned int s = strlen(yytext);
@@ -81,18 +78,16 @@ identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})*
 	} else if (s >= 2 && !strcmp(yytext + s - 2, "_o")) {
 		yytext[s - 2] = '\0';
 	}
-	BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext, 8);
-}
-
-{decint}	{
-	yylval.mp = (mpz_t *)malloc(sizeof(mpz_t));
-	remove_newlines(yytext);
-	mpz_init_set_str(*(yylval.mp), yytext, 10);
-	COUNT_MPZ_INC;
+	yylval.mp = mpz_const_from_str(yytext, 8);
 	return INTEGER;
 }
 
-{hexint1}	{ BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext, 0); }
+{decint}	{
+	yylval.mp = mpz_const_from_str(yytext, 10);
+	return INTEGER;
+}
+
+{hexint1}	{ yylval.mp = mpz_const_from_str(yytext, 0); return INTEGER; }
 
 {hexint2}	{
 	unsigned int s = strlen(yytext);
@@ -101,7 +96,8 @@ identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})*
 	} else if (s >= 2 && !strcmp(yytext + s - 2, "_h")) {
 		yytext[s - 2] = '\0';
 	}
-	BUILD_AND_RETURN_MP_INTEGER(yylval.mp, yytext, 16);
+	yylval.mp = mpz_const_from_str(yytext, 16);
+	return INTEGER;
 }
 
 (?i:quit)		return QUIT;

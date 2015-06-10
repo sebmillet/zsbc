@@ -39,6 +39,15 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 58 "parser.y" /* yacc.c:1909  */
+
+mpz_t *mpz_const_from_str(const char *str, int base);
+mpz_t *mpz_const();
+mpz_t *mpz_const_from_mpz(mpz_t *from);
+void mpz_destruct(mpz_t *a);
+
+#line 51 "parser.h" /* yacc.c:1909  */
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -68,12 +77,13 @@ extern int yydebug;
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 83 "parser.y" /* yacc.c:1909  */
+#line 68 "parser.y" /* yacc.c:1909  */
 
 	mpz_t *mp;
+	expr_t *enode;
 	char *id;
 
-#line 77 "parser.h" /* yacc.c:1909  */
+#line 87 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
