@@ -33,5 +33,12 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Embedded variables assignment"
+send "a=1+(b=1+(c=1+(d=1+(e=1+(f=1)))))\na\nb\nc\nd\ne\nf\n"
+expect {
+	-re "6.*5.*4.*3.*2.*1.*" { pass "$test" }
+	default { fail "$test" }
+}
+
 send "quit\n"
 

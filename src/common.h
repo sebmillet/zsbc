@@ -8,6 +8,7 @@ Sébastien Millet, May 2015
 #define COMMON_H
 
 #include <stdlib.h>
+#include <assert.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -23,8 +24,11 @@ Sébastien Millet, May 2015
 #define out_dbg(...) ;
 #endif
 
+enum {ERR_NONE = 0, ERR_DIV0};
+
 void yyerror(char *s, ...);
 
+int out(const char *fmt, ...);
 char *s_strncpy(char *dest, const char *src, size_t n);
 
 #endif /* COMMON_H */

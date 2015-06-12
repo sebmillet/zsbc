@@ -39,15 +39,19 @@ int vars_ar;
 
 void vars_init();
 void vars_terminate();
-mpz_t *vars_get_value(const char *var);
-void vars_set_value(const char *name, mpz_t* const new_value);
 void vars_display_all();
 
 int opt_output_base = 10;
 void display_base();
 void display_int(mpz_t* const mp);
 
-void expr_error(const char *fmt, ...);
+void out_error(const char *fmt, ...);
+void print_error_code(int e);
+
+const char *table_errors[] = {
+	"No error",			/* ERR_NONE */
+	"Division by 0"		/* ERR_DIV0 */
+};
 
 #ifdef BISON_DEBUG
 #define YYDEBUG 1
@@ -57,8 +61,9 @@ void expr_error(const char *fmt, ...);
 
 %code requires {
 mpz_t *mpz_const_from_str(const char *str, int base);
-mpz_t *mpz_const();
-mpz_t *mpz_const_from_mpz(mpz_t *from);
+void my_mpz_init_set_str(mpz_t *mp, const char *str, int base);
+void my_mpz_init(mpz_t *mp);
+void my_mpz_clear(mpz_t *mp);
 void mpz_destruct(mpz_t *a);
 }
 
@@ -101,11 +106,14 @@ instruction:
 	NEWLINE { loc_reset(); }
 	| bare_assignment NEWLINE
 	| expression NEWLINE {
-		mpz_t *r = NULL;
-/*        = expr_eval($1);*/
-		display_int(r);
-		printf("\n");
-		mpz_destruct(r);
+		mpz_t mp;
+		my_mpz_init(&mp);
+		int r = expr_eval($1, &mp);
+		if (r != 0)
+			print_error_code(r);
+		else
+			display_int(&mp);
+		my_mpz_clear(&mp);
 		expr_destruct($1);
 		loc_reset();
 	}
@@ -116,9 +124,12 @@ instruction:
 bare_assignment:
 	IDENTIFIER '=' expression {
 		expr_t *enode = expr_const_setvar($1, $3);
-		mpz_t *r = NULL;
-/*        = expr_eval(enode);*/
-		mpz_destruct(r);
+		mpz_t mp;
+		my_mpz_init(&mp);
+		int r = expr_eval(enode, &mp);
+		if (r != 0)
+			print_error_code(r);
+		my_mpz_clear(&mp);
 		expr_destruct(enode);
 	}
 ;
@@ -160,7 +171,7 @@ statement:
 			n = 16;
 		}
 		if (n == 0) {
-			expr_error("Unknown base name: %s", $2);
+			out_error("Unknown base name: %s", $2);
 			free($2);
 			YYERROR;
 		} else {
@@ -172,7 +183,7 @@ statement:
 	| OUTPUT INTEGER {
 		unsigned long int exp = mpz_get_ui(*$2);
 		if (exp < 2 || exp > 62) {
-			expr_error("Base value must be in the range [2, 62]");
+			out_error("Base value must be in the range [2, 62]");
 			mpz_destruct($2);
 			YYERROR;
 		} else {
@@ -234,52 +245,65 @@ void version()
 }
 
 int mpz_count_ref = 0;
+int mpz_init_ref = 0;
 
 mpz_t *mpz_const_from_str(const char *str, int base)
 {
-	mpz_t *r = (mpz_t *)malloc(sizeof(mpz_t));
-	mpz_init_set_str(*r, str, base);
+	out_dbg("Constructing one mpz_t from str\n");
+	mpz_t *mp = (mpz_t *)malloc(sizeof(mpz_t));
 	++mpz_count_ref;
-	return r;
+	my_mpz_init_set_str(mp, str, base);
+	return mp;
 }
 
-mpz_t *mpz_const()
+void my_mpz_init_set_str(mpz_t *mp, const char *str, int base)
 {
-	mpz_t *r = (mpz_t *)malloc(sizeof(mpz_t));
-	mpz_init(*r);
-	++mpz_count_ref;
-	return r;
+	out_dbg("Initializing one mpz_t from str\n");
+	mpz_init_set_str(*mp, str, base);
+	++mpz_init_ref;
 }
 
-mpz_t *mpz_const_from_mpz(mpz_t *from)
+void my_mpz_init(mpz_t *mp)
 {
-	mpz_t *r = (mpz_t *)malloc(sizeof(mpz_t));
-	mpz_init_set(*r, *from);
-	++mpz_count_ref;
-	return r;
+	out_dbg("Initializing one mpz_t\n");
+	mpz_init(*mp);
+	++mpz_init_ref;
 }
 
-void mpz_destruct(mpz_t *a)
+void my_mpz_clear(mpz_t *mp)
 {
-	mpz_clear(*a);
-	free(a);
+	out_dbg("Clearing one mpz_t\n");
+	mpz_clear(*mp);
+	--mpz_init_ref;
+}
+
+void mpz_destruct(mpz_t *mp)
+{
+	out_dbg("Destucting one mpz_t\n");
+	my_mpz_clear(mp);
+	free(mp);
 	--mpz_count_ref;
 }
 
-void count_mpz_output_report()
-{
-	if (opt_ol >= OL_VERBOSE || mpz_count_ref != 0) {
-		fprintf(stderr, "MPZ COUNT (SHOULD BE NULL): %i\n", mpz_count_ref);
-		fprintf(stderr, "%s\n", mpz_count_ref != 0 ? "****  ERROR  ****" : "OK");
-	}
-}
+int get_mpz_count_ref() { return mpz_count_ref; }
 
-void expr_error(const char *fmt, ...)
+int get_mpz_init_ref() { return mpz_init_ref; }
+
+void out_error(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
+}
+
+void print_error_code(int e)
+{
+	if (e < 0 || e >= (sizeof(table_errors) / sizeof(*table_errors))) {
+		out_error("Error code %d", e);
+	} else {
+		out_error("%s", table_errors[e]);
+	}
 }
 
 char *s_strncpy(char *dest, const char *src, size_t n)
@@ -320,7 +344,7 @@ mpz_t *vars_get_value(const char *name)
 	return NULL;
 }
 
-void vars_set_value(const char *name, mpz_t* const new_value)
+void vars_set_value(const char *name, const mpz_t* new_value)
 {
 	mpz_t *value = vars_get_value(name);
 	if (value == NULL) {
@@ -347,7 +371,6 @@ void vars_display_all()
 	for (i = 0; i < vars_nb; ++i) {
 		printf("%s=", vars[i].name);
 		display_int(&(vars[i].value));
-		printf("\n");
 	}
 }
 
@@ -365,6 +388,7 @@ void display_int(mpz_t* const mp)
 /*    else if (opt_output_base == 16)*/
 /*        printf("0x");*/
 	mpz_out_str(NULL, opt_output_base, *mp);
+	printf("\n");
 /*    if (opt_output_base != 2 && opt_output_base != 8 && opt_output_base != 16 && opt_output_base != 10)*/
 /*        printf("_%i", opt_output_base);*/
 }
@@ -378,6 +402,14 @@ void opt_check(int n, const char *opt)
 		exit(-2);
 	} else
 		defined_options[n] = 1;
+}
+
+void output_count_ref_report(const char *name, int count_ref)
+{
+	if (opt_ol >= OL_VERBOSE || count_ref != 0) {
+		fprintf(stderr, "%s count (should be null): %i\n", name, count_ref);
+		fprintf(stderr, "%s\n", count_ref != 0 ? "****  ERROR  ****" : "OK");
+	}
 }
 
 int main(int argc, char *argv[])
@@ -440,8 +472,13 @@ int main(int argc, char *argv[])
 
 	vars_terminate();
 
-	count_mpz_output_report();
+	int m = get_mpz_count_ref();
+	output_count_ref_report("mpz_t *", m);
+	int I = get_mpz_init_ref();
+	output_count_ref_report("mpz_t init/clear", I);
+	int e = expr_get_count_ref();
+	output_count_ref_report("expr_t *", e);
 
-	return 0;
+	return (m == 0 && e == 0 ? 0 : abs(e) + abs(m));
 }
 

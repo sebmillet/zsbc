@@ -21,10 +21,45 @@ expect {
 	default { fail "Could not get GMP library version" }
 }
 
-set test "Basic Arithmetic"
-send "101+101\n"
+set test "Addition"
+send "102+103\n"
 expect {
-	"202" { pass "$test" }
+	"205" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Subtraction"
+send "102-105\n"
+expect {
+	-- "-3" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Multiplication"
+send "102*(-105)\n"
+expect {
+	-- "-10710" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Division"
+send -- "-97/9\n"
+expect {
+	-- "-10" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Power"
+send "(-102)^15\n"
+expect {
+	-- "-1345868338324129592144306208768" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Modulo"
+send -- "-15300%97\n"
+expect {
+	-- "26" { pass "$test" }
 	default { fail "$test" }
 }
 
