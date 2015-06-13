@@ -20,7 +20,7 @@ Sébastien Millet 2015 */
 #define YY_NO_UNISTD_H
 
 int yycolumn = 1;
-void remove_newlines(char *s);
+void cleanup_inputnumber(char *s);
 
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
@@ -34,69 +34,28 @@ void remove_newlines(char *s);
 %option noyywrap
 %option nounput
 
-hexint1		0x[[:xdigit:]]+
-hexint2		[[:xdigit:]]+_h(ex)?
-octint1		0o[0-7]+
-octint2		[0-7]+_o(ct)?
-binint1		0b[01]+
-binint2		[01]+_b(in)?
-decint		([[:digit:]]|\\\n)+
-unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]
-identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})*
+int			([A-Z0-9]|\\\n)+
+/*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
+/*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
+identifier	[a-z][[:alnum:]]*
 
 %%
 
-"="		return '=';
-"+"		return '+';
-"-"		return '-';
-"*"		return '*';
-"/"		return '/';
-"("		return '(';
-")"		return ')';
-"^"		return '^';
-"%"		return '%';
+[ \t]+		{ }
 
-{binint1}	{ yylval.mp = mpz_const_from_str(yytext + 2, 2); }
+"="			return '=';
+"+"			return '+';
+"-"			return '-';
+"*"			return '*';
+"/"			return '/';
+"("			return '(';
+")"			return ')';
+"^"			return '^';
+"%"			return '%';
 
-{binint2}	{
-	unsigned int s = strlen(yytext);
-	if (s >= 4 && !strcmp(yytext + s - 4, "_bin")) {
-		yytext[s - 4] = '\0';
-	} else if (s >= 2 && !strcmp(yytext + s - 2, "_b")) {
-		yytext[s - 2] = '\0';
-	}
-	yylval.mp = mpz_const_from_str(yytext, 2);
-	return INTEGER;
-}
-
-{octint1}	{ yylval.mp = mpz_const_from_str(yytext + 2, 8); return INTEGER; }
-
-{octint2}	{
-	unsigned int s = strlen(yytext);
-	if (s >= 4 && !strcmp(yytext + s - 4, "_oct")) {
-		yytext[s - 4] = '\0';
-	} else if (s >= 2 && !strcmp(yytext + s - 2, "_o")) {
-		yytext[s - 2] = '\0';
-	}
-	yylval.mp = mpz_const_from_str(yytext, 8);
-	return INTEGER;
-}
-
-{decint}	{
+{int}	{
+	cleanup_inputnumber(yytext);
 	yylval.mp = mpz_const_from_str(yytext, 10);
-	return INTEGER;
-}
-
-{hexint1}	{ yylval.mp = mpz_const_from_str(yytext, 0); return INTEGER; }
-
-{hexint2}	{
-	unsigned int s = strlen(yytext);
-	if (s >= 4 && !strcmp(yytext + s - 4, "_hex")) {
-		yytext[s - 4] = '\0';
-	} else if (s >= 2 && !strcmp(yytext + s - 2, "_h")) {
-		yytext[s - 2] = '\0';
-	}
-	yylval.mp = mpz_const_from_str(yytext, 16);
 	return INTEGER;
 }
 
@@ -114,15 +73,13 @@ out				return OUTPUT;
 	return IDENTIFIER;
 }
 
-
 "\n"	{ yycolumn = 1; return NEWLINE; }
 \\\n
-[ \t]+		{ }
 .		{ yyerror("illegal character: %s", yytext); }
 
 %%
 
-void remove_newlines(char *s)
+void cleanup_inputnumber(char *s)
 {
 	char *src = s;
 	char *dst = s;

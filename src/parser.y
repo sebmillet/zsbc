@@ -90,8 +90,9 @@ void mpz_destruct(mpz_t *a);
 %precedence NEG
 %right '^'
 
-/*%destructor { mpz_clear(*$$); free($$); COUNT_MPZ_DEC; } <mp>*/
-/*%destructor { free($$); } <id>*/
+%destructor { mpz_destruct($$); } <mp>
+%destructor { expr_destruct($$); } <enode>
+%destructor { free($$); } <id>
 
 %start input
 
