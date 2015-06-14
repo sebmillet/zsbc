@@ -66,13 +66,13 @@
 
 
 #include <stdio.h>
-#include <gmp.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "common.h"
+#include "numwrap.h"
+#include "vars.h"
 #include "expr.h"
-#include "number.h"
 
 extern int yylex();
 
@@ -117,16 +117,6 @@ void display_base();
 #if YYDEBUG
 extern int yydebug;
 #endif
-/* "%code requires" blocks.  */
-#line 49 "parser.y" /* yacc.c:355  */
-
-mpz_t *mpz_const_from_str(const char *str, int base);
-void my_mpz_init_set_str(mpz_t *mp, const char *str, int base);
-void my_mpz_init(mpz_t *mp);
-void my_mpz_clear(mpz_t *mp);
-void mpz_destruct(mpz_t *a);
-
-#line 130 "parser.c" /* yacc.c:355  */
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -156,13 +146,13 @@ void mpz_destruct(mpz_t *a);
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 60 "parser.y" /* yacc.c:355  */
+#line 55 "parser.y" /* yacc.c:355  */
 
-	mpz_t *mp;
+	numptr num;
 	expr_t *enode;
 	char *id;
 
-#line 166 "parser.c" /* yacc.c:355  */
+#line 156 "parser.c" /* yacc.c:355  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -191,7 +181,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 195 "parser.c" /* yacc.c:358  */
+#line 185 "parser.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -491,9 +481,9 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    89,    89,    90,    94,    95,    96,   108,   109,   113,
-     126,   132,   133,   134,   135,   136,   137,   138,   139,   140,
-     141,   142,   146,   147,   150,   171,   183
+       0,    84,    84,    85,    89,    90,    91,   102,   103,   107,
+     119,   125,   126,   127,   128,   129,   130,   131,   132,   133,
+     134,   135,   139,   140,   143,   164,   176
 };
 #endif
 
@@ -1104,27 +1094,27 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
   switch (yytype)
     {
           case 3: /* INTEGER  */
-#line 80 "parser.y" /* yacc.c:1257  */
-      { mpz_destruct(((*yyvaluep).mp)); }
-#line 1110 "parser.c" /* yacc.c:1257  */
+#line 75 "parser.y" /* yacc.c:1257  */
+      { num_destruct(((*yyvaluep).num)); }
+#line 1100 "parser.c" /* yacc.c:1257  */
         break;
 
     case 4: /* IDENTIFIER  */
-#line 82 "parser.y" /* yacc.c:1257  */
+#line 77 "parser.y" /* yacc.c:1257  */
       { free(((*yyvaluep).id)); }
-#line 1116 "parser.c" /* yacc.c:1257  */
+#line 1106 "parser.c" /* yacc.c:1257  */
         break;
 
     case 23: /* expr_assignment  */
-#line 81 "parser.y" /* yacc.c:1257  */
+#line 76 "parser.y" /* yacc.c:1257  */
       { expr_destruct(((*yyvaluep).enode)); }
-#line 1122 "parser.c" /* yacc.c:1257  */
+#line 1112 "parser.c" /* yacc.c:1257  */
         break;
 
     case 24: /* expression  */
-#line 81 "parser.y" /* yacc.c:1257  */
+#line 76 "parser.y" /* yacc.c:1257  */
       { expr_destruct(((*yyvaluep).enode)); }
-#line 1128 "parser.c" /* yacc.c:1257  */
+#line 1118 "parser.c" /* yacc.c:1257  */
         break;
 
 
@@ -1410,133 +1400,131 @@ yyreduce:
   switch (yyn)
     {
         case 4:
-#line 94 "parser.y" /* yacc.c:1646  */
+#line 89 "parser.y" /* yacc.c:1646  */
     { loc_reset(); }
-#line 1416 "parser.c" /* yacc.c:1646  */
+#line 1406 "parser.c" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 96 "parser.y" /* yacc.c:1646  */
+#line 91 "parser.y" /* yacc.c:1646  */
     {
-		mpz_t mp;
-		my_mpz_init(&mp);
-		int r = expr_eval((yyvsp[-1].enode), &mp);
+		numptr num = num_construct();
+		int r = expr_eval((yyvsp[-1].enode), num);
 		if (r != 0)
-			print_error_code(r);
+			out_err_code(r);
 		else
-			display_int(&mp);
-		my_mpz_clear(&mp);
+			num_print(num, 10);
+		num_destruct(num);
 		expr_destruct((yyvsp[-1].enode));
 		loc_reset();
 	}
-#line 1433 "parser.c" /* yacc.c:1646  */
+#line 1422 "parser.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 109 "parser.y" /* yacc.c:1646  */
+#line 103 "parser.y" /* yacc.c:1646  */
     { yyclearin; yyerrok; }
-#line 1439 "parser.c" /* yacc.c:1646  */
+#line 1428 "parser.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 113 "parser.y" /* yacc.c:1646  */
+#line 107 "parser.y" /* yacc.c:1646  */
     {
 		expr_t *enode = expr_const_setvar((yyvsp[-2].id), (yyvsp[0].enode));
-		mpz_t mp;
-		my_mpz_init(&mp);
-		int r = expr_eval(enode, &mp);
+		numptr num = num_construct();
+		int r = expr_eval(enode, num);
 		if (r != 0)
-			print_error_code(r);
-		my_mpz_clear(&mp);
+			out_err_code(r);
+		num_destruct(num);
 		expr_destruct(enode);
 	}
-#line 1454 "parser.c" /* yacc.c:1646  */
+#line 1442 "parser.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 126 "parser.y" /* yacc.c:1646  */
+#line 119 "parser.y" /* yacc.c:1646  */
     {
 		(yyval.enode) = expr_const_setvar((yyvsp[-2].id), (yyvsp[0].enode));
 	}
-#line 1462 "parser.c" /* yacc.c:1646  */
+#line 1450 "parser.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 132 "parser.y" /* yacc.c:1646  */
-    { (yyval.enode) = expr_const_number((yyvsp[0].mp)); }
-#line 1468 "parser.c" /* yacc.c:1646  */
+#line 125 "parser.y" /* yacc.c:1646  */
+    { (yyval.enode) = expr_const_number((yyvsp[0].num)); }
+#line 1456 "parser.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 133 "parser.y" /* yacc.c:1646  */
+#line 126 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = expr_const_getvar((yyvsp[0].id)); }
-#line 1474 "parser.c" /* yacc.c:1646  */
+#line 1462 "parser.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 135 "parser.y" /* yacc.c:1646  */
+#line 128 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = expr_const_op2(FN_ADD, (yyvsp[-2].enode), (yyvsp[0].enode)); }
-#line 1480 "parser.c" /* yacc.c:1646  */
+#line 1468 "parser.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 136 "parser.y" /* yacc.c:1646  */
+#line 129 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = expr_const_op2(FN_SUB, (yyvsp[-2].enode), (yyvsp[0].enode)); }
-#line 1486 "parser.c" /* yacc.c:1646  */
+#line 1474 "parser.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 137 "parser.y" /* yacc.c:1646  */
+#line 130 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = expr_const_op2(FN_MUL, (yyvsp[-2].enode), (yyvsp[0].enode)); }
-#line 1492 "parser.c" /* yacc.c:1646  */
+#line 1480 "parser.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 138 "parser.y" /* yacc.c:1646  */
+#line 131 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = expr_const_op2(FN_DIV, (yyvsp[-2].enode), (yyvsp[0].enode)); }
-#line 1498 "parser.c" /* yacc.c:1646  */
+#line 1486 "parser.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 139 "parser.y" /* yacc.c:1646  */
+#line 132 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = expr_const_op2(FN_POW, (yyvsp[-2].enode), (yyvsp[0].enode)); }
-#line 1504 "parser.c" /* yacc.c:1646  */
+#line 1492 "parser.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 140 "parser.y" /* yacc.c:1646  */
+#line 133 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = expr_const_op2(FN_MOD, (yyvsp[-2].enode), (yyvsp[0].enode)); }
-#line 1510 "parser.c" /* yacc.c:1646  */
+#line 1498 "parser.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 141 "parser.y" /* yacc.c:1646  */
+#line 134 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = expr_const_op1(FN_NEG, (yyvsp[0].enode)); }
-#line 1516 "parser.c" /* yacc.c:1646  */
+#line 1504 "parser.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 142 "parser.y" /* yacc.c:1646  */
+#line 135 "parser.y" /* yacc.c:1646  */
     { (yyval.enode) = (yyvsp[-1].enode); }
-#line 1522 "parser.c" /* yacc.c:1646  */
+#line 1510 "parser.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 146 "parser.y" /* yacc.c:1646  */
+#line 139 "parser.y" /* yacc.c:1646  */
     { YYABORT; }
-#line 1528 "parser.c" /* yacc.c:1646  */
+#line 1516 "parser.c" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 147 "parser.y" /* yacc.c:1646  */
+#line 140 "parser.y" /* yacc.c:1646  */
     {
 		display_base();
 	}
-#line 1536 "parser.c" /* yacc.c:1646  */
+#line 1524 "parser.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 150 "parser.y" /* yacc.c:1646  */
+#line 143 "parser.y" /* yacc.c:1646  */
     {
 		int n = 0;
 		if (!strcmp((yyvsp[0].id), "bin") || !strcmp((yyvsp[0].id), "binary")) {
@@ -1549,7 +1537,7 @@ yyreduce:
 			n = 16;
 		}
 		if (n == 0) {
-			out_error("Unknown base name: %s", (yyvsp[0].id));
+			out_err("Unknown base name: %s", (yyvsp[0].id));
 			free((yyvsp[0].id));
 			YYERROR;
 		} else {
@@ -1558,36 +1546,36 @@ yyreduce:
 			display_base();
 		}
 	}
-#line 1562 "parser.c" /* yacc.c:1646  */
+#line 1550 "parser.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 171 "parser.y" /* yacc.c:1646  */
+#line 164 "parser.y" /* yacc.c:1646  */
     {
-		unsigned long int exp = mpz_get_ui(*(yyvsp[0].mp));
+		unsigned long int exp = num_getlongint((yyvsp[0].num));
 		if (exp < 2 || exp > 62) {
-			out_error("Base value must be in the range [2, 62]");
-			mpz_destruct((yyvsp[0].mp));
+			out_err("Base value must be in the range [2, 62]");
+			num_destruct((yyvsp[0].num));
 			YYERROR;
 		} else {
 			opt_output_base = exp;
 			display_base();
-			mpz_destruct((yyvsp[0].mp));
+			num_destruct((yyvsp[0].num));
 		}
 	}
-#line 1579 "parser.c" /* yacc.c:1646  */
+#line 1567 "parser.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 183 "parser.y" /* yacc.c:1646  */
+#line 176 "parser.y" /* yacc.c:1646  */
     {
 		vars_display_all();
 	}
-#line 1587 "parser.c" /* yacc.c:1646  */
+#line 1575 "parser.c" /* yacc.c:1646  */
     break;
 
 
-#line 1591 "parser.c" /* yacc.c:1646  */
+#line 1579 "parser.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1822,76 +1810,11 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 188 "parser.y" /* yacc.c:1906  */
+#line 181 "parser.y" /* yacc.c:1906  */
 
-
-void my_mpz_pow(mpz_t r, const mpz_t a, const mpz_t b)
-{
-	unsigned long int exp = mpz_get_ui(b);
-	mpz_pow_ui(r, a, exp);
-}
-
-int mpz_count_ref = 0;
-int mpz_init_ref = 0;
-
-mpz_t *mpz_const_from_str(const char *str, int base)
-{
-	out_dbg("Constructing one mpz_t from str\n");
-	mpz_t *mp = (mpz_t *)malloc(sizeof(mpz_t));
-	++mpz_count_ref;
-	my_mpz_init_set_str(mp, str, base);
-	return mp;
-}
-
-void my_mpz_init_set_str(mpz_t *mp, const char *str, int base)
-{
-	out_dbg("Initializing one mpz_t from str\n");
-	mpz_init_set_str(*mp, str, base);
-	++mpz_init_ref;
-}
-
-void my_mpz_init(mpz_t *mp)
-{
-	out_dbg("Initializing one mpz_t\n");
-	mpz_init(*mp);
-	++mpz_init_ref;
-}
-
-void my_mpz_clear(mpz_t *mp)
-{
-	out_dbg("Clearing one mpz_t\n");
-	mpz_clear(*mp);
-	--mpz_init_ref;
-}
-
-void mpz_destruct(mpz_t *mp)
-{
-	out_dbg("Destucting one mpz_t\n");
-	my_mpz_clear(mp);
-	free(mp);
-	--mpz_count_ref;
-}
-
-int get_mpz_count_ref() { return mpz_count_ref; }
-
-int get_mpz_init_ref() { return mpz_init_ref; }
 
 void display_base()
 {
 	printf("Output base: %i\n", opt_output_base);
-}
-
-void display_int(mpz_t* const mp)
-{
-/*    if (opt_output_base == 2)*/
-/*        printf("0b");*/
-/*    else if (opt_output_base == 8)*/
-/*        printf("0o");*/
-/*    else if (opt_output_base == 16)*/
-/*        printf("0x");*/
-	mpz_out_str(NULL, opt_output_base, *mp);
-	printf("\n");
-/*    if (opt_output_base != 2 && opt_output_base != 8 && opt_output_base != 16 && opt_output_base != 10)*/
-/*        printf("_%i", opt_output_base);*/
 }
 

@@ -16,11 +16,11 @@
  */
 
 
-//#ifndef EXPR_H
-//#define EXPR_H
+#ifndef EXPR_H
+#define EXPR_H
 
 #include "common.h"
-#include <gmp.h>
+#include "numwrap.h"
 
 typedef enum {TNODE_NUMBER = 0, TNODE_GETVAR, TNODE_SETVAR, TNODE_BUILTIN_OP, TNODE_LAST = TNODE_BUILTIN_OP} expr_node_t;
 
@@ -30,7 +30,7 @@ struct expr_t {
 	expr_node_t type;
 	union {
 		char *varname;
-		mpz_t *mp;
+		numptr num;
 		builtin_id builtin;
 	};
 	int nb_args;
@@ -40,15 +40,15 @@ typedef struct expr_t expr_t;
 
 void expr_destruct(expr_t *self);
 
-expr_t *expr_const_number(mpz_t* mp);
+expr_t *expr_const_number(numptr num);
 expr_t *expr_const_getvar(char *varname);
 expr_t *expr_const_setvar(char *varname, expr_t *e1);
 expr_t *expr_const_op1(builtin_id builtin, expr_t *e1);
 expr_t *expr_const_op2(builtin_id builtin, expr_t *e1, expr_t *e2);
 expr_t *expr_const_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1);
 
-int expr_eval(const expr_t *self, mpz_t* const value);
+int expr_eval(const expr_t *self, numptr value);
 int expr_get_count_ref();
 
-//#endif	/* EXPR_H */
+#endif	/* EXPR_H */
 

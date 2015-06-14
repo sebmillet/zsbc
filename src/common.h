@@ -38,16 +38,11 @@
 
 enum {ERR_NONE = 0, ERR_DIV0};
 
+int out(const char *fmt, ...);
+int out_err(const char *fmt, ...);
+void out_err_code(int e);
+
 char *s_strncpy(char *dest, const char *src, size_t n);
-void print_error_code(int e);
-void out_error(const char *fmt, ...);
-
-#include <gmp.h>
-void display_int(mpz_t* const mp);
-int get_mpz_count_ref();
-int get_mpz_init_ref();
-
-void vars_display_all();
 
 #endif /* COMMON_H */
 

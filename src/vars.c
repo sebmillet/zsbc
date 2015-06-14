@@ -18,7 +18,6 @@
 
 
 #include "vars.h"
-#include "common.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -35,7 +34,7 @@ void vars_terminate()
 	int i;
 	for (i = 0; i < vars_nb; ++i) {
 		free(vars[i].name);
-		mpz_clear(vars[i].value);
+		num_destruct(vars[i].num);
 	}
 	free(vars);
 	vars = NULL;
@@ -43,20 +42,20 @@ void vars_terminate()
 	vars_nb = 0;
 }
 
-mpz_t *vars_get_value(const char *name)
+numptr *vars_get_value(const char *name)
 {
 	int i;
 	for (i = 0; i < vars_nb; ++i) {
 		if (!strcmp(vars[i].name, name)) {
-			return &(vars[i].value);
+			return &vars[i].num;
 		}
 	}
 	return NULL;
 }
 
-void vars_set_value(const char *name, const mpz_t* new_value)
+void vars_set_value(const char *name, const numptr new_value)
 {
-	mpz_t *value = vars_get_value(name);
+	numptr *value = vars_get_value(name);
 	if (value == NULL) {
 		if (++vars_nb >= vars_ar) {
 			int new_vars_ar = vars_ar * 2;
@@ -68,11 +67,11 @@ void vars_set_value(const char *name, const mpz_t* new_value)
 		int l = strlen(name) + 1;
 		vars[vars_nb - 1].name = (char *)malloc(l);
 		s_strncpy(vars[vars_nb - 1].name, name, l);
-		value = &(vars[vars_nb - 1].value);
+		value = &(vars[vars_nb - 1].num);
 	} else {
-		mpz_clear(*value);
+		num_destruct(*value);
 	}
-	mpz_init_set(*value, *new_value);
+	*value = num_construct_from_num(new_value);
 }
 
 void vars_display_all()
@@ -80,7 +79,8 @@ void vars_display_all()
 	int i;
 	for (i = 0; i < vars_nb; ++i) {
 		printf("%s=", vars[i].name);
-		display_int(&(vars[i].value));
+		num_print(vars[i].num, 10);
+		printf("\n");
 	}
 }
 

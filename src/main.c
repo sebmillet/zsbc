@@ -43,8 +43,12 @@ const char *table_errors[] = {
 	"Division by 0"		/* ERR_DIV0 */
 };
 
-int out(const char *fmt, ...);
-int out_err(const char *fmt, ...);
+char *s_strncpy(char *dest, const char *src, size_t n)
+{
+	char *r = strncpy(dest, src, n);
+	dest[n - 1] = '\0';
+	return r;
+}
 
 int out(const char *fmt, ...)
 {
@@ -60,18 +64,28 @@ int out_err(const char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	int r = vfprintf(stderr, fmt, args);
+	fprintf(stderr, "\n");
 	va_end(args);
 	return r;
 }
 
+void out_err_code(int e)
+{
+	if (e < 0 || e >= (sizeof(table_errors) / sizeof(*table_errors))) {
+		out_err("Error code %d", e);
+	} else {
+		out_err("%s", table_errors[e]);
+	}
+}
+
 void usage()
 {
-	out_err("Usage: %s [options] [file ...]\n", PACKAGE_NAME);
-	out_err("  -h  -help     print this usage and exit\n");
-	out_err("  -V  -verbose  verbose output\n");
-	out_err("  -q  -quiet    don't print initial banner\n");
-	out_err("  -v  -version  print version information and exit\n");
-	out_err("  --            end of parameters, next options are file names\n");
+	out_err("Usage: %s [options] [file ...]", PACKAGE_NAME);
+	out_err("  -h  -help     print this usage and exit");
+	out_err("  -V  -verbose  verbose output");
+	out_err("  -q  -quiet    don't print initial banner");
+	out_err("  -v  -version  print version information and exit");
+	out_err("  --            end of parameters, next options are file names");
 	exit(-1);
 }
 
@@ -85,36 +99,12 @@ void version()
 	out("Copyright 2015 Sébastien Millet\n");
 }
 
-char *s_strncpy(char *dest, const char *src, size_t n)
-{
-	char *r = strncpy(dest, src, n);
-	dest[n - 1] = '\0';
-	return r;
-}
-
-void out_error(const char *fmt, ...)
-{
-	va_list ap;
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, "\n");
-}
-
-void print_error_code(int e)
-{
-	if (e < 0 || e >= (sizeof(table_errors) / sizeof(*table_errors))) {
-		out_error("Error code %d", e);
-	} else {
-		out_error("%s", table_errors[e]);
-	}
-}
-
 void opt_check(int n, const char *opt)
 {
 	static int defined_options[2] = {0, 0};
 
 	if (defined_options[n]) {
-		out_err("Option %s already set\n", opt);
+		out_err("Option %s already set", opt);
 		exit(-2);
 	} else
 		defined_options[n] = 1;
@@ -170,6 +160,8 @@ int main(int argc, char *argv[])
 	yydebug = 1;
 #endif
 
+	num_init_gmp();
+
 	int optset_verbose = 0;
 	int optset_quiet = 0;
 
@@ -190,7 +182,7 @@ int main(int argc, char *argv[])
 			opt_ol = OL_QUIET;
 		} else if (argv[a][0] == '-') {
 			if (strcmp(argv[a], "--")) {
-				out_err("%s: invalid option -- '%s'\n", PACKAGE_NAME, argv[a]);
+				out_err("%s: invalid option -- '%s'", PACKAGE_NAME, argv[a]);
 				a = -1;
 				break;
 			} else {
@@ -212,10 +204,11 @@ int main(int argc, char *argv[])
 
 	if (opt_ol >= OL_NORMAL) {
 		version();
-		nw_libversions();
+		num_lib_may_i_ask_you_to_identify_yourself_please();
 	}
 
 	out_dbg("DEBUG mode activated\n");
+
 
 	vars_init();
 
@@ -234,13 +227,11 @@ int main(int argc, char *argv[])
 
 	vars_terminate();
 
-	int m = get_mpz_count_ref();
-	output_count_ref_report("mpz_t *", m);
-	int I = get_mpz_init_ref();
-	output_count_ref_report("mpz_t init/clear", I);
+	int n = num_get_count_ref();
+	output_count_ref_report("number", n);
 	int e = expr_get_count_ref();
 	output_count_ref_report("expr_t *", e);
 
-	return (m == 0 && e == 0 ? 0 : abs(e) + abs(m));
+	return (n == 0 && e == 0 ? 0 : abs(n) + abs(e));
 }
 

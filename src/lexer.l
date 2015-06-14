@@ -24,9 +24,9 @@
 
 #include <string.h>
 #include <stdarg.h>
-#include <gmp.h>
 
 #include "common.h"
+#include "numwrap.h"
 #include "expr.h"
 #include "parser.h"
 
@@ -71,7 +71,7 @@ identifier	[a-z][[:alnum:]]*
 
 {int}	{
 	cleanup_inputnumber(yytext);
-	yylval.mp = mpz_const_from_str(yytext, 10);
+	yylval.num = num_construct_from_str(yytext, 10);
 	return INTEGER;
 }
 

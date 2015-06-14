@@ -23,13 +23,13 @@
 %{
 
 #include <stdio.h>
-#include <gmp.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "common.h"
+#include "numwrap.h"
+#include "vars.h"
 #include "expr.h"
-#include "number.h"
 
 extern int yylex();
 
@@ -46,24 +46,19 @@ void display_base();
 
 %}
 
-%code requires {
-mpz_t *mpz_const_from_str(const char *str, int base);
-void my_mpz_init_set_str(mpz_t *mp, const char *str, int base);
-void my_mpz_init(mpz_t *mp);
-void my_mpz_clear(mpz_t *mp);
-void mpz_destruct(mpz_t *a);
-}
+/*%code requires {*/
+/*}*/
 
 %defines
 %locations
 
 %union {
-	mpz_t *mp;
+	numptr num;
 	expr_t *enode;
 	char *id;
 };
 
-%token <mp> INTEGER
+%token <num> INTEGER
 %type <enode> expression expr_assignment
 %token <id> IDENTIFIER
 
@@ -77,7 +72,7 @@ void mpz_destruct(mpz_t *a);
 %precedence NEG
 %right '^'
 
-%destructor { mpz_destruct($$); } <mp>
+%destructor { num_destruct($$); } <num>
 %destructor { expr_destruct($$); } <enode>
 %destructor { free($$); } <id>
 
@@ -94,14 +89,13 @@ instruction:
 	NEWLINE { loc_reset(); }
 	| bare_assignment NEWLINE
 	| expression NEWLINE {
-		mpz_t mp;
-		my_mpz_init(&mp);
-		int r = expr_eval($1, &mp);
+		numptr num = num_construct();
+		int r = expr_eval($1, num);
 		if (r != 0)
-			print_error_code(r);
+			out_err_code(r);
 		else
-			display_int(&mp);
-		my_mpz_clear(&mp);
+			num_print(num, 10);
+		num_destruct(num);
 		expr_destruct($1);
 		loc_reset();
 	}
@@ -112,12 +106,11 @@ instruction:
 bare_assignment:
 	IDENTIFIER '=' expression {
 		expr_t *enode = expr_const_setvar($1, $3);
-		mpz_t mp;
-		my_mpz_init(&mp);
-		int r = expr_eval(enode, &mp);
+		numptr num = num_construct();
+		int r = expr_eval(enode, num);
 		if (r != 0)
-			print_error_code(r);
-		my_mpz_clear(&mp);
+			out_err_code(r);
+		num_destruct(num);
 		expr_destruct(enode);
 	}
 ;
@@ -159,7 +152,7 @@ statement:
 			n = 16;
 		}
 		if (n == 0) {
-			out_error("Unknown base name: %s", $2);
+			out_err("Unknown base name: %s", $2);
 			free($2);
 			YYERROR;
 		} else {
@@ -169,15 +162,15 @@ statement:
 		}
 	}
 	| OUTPUT INTEGER {
-		unsigned long int exp = mpz_get_ui(*$2);
+		unsigned long int exp = num_getlongint($2);
 		if (exp < 2 || exp > 62) {
-			out_error("Base value must be in the range [2, 62]");
-			mpz_destruct($2);
+			out_err("Base value must be in the range [2, 62]");
+			num_destruct($2);
 			YYERROR;
 		} else {
 			opt_output_base = exp;
 			display_base();
-			mpz_destruct($2);
+			num_destruct($2);
 		}
 	}
 	| VARS {
@@ -187,73 +180,8 @@ statement:
 
 %%
 
-void my_mpz_pow(mpz_t r, const mpz_t a, const mpz_t b)
-{
-	unsigned long int exp = mpz_get_ui(b);
-	mpz_pow_ui(r, a, exp);
-}
-
-int mpz_count_ref = 0;
-int mpz_init_ref = 0;
-
-mpz_t *mpz_const_from_str(const char *str, int base)
-{
-	out_dbg("Constructing one mpz_t from str\n");
-	mpz_t *mp = (mpz_t *)malloc(sizeof(mpz_t));
-	++mpz_count_ref;
-	my_mpz_init_set_str(mp, str, base);
-	return mp;
-}
-
-void my_mpz_init_set_str(mpz_t *mp, const char *str, int base)
-{
-	out_dbg("Initializing one mpz_t from str\n");
-	mpz_init_set_str(*mp, str, base);
-	++mpz_init_ref;
-}
-
-void my_mpz_init(mpz_t *mp)
-{
-	out_dbg("Initializing one mpz_t\n");
-	mpz_init(*mp);
-	++mpz_init_ref;
-}
-
-void my_mpz_clear(mpz_t *mp)
-{
-	out_dbg("Clearing one mpz_t\n");
-	mpz_clear(*mp);
-	--mpz_init_ref;
-}
-
-void mpz_destruct(mpz_t *mp)
-{
-	out_dbg("Destucting one mpz_t\n");
-	my_mpz_clear(mp);
-	free(mp);
-	--mpz_count_ref;
-}
-
-int get_mpz_count_ref() { return mpz_count_ref; }
-
-int get_mpz_init_ref() { return mpz_init_ref; }
-
 void display_base()
 {
 	printf("Output base: %i\n", opt_output_base);
-}
-
-void display_int(mpz_t* const mp)
-{
-/*    if (opt_output_base == 2)*/
-/*        printf("0b");*/
-/*    else if (opt_output_base == 8)*/
-/*        printf("0o");*/
-/*    else if (opt_output_base == 16)*/
-/*        printf("0x");*/
-	mpz_out_str(NULL, opt_output_base, *mp);
-	printf("\n");
-/*    if (opt_output_base != 2 && opt_output_base != 8 && opt_output_base != 16 && opt_output_base != 10)*/
-/*        printf("_%i", opt_output_base);*/
 }
 

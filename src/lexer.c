@@ -592,9 +592,9 @@ char *yytext;
 
 #include <string.h>
 #include <stdarg.h>
-#include <gmp.h>
 
 #include "common.h"
+#include "numwrap.h"
 #include "expr.h"
 #include "parser.h"
 
@@ -950,7 +950,7 @@ YY_RULE_SETUP
 #line 72 "lexer.l"
 {
 	cleanup_inputnumber(yytext);
-	yylval.mp = mpz_const_from_str(yytext, 10);
+	yylval.num = num_construct_from_str(yytext, 10);
 	return INTEGER;
 }
 	YY_BREAK

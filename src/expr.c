@@ -16,29 +16,22 @@
  */
 
 
-#include "common.h"
 #include "expr.h"
+#include "vars.h"
 
-#include <gmp.h>
-#include <string.h>
+/*#include <string.h>*/
 
-void my_mpz_init(mpz_t *mp);
-void my_mpz_clear(mpz_t *mp);
-void mpz_destruct(mpz_t *a);
-mpz_t *vars_get_value(const char *var);
-void vars_set_value(const char *name, const mpz_t* new_value);
+int expr_count_ref = 0;
 
 static void destruct_number(expr_t *self);
 static void destruct_getvar(expr_t *self);
 static void destruct_setvar(expr_t *self);
 static void destruct_builtin_op(expr_t *self);
 
-static int eval_number(const expr_t *self, const mpz_t *value_args, mpz_t* const value);
-static int eval_getvar(const expr_t *self, const mpz_t *value_args, mpz_t* const value);
-static int eval_setvar(const expr_t *self, const mpz_t *value_args, mpz_t* const value);
-static int eval_builtin_op(const expr_t *self, const mpz_t *value_args, mpz_t* const value);
-
-int expr_count_ref = 0;
+static int eval_number(const expr_t *self, const numptr *value_args, numptr value);
+static int eval_getvar(const expr_t *self, const numptr *value_args, numptr value);
+static int eval_setvar(const expr_t *self, const numptr *value_args, numptr value);
+static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr value);
 
 static void (*table_destruct[])(expr_t *self) = {
 	destruct_number,	/* TNODE_NUMBER */
@@ -47,7 +40,7 @@ static void (*table_destruct[])(expr_t *self) = {
 	destruct_builtin_op	/* TNODE_BUILTIN_OP */
 };
 
-static int (*table_eval[])(const expr_t *self, const mpz_t *value_args, mpz_t* const value) = {
+static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr value) = {
 	eval_number,		/* TNODE_NUMBER */
 	eval_getvar,		/* TNODE_GETVAR */
 	eval_setvar,		/* TNODE_SETVAR */
@@ -56,8 +49,7 @@ static int (*table_eval[])(const expr_t *self, const mpz_t *value_args, mpz_t* c
 
 static void destruct_number(expr_t *self)
 {
-	mpz_destruct(self->mp);
-	self->mp = NULL;
+	num_destruct(self->num);
 }
 
 static void destruct_getvar(expr_t *self) { }
@@ -94,10 +86,10 @@ static expr_t *expr_construct(expr_node_t type, int nb_args)
 	return self;
 }
 
-expr_t *expr_const_number(mpz_t *mp)
+expr_t *expr_const_number(numptr num)
 {
 	expr_t *self = expr_construct(TNODE_NUMBER, 0);
-	self->mp = mp;
+	self->num = num;
 	return self;
 }
 
@@ -140,101 +132,87 @@ expr_t *expr_const_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1)
 	return expr_const_setvar(varname, etop);
 }
 
-int expr_eval(const expr_t *self, mpz_t* const value)
+int expr_eval(const expr_t *self, numptr value)
 {
 	out_dbg("Evaluating expression, type: %d, #args: %d\n", self->type, self->nb_args);
-	mpz_t *value_args = NULL;
+	numptr *value_args = NULL;
 	if (self->nb_args >= 1)
-		value_args = (mpz_t *)malloc(sizeof(mpz_t) * (unsigned)self->nb_args);
+		value_args = malloc(sizeof(numptr) * (unsigned)self->nb_args);
 	int i;
 	int r;
 	for (i = 0; i < self->nb_args; ++i)
-		my_mpz_init(&value_args[i]);
+		value_args[i] = num_construct();
 	for (i = 0; i < self->nb_args; ++i) {
-		if ((r = expr_eval(self->args[i], &(value_args[i]))) != ERR_NONE)
+		if ((r = expr_eval(self->args[i], value_args[i])) != ERR_NONE)
 			break;
 	}
 	if (r == ERR_NONE) {
-		r = (table_eval[self->type])(self, (const mpz_t *)value_args, value);
+		r = (table_eval[self->type])(self, (const numptr *)value_args, value);
 	}
 	for (i = 0; i < self->nb_args; ++i)
-		my_mpz_clear(&value_args[i]);
+		num_destruct(value_args[i]);
 	if (value_args != NULL)
 		free(value_args);
 	return r;
 }
 
-static int eval_number(const expr_t *self, const mpz_t *value_args, mpz_t* const value)
+static int eval_number(const expr_t *self, const numptr *value_args, numptr value)
 {
 	assert(self->type == TNODE_NUMBER);
 	assert(self->nb_args == 0);
 	assert(value_args == NULL);
-	mpz_init_set(*value, *self->mp);
+	num_copy(value, self->num);
 	return 0;
 }
 
-static int eval_getvar(const expr_t *self, const mpz_t *value_args, mpz_t* const value)
+static int eval_getvar(const expr_t *self, const numptr *value_args, numptr value)
 {
 	assert(self->type == TNODE_GETVAR);
 	assert(self->nb_args == 0);
 	assert(value_args == NULL);
-	mpz_t *mp = vars_get_value(self->varname);
-	if (mp == NULL)
-		mpz_init(*value);
+	numptr *pnum = vars_get_value(self->varname);
+	if (pnum == NULL)
+		num_reset(value);
 	else
-		mpz_init_set(*value, *mp);
+		num_copy(value, *pnum);
 	return 0;
 }
 
-static int eval_setvar(const expr_t *self, const mpz_t *value_args, mpz_t* const value)
+static int eval_setvar(const expr_t *self, const numptr *value_args, numptr value)
 {
 	assert(self->type == TNODE_SETVAR);
 	assert(self->nb_args == 1);
 	assert(value_args != NULL);
-	vars_set_value(self->varname, &value_args[0]);
-	mpz_init_set(*value, value_args[0]);
+	vars_set_value(self->varname, value_args[0]);
+	num_copy(value, value_args[0]);
 	return 0;
 }
 
-static int eval_builtin_op(const expr_t *self, const mpz_t *value_args, mpz_t* const value)
+static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr value)
 {
 	assert(self->type == TNODE_BUILTIN_OP);
 	switch (self->builtin) {
 		case FN_ADD:
 			assert(self->nb_args == 2 && value_args != NULL);
-			mpz_add(*value, value_args[0], value_args[1]);
-			return 0;
+			return num_add(value, value_args[0], value_args[1]);
 		case FN_SUB:
 			assert(self->nb_args == 2 && value_args != NULL);
-			mpz_sub(*value, value_args[0], value_args[1]);
-			return 0;
+			return num_sub(value, value_args[0], value_args[1]);
 		case FN_MUL:
 			assert(self->nb_args == 2 && value_args != NULL);
-			mpz_mul(*value, value_args[0], value_args[1]);
-			return 0;
+			return num_mul(value, value_args[0], value_args[1]);
 		case FN_DIV:
 			assert(self->nb_args == 2 && value_args != NULL);
-			if (!mpz_cmp_ui(value_args[1], 0)) {
-				return ERR_DIV0;
-			}
-			mpz_tdiv_q(*value, value_args[0], value_args[1]);
-			return 0;
+			return num_div(value, value_args[0], value_args[1]);
 		case FN_POW:
 			assert(self->nb_args == 2 && value_args != NULL);
-			unsigned long int exp = mpz_get_ui(value_args[1]);
-			mpz_pow_ui(*value, value_args[0], exp);
-			return 0;
+			return num_pow(value, value_args[0], value_args[1]);
 		case FN_MOD:
 			assert(self->nb_args == 2 && value_args != NULL);
-			if (!mpz_cmp_ui(value_args[1], 0)) {
-				return ERR_DIV0;
-			}
-			mpz_mod(*value, value_args[0], value_args[1]);
-			return 0;
+			return num_mod(value, value_args[0], value_args[1]);
 		case FN_NEG:
 			assert(self->nb_args == 1 && value_args != NULL);
-			mpz_neg(*value, value_args[0]);
-			return 0;
+			return num_neg(value, value_args[0]);
 		default:
 			assert(0);
 	}
