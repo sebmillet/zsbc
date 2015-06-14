@@ -21,12 +21,14 @@ AC_CONFIG_HEADERS([config.h])
 AC_PROG_CC
 AC_PROG_YACC
 AC_PROG_LEX
+AC_PROG_RANLIB
 
 # Checks for libraries.
 
 # Checks for header files.
 AC_FUNC_ALLOCA
-AC_CHECK_HEADERS([inttypes.h libintl.h malloc.h stddef.h stdlib.h string.h unistd.h gmp.h])
+AC_FUNC_VPRINTF
+AC_CHECK_HEADERS([inttypes.h libintl.h malloc.h stddef.h stdlib.h string.h unistd.h lib.h gmp.h])
 
 dnl ==================== Options ====================================
 
@@ -78,6 +80,7 @@ AC_FUNC_REALLOC
 AC_CHECK_FUNCS([memset])
 
 AC_CONFIG_FILES([Makefile
-                 src/Makefile])
+                 src/Makefile
+				 lib/Makefile])
 AC_OUTPUT
 

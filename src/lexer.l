@@ -1,10 +1,24 @@
-/* lexer.l
+/*
+ * =====================================================================================
+ *
+ *       Filename:  lexer.l
+ *
+ *    Description:  Manage scanner of zsbc input.
+ *
+ *        Version:  1.0
+ *        Created:  03/06/2015 23:22:00
+ *       Revision:  none
+ *       Compiler:  flex
+ *
+ *         Author:  Sébastien Millet (smt), milletseb@laposte.net
+ *
+ * =====================================================================================
+ */
 
-Expression lexer.
-Inspired from
-   http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
+/* Inspired from
+ * http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
+ */
 
-Sébastien Millet 2015 */
 
 %{
 
@@ -21,6 +35,8 @@ Sébastien Millet 2015 */
 
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
+
+void yyerror(char *s, ...);
 
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \

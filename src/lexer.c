@@ -569,14 +569,26 @@ int yy_flex_debug = 0;
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
 #line 1 "lexer.l"
-/* lexer.l
-
-Expression lexer.
-Inspired from
-   http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
-
-Sébastien Millet 2015 */
-#line 10 "lexer.l"
+/*
+ * =====================================================================================
+ *
+ *       Filename:  lexer.l
+ *
+ *    Description:  Manage scanner of zsbc input.
+ *
+ *        Version:  1.0
+ *        Created:  03/06/2015 23:22:00
+ *       Revision:  none
+ *       Compiler:  flex
+ *
+ *         Author:  Sébastien Millet (smt), milletseb@laposte.net
+ *
+ * =====================================================================================
+ */
+/* Inspired from
+ * http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
+ */
+#line 24 "lexer.l"
 
 #include <string.h>
 #include <stdarg.h>
@@ -592,13 +604,15 @@ Sébastien Millet 2015 */
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
 
+void yyerror(char *s, ...);
+
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
 
 /*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
 /*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
-#line 602 "lexer.c"
+#line 616 "lexer.c"
 
 #define INITIAL 0
 
@@ -810,10 +824,10 @@ YY_DECL
 		}
 
 	{
-#line 42 "lexer.l"
+#line 58 "lexer.l"
 
 
-#line 817 "lexer.c"
+#line 831 "lexer.c"
 
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
@@ -882,58 +896,58 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 44 "lexer.l"
+#line 60 "lexer.l"
 { }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 46 "lexer.l"
+#line 62 "lexer.l"
 return '=';
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 47 "lexer.l"
+#line 63 "lexer.l"
 return '+';
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 48 "lexer.l"
+#line 64 "lexer.l"
 return '-';
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 49 "lexer.l"
+#line 65 "lexer.l"
 return '*';
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 50 "lexer.l"
+#line 66 "lexer.l"
 return '/';
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 51 "lexer.l"
+#line 67 "lexer.l"
 return '(';
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 52 "lexer.l"
+#line 68 "lexer.l"
 return ')';
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 53 "lexer.l"
+#line 69 "lexer.l"
 return '^';
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 54 "lexer.l"
+#line 70 "lexer.l"
 return '%';
 	YY_BREAK
 case 11:
 /* rule 11 can match eol */
 YY_RULE_SETUP
-#line 56 "lexer.l"
+#line 72 "lexer.l"
 {
 	cleanup_inputnumber(yytext);
 	yylval.mp = mpz_const_from_str(yytext, 10);
@@ -942,37 +956,37 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 62 "lexer.l"
+#line 78 "lexer.l"
 return QUIT;
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 63 "lexer.l"
+#line 79 "lexer.l"
 return QUIT;
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 64 "lexer.l"
+#line 80 "lexer.l"
 return OUTPUT;
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 65 "lexer.l"
+#line 81 "lexer.l"
 return OUTPUT;
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 66 "lexer.l"
+#line 82 "lexer.l"
 return VARS;
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 67 "lexer.l"
+#line 83 "lexer.l"
 return VARS;
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 69 "lexer.l"
+#line 85 "lexer.l"
 {
 	unsigned int l = strlen(yytext) + 1;
 	yylval.id = (char *)malloc(l);
@@ -983,26 +997,26 @@ YY_RULE_SETUP
 case 19:
 /* rule 19 can match eol */
 YY_RULE_SETUP
-#line 76 "lexer.l"
+#line 92 "lexer.l"
 { yycolumn = 1; return NEWLINE; }
 	YY_BREAK
 case 20:
 /* rule 20 can match eol */
 YY_RULE_SETUP
-#line 77 "lexer.l"
+#line 93 "lexer.l"
 
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 78 "lexer.l"
+#line 94 "lexer.l"
 { yyerror("illegal character: %s", yytext); }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 80 "lexer.l"
+#line 96 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1006 "lexer.c"
+#line 1020 "lexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1968,7 +1982,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 79 "lexer.l"
+#line 95 "lexer.l"
 
 
 

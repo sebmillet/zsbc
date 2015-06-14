@@ -3,7 +3,7 @@
 AUTOMAKE_OPTIONS = dejagnu
 RUNTESTDEFAULTFLAGS = --all --tool zsbc --srcdir $$srcdir/tests
 
-SUBDIRS = src
+SUBDIRS = lib src
 ACLOCAL_AMFLAGS = -I admin
 
 dist_doc_DATA=README

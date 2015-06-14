@@ -2,7 +2,7 @@
 
 SUFFIXES = .c .h .y .l
 
-AM_CPPFLAGS = -Wshadow -Wall
+AM_CPPFLAGS = -Wshadow -Wall -I$(srcdir) -I$(srcdir)/../h
 AM_YFLAGS = -d
 
 if DEBUG_FLEX
@@ -13,9 +13,12 @@ bin_PROGRAMS = zsbc
 
 check_PROGRAMS = zsbc
 
-zsbc_SOURCES = expr.c expr.h parser.y lexer.l common.h
+zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h parser.y lexer.l common.h
 zsbc_LDFLAGS = 
-zsbc_LDADD = -lgmp
+
+LIBBC = ../lib/libbc.a
+zsbc_LDADD = -lgmp $(LIBBC)
+$(PROGRAMS): $(LIBBC)
 
 BUILT_SOURCES = parser.h
 

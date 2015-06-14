@@ -1,9 +1,24 @@
-/* expr.c */
+/*
+ * =====================================================================================
+ *
+ *       Filename:  expr.c
+ *
+ *    Description:  Manage expressions with expr_t structure.
+ *
+ *        Version:  1.0
+ *        Created:  07/06/2015 20:25:40
+ *       Revision:  none
+ *       Compiler:  gcc
+ *
+ *         Author:  Sébastien Millet (smt), milletseb@laposte.net
+ *
+ * =====================================================================================
+ */
 
-/* Sébastien Millet 2015 */
 
 #include "common.h"
 #include "expr.h"
+
 #include <gmp.h>
 #include <string.h>
 

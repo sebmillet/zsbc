@@ -40,7 +40,7 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 62 "parser.y" /* yacc.c:1909  */
+#line 49 "parser.y" /* yacc.c:1909  */
 
 mpz_t *mpz_const_from_str(const char *str, int base);
 void my_mpz_init_set_str(mpz_t *mp, const char *str, int base);
@@ -78,7 +78,7 @@ void mpz_destruct(mpz_t *a);
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 73 "parser.y" /* yacc.c:1909  */
+#line 60 "parser.y" /* yacc.c:1909  */
 
 	mpz_t *mp;
 	expr_t *enode;

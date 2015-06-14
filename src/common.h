@@ -1,8 +1,20 @@
-/* common.h
+/*
+ * =====================================================================================
+ *
+ *       Filename:  common.h
+ *
+ *    Description:  Header file for most zsbc source files.
+ *
+ *        Version:  1.0
+ *        Created:  03/06/2015 23:22:00
+ *       Revision:  none
+ *       Compiler:  gcc
+ *
+ *         Author:  Sébastien Millet (smt), milletseb@laposte.net
+ *
+ * =====================================================================================
+ */
 
-Sébastien Millet, May 2015
-
-*/
 
 #ifndef COMMON_H
 #define COMMON_H
@@ -26,10 +38,16 @@ Sébastien Millet, May 2015
 
 enum {ERR_NONE = 0, ERR_DIV0};
 
-void yyerror(char *s, ...);
-
-int out(const char *fmt, ...);
 char *s_strncpy(char *dest, const char *src, size_t n);
+void print_error_code(int e);
+void out_error(const char *fmt, ...);
+
+#include <gmp.h>
+void display_int(mpz_t* const mp);
+int get_mpz_count_ref();
+int get_mpz_init_ref();
+
+void vars_display_all();
 
 #endif /* COMMON_H */
 
