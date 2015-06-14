@@ -40,5 +40,12 @@ expect {
 	default { fail "$test" }
 }
 
+set test "minus Variable"
+send -- "a=12\n-a\n"
+expect {
+	-- "-12" { pass "$test" }
+	default { fail "$test" }
+}
+
 send "quit\n"
 
