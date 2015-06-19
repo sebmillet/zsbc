@@ -1095,7 +1095,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     {
           case 3: /* INTEGER  */
 #line 75 "parser.y" /* yacc.c:1257  */
-      { num_destruct(((*yyvaluep).num)); }
+      { num_destruct(&((*yyvaluep).num)); }
 #line 1100 "parser.c" /* yacc.c:1257  */
         break;
 
@@ -1408,13 +1408,13 @@ yyreduce:
   case 6:
 #line 91 "parser.y" /* yacc.c:1646  */
     {
-		numptr num = num_construct();
-		int r = expr_eval((yyvsp[-1].enode), num);
+		numptr num = num_preinit();
+		int r = expr_eval((yyvsp[-1].enode), &num);
 		if (r != 0)
 			out_err_code(r);
 		else
 			num_print(num, 10);
-		num_destruct(num);
+		num_destruct(&num);
 		expr_destruct((yyvsp[-1].enode));
 		loc_reset();
 	}
@@ -1431,11 +1431,11 @@ yyreduce:
 #line 107 "parser.y" /* yacc.c:1646  */
     {
 		expr_t *enode = expr_const_setvar((yyvsp[-2].id), (yyvsp[0].enode));
-		numptr num = num_construct();
-		int r = expr_eval(enode, num);
+		numptr num = num_preinit();
+		int r = expr_eval(enode, &num);
 		if (r != 0)
 			out_err_code(r);
-		num_destruct(num);
+		num_destruct(&num);
 		expr_destruct(enode);
 	}
 #line 1442 "parser.c" /* yacc.c:1646  */
@@ -1555,12 +1555,12 @@ yyreduce:
 		unsigned long int exp = num_getlongint((yyvsp[0].num));
 		if (exp < 2 || exp > 62) {
 			out_err("Base value must be in the range [2, 62]");
-			num_destruct((yyvsp[0].num));
+			num_destruct(&(yyvsp[0].num));
 			YYERROR;
 		} else {
 			opt_output_base = exp;
 			display_base();
-			num_destruct((yyvsp[0].num));
+			num_destruct(&(yyvsp[0].num));
 		}
 	}
 #line 1567 "parser.c" /* yacc.c:1646  */

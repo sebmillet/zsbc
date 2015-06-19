@@ -117,11 +117,6 @@ void output_count_ref_report(const char *name, int count_ref)
 	}
 }
 
-void myputchar(int c)
-{
-	putchar(c);
-}
-
 void rt_warn(const char *fmt, ...)
 {
 	va_list args;
@@ -160,7 +155,8 @@ int main(int argc, char *argv[])
 	yydebug = 1;
 #endif
 
-	num_init_gmp();
+/*    num_init_gmp();*/
+	num_init_libbc();
 
 	int optset_verbose = 0;
 	int optset_quiet = 0;

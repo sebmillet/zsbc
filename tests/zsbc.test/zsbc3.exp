@@ -1,7 +1,7 @@
 # tests/zsbc.test/zsbc3.exp
 
 set timeout 3
-spawn "$ZSBC" -q
+spawn "$ZSBC" -V
 send_user "***   Variable tests\n"
 
 set test "Variable assignment"
@@ -47,5 +47,10 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Checking object count ref at the end of zsbc3.exp"
 send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
 

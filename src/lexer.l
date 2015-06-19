@@ -50,7 +50,7 @@ void yyerror(char *s, ...);
 %option noyywrap
 %option nounput
 
-int			([A-Z0-9]|\\\n)+
+number			([A-Z0-9]|\\\n)+(\.([A-Z0-9]|\\\n)*)?
 /*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
 /*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
 identifier	[a-z][[:alnum:]]*
@@ -69,7 +69,7 @@ identifier	[a-z][[:alnum:]]*
 "^"			return '^';
 "%"			return '%';
 
-{int}	{
+{number}	{
 	cleanup_inputnumber(yytext);
 	yylval.num = num_construct_from_str(yytext, 10);
 	return INTEGER;

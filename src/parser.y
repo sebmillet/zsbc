@@ -72,7 +72,7 @@ void display_base();
 %precedence NEG
 %right '^'
 
-%destructor { num_destruct($$); } <num>
+%destructor { num_destruct(&$$); } <num>
 %destructor { expr_destruct($$); } <enode>
 %destructor { free($$); } <id>
 
@@ -89,13 +89,13 @@ instruction:
 	NEWLINE { loc_reset(); }
 	| bare_assignment NEWLINE
 	| expression NEWLINE {
-		numptr num = num_construct();
-		int r = expr_eval($1, num);
+		numptr num = num_preinit();
+		int r = expr_eval($1, &num);
 		if (r != 0)
 			out_err_code(r);
 		else
 			num_print(num, 10);
-		num_destruct(num);
+		num_destruct(&num);
 		expr_destruct($1);
 		loc_reset();
 	}
@@ -106,11 +106,11 @@ instruction:
 bare_assignment:
 	IDENTIFIER '=' expression {
 		expr_t *enode = expr_const_setvar($1, $3);
-		numptr num = num_construct();
-		int r = expr_eval(enode, num);
+		numptr num = num_preinit();
+		int r = expr_eval(enode, &num);
 		if (r != 0)
 			out_err_code(r);
-		num_destruct(num);
+		num_destruct(&num);
 		expr_destruct(enode);
 	}
 ;
@@ -165,12 +165,12 @@ statement:
 		unsigned long int exp = num_getlongint($2);
 		if (exp < 2 || exp > 62) {
 			out_err("Base value must be in the range [2, 62]");
-			num_destruct($2);
+			num_destruct(&$2);
 			YYERROR;
 		} else {
 			opt_output_base = exp;
 			display_base();
-			num_destruct($2);
+			num_destruct(&$2);
 		}
 	}
 	| VARS {

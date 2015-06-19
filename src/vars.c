@@ -34,7 +34,7 @@ void vars_terminate()
 	int i;
 	for (i = 0; i < vars_nb; ++i) {
 		free(vars[i].name);
-		num_destruct(vars[i].num);
+		num_destruct(&vars[i].num);
 	}
 	free(vars);
 	vars = NULL;
@@ -55,8 +55,8 @@ numptr *vars_get_value(const char *name)
 
 void vars_set_value(const char *name, const numptr new_value)
 {
-	numptr *value = vars_get_value(name);
-	if (value == NULL) {
+	numptr *pval = vars_get_value(name);
+	if (pval == NULL) {
 		if (++vars_nb >= vars_ar) {
 			int new_vars_ar = vars_ar * 2;
 			if (new_vars_ar <= 0)
@@ -67,11 +67,11 @@ void vars_set_value(const char *name, const numptr new_value)
 		int l = strlen(name) + 1;
 		vars[vars_nb - 1].name = (char *)malloc(l);
 		s_strncpy(vars[vars_nb - 1].name, name, l);
-		value = &(vars[vars_nb - 1].num);
+		pval = &(vars[vars_nb - 1].num);
 	} else {
-		num_destruct(*value);
+		num_destruct(pval);
 	}
-	*value = num_construct_from_num(new_value);
+	*pval = num_construct_from_num(new_value);
 }
 
 void vars_display_all()

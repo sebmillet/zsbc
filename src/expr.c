@@ -28,10 +28,10 @@ static void destruct_getvar(expr_t *self);
 static void destruct_setvar(expr_t *self);
 static void destruct_builtin_op(expr_t *self);
 
-static int eval_number(const expr_t *self, const numptr *value_args, numptr value);
-static int eval_getvar(const expr_t *self, const numptr *value_args, numptr value);
-static int eval_setvar(const expr_t *self, const numptr *value_args, numptr value);
-static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr value);
+static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval);
+static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval);
+static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval);
+static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval);
 
 static void (*table_destruct[])(expr_t *self) = {
 	destruct_number,	/* TNODE_NUMBER */
@@ -40,7 +40,7 @@ static void (*table_destruct[])(expr_t *self) = {
 	destruct_builtin_op	/* TNODE_BUILTIN_OP */
 };
 
-static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr value) = {
+static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr *pval) = {
 	eval_number,		/* TNODE_NUMBER */
 	eval_getvar,		/* TNODE_GETVAR */
 	eval_setvar,		/* TNODE_SETVAR */
@@ -49,7 +49,7 @@ static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr 
 
 static void destruct_number(expr_t *self)
 {
-	num_destruct(self->num);
+	num_destruct(&self->num);
 }
 
 static void destruct_getvar(expr_t *self) { }
@@ -132,7 +132,7 @@ expr_t *expr_const_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1)
 	return expr_const_setvar(varname, etop);
 }
 
-int expr_eval(const expr_t *self, numptr value)
+int expr_eval(const expr_t *self, numptr *pval)
 {
 	out_dbg("Evaluating expression, type: %d, #args: %d\n", self->type, self->nb_args);
 	numptr *value_args = NULL;
@@ -141,78 +141,75 @@ int expr_eval(const expr_t *self, numptr value)
 	int i;
 	int r;
 	for (i = 0; i < self->nb_args; ++i)
-		value_args[i] = num_construct();
+		value_args[i] = num_preinit();
 	for (i = 0; i < self->nb_args; ++i) {
-		if ((r = expr_eval(self->args[i], value_args[i])) != ERR_NONE)
+		if ((r = expr_eval(self->args[i], &value_args[i])) != ERR_NONE)
 			break;
 	}
 	if (r == ERR_NONE) {
-		r = (table_eval[self->type])(self, (const numptr *)value_args, value);
+		r = (table_eval[self->type])(self, (const numptr *)value_args, pval);
 	}
 	for (i = 0; i < self->nb_args; ++i)
-		num_destruct(value_args[i]);
+		num_destruct(&value_args[i]);
 	if (value_args != NULL)
 		free(value_args);
 	return r;
 }
 
-static int eval_number(const expr_t *self, const numptr *value_args, numptr value)
+static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == TNODE_NUMBER);
-	assert(self->nb_args == 0);
-	assert(value_args == NULL);
-	num_copy(value, self->num);
+	assert(self->type == TNODE_NUMBER && self->nb_args == 0 && value_args == NULL);
+	assert(num_is_not_initialized(*pval));
+	*pval = num_construct_from_num(self->num);
 	return 0;
 }
 
-static int eval_getvar(const expr_t *self, const numptr *value_args, numptr value)
+static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == TNODE_GETVAR);
-	assert(self->nb_args == 0);
-	assert(value_args == NULL);
+	assert(self->type == TNODE_GETVAR && self->nb_args == 0 && value_args == NULL);
+	assert(num_is_not_initialized(*pval));
 	numptr *pnum = vars_get_value(self->varname);
 	if (pnum == NULL)
-		num_reset(value);
+		*pval = num_construct();
 	else
-		num_copy(value, *pnum);
+		*pval = num_construct_from_num(*pnum);
 	return 0;
 }
 
-static int eval_setvar(const expr_t *self, const numptr *value_args, numptr value)
+static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == TNODE_SETVAR);
-	assert(self->nb_args == 1);
-	assert(value_args != NULL);
+	assert(self->type == TNODE_SETVAR && self->nb_args == 1 && value_args != NULL);
+	assert(num_is_not_initialized(*pval));
 	vars_set_value(self->varname, value_args[0]);
-	num_copy(value, value_args[0]);
+	*pval = num_construct_from_num(value_args[0]);
 	return 0;
 }
 
-static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr value)
+static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval)
 {
 	assert(self->type == TNODE_BUILTIN_OP);
 	switch (self->builtin) {
 		case FN_ADD:
 			assert(self->nb_args == 2 && value_args != NULL);
-			return num_add(value, value_args[0], value_args[1]);
+			return num_add(pval, value_args[0], value_args[1]);
 		case FN_SUB:
 			assert(self->nb_args == 2 && value_args != NULL);
-			return num_sub(value, value_args[0], value_args[1]);
+			return num_sub(pval, value_args[0], value_args[1]);
 		case FN_MUL:
 			assert(self->nb_args == 2 && value_args != NULL);
-			return num_mul(value, value_args[0], value_args[1]);
+			return num_mul(pval, value_args[0], value_args[1]);
 		case FN_DIV:
 			assert(self->nb_args == 2 && value_args != NULL);
-			return num_div(value, value_args[0], value_args[1]);
+			return num_div(pval, value_args[0], value_args[1]);
 		case FN_POW:
 			assert(self->nb_args == 2 && value_args != NULL);
-			return num_pow(value, value_args[0], value_args[1]);
+			return num_pow(pval, value_args[0], value_args[1]);
 		case FN_MOD:
 			assert(self->nb_args == 2 && value_args != NULL);
-			return num_mod(value, value_args[0], value_args[1]);
+			return num_mod(pval, value_args[0], value_args[1]);
 		case FN_NEG:
 			assert(self->nb_args == 1 && value_args != NULL);
-			return num_neg(value, value_args[0]);
+			return num_neg(pval, value_args[0]);
 		default:
 			assert(0);
 	}

@@ -47,7 +47,7 @@ expr_t *expr_const_op1(builtin_id builtin, expr_t *e1);
 expr_t *expr_const_op2(builtin_id builtin, expr_t *e1, expr_t *e2);
 expr_t *expr_const_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1);
 
-int expr_eval(const expr_t *self, numptr value);
+int expr_eval(const expr_t *self, numptr *pval);
 int expr_get_count_ref();
 
 #endif	/* EXPR_H */

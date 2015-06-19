@@ -14,7 +14,7 @@ expect {
 	-re "\[0-9.\]+"  { pass "$test" }
 }
 
-spawn "$ZSBC"
+spawn "$ZSBC" -V
 set test "Get GMP Library version"
 expect {
 	-nocase "gmp library" { pass "$test" }
@@ -98,5 +98,10 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Checking object count ref at the end of zsbc1.exp"
 send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
 
