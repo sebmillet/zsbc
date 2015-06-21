@@ -25,10 +25,13 @@ struct ToBeOrNotToBeAStructThatIsTheQuestion;
 typedef struct ToBeOrNotToBeAStructThatIsTheQuestion* numptr;
 
 void num_init();
+void num_terminate();
+
+int num_libswitch(const char *id);
 
 int num_get_count_ref();
 
-void num_lib_may_i_ask_you_to_identify_yourself_please();
+const char *num_identify_yourself();
 numptr num_undefvalue();
 void num_postcleanup(numptr *pnum);
 int num_is_not_initialized(numptr pnum);

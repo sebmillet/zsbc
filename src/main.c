@@ -34,9 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-	/* OL stands for Out Level (no link with Olympic Lyonnais) */
-typedef enum {OL_QUIET = 0, OL_NORMAL = 1, OL_VERBOSE = 2} out_level_t;
-out_level_t opt_ol = OL_NORMAL;
+static int out_level = L_NORMAL;
 
 const char *table_errors[] = {
 	"No error",			/* ERR_NONE */
@@ -50,16 +48,52 @@ char *s_strncpy(char *dest, const char *src, size_t n)
 	return r;
 }
 
-int out(const char *fmt, ...)
+char *s_strncat(char *dest, const char *src, size_t n)
 {
-	va_list args;
-	va_start(args, fmt);
-	int r = vprintf(fmt, args);
-	va_end(args);
+	char *r = strncat(dest, src, n);
+	dest[n - 1] = '\0';
 	return r;
 }
 
-int out_err(const char *fmt, ...)
+int outln(int level, const char *fmt, ...)
+{
+	if (level <= out_level || level == L_ENFORCE) {
+		va_list args;
+		va_start(args, fmt);
+		int r;
+		if (level == L_ERROR || level == L_WARNING) {
+			r = vprintf(fmt, args);
+			printf("\n");
+		} else {
+			r = vfprintf(stderr, fmt, args);
+			fprintf(stderr, "\n");
+		}
+		va_end(args);
+		return r;
+	} else {
+		return -1;
+	}
+}
+
+int out(int level, const char *fmt, ...)
+{
+	if (level <= out_level || level == L_ENFORCE) {
+		va_list args;
+		va_start(args, fmt);
+		int r;
+		if (level == L_ERROR || level == L_WARNING) {
+			r = vprintf(fmt, args);
+		} else {
+			r = vfprintf(stderr, fmt, args);
+		}
+		va_end(args);
+		return r;
+	} else {
+		return -1;
+	}
+}
+
+int outln_error(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -69,52 +103,45 @@ int out_err(const char *fmt, ...)
 	return r;
 }
 
-void out_err_code(int e)
+void outln_error_code(int e)
 {
-	if (e < 0 || e >= (sizeof(table_errors) / sizeof(*table_errors))) {
-		out_err("Error code %d", e);
+	if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
+		outln_error("%s", table_errors[e]);
 	} else {
-		out_err("%s", table_errors[e]);
+			/* Should an unknown error immediately stop the program execution?
+			 * Not sure of it.
+			 * I leave it ACTIVE for the moment.
+			*/
+		assert(e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors)));
+		outln_error("Unknown error code %d", e);
 	}
 }
 
 void usage()
 {
-	out_err("Usage: %s [options] [file ...]", PACKAGE_NAME);
-	out_err("  -h  -help     print this usage and exit");
-	out_err("  -V  -verbose  verbose output");
-	out_err("  -q  -quiet    don't print initial banner");
-	out_err("  -v  -version  print version information and exit");
-	out_err("  --            end of parameters, next options are file names");
+	fprintf(stderr, "Usage: %s [options] [file ...]\n", PACKAGE_NAME);
+	fprintf(stderr, "  -h  -help     print this usage and exit\n");
+	fprintf(stderr, "  -V  -verbose  verbose output\n");
+	fprintf(stderr, "  -q  -quiet    don't print initial banner\n");
+	fprintf(stderr, "  -v  -version  print version information and exit\n");
+	fprintf(stderr, "  --            end of parameters, next options are file names\n");
 	exit(-1);
 }
 
 void version()
 {
 #if defined(DEBUG) || defined(BISON_DEBUG) || defined(FLEX_DEBUG)
-	out(PACKAGE_STRING "d\n");
+	printf("%sd\n", PACKAGE_STRING);
 #else
-	out(PACKAGE_STRING "\n");
+	printf("%s\n", PACKAGE_STRING);
 #endif
-	out("Copyright 2015 Sébastien Millet\n");
-}
-
-void opt_check(int n, const char *opt)
-{
-	static int defined_options[2] = {0, 0};
-
-	if (defined_options[n]) {
-		out_err("Option %s already set", opt);
-		exit(-2);
-	} else
-		defined_options[n] = 1;
+	printf("Copyright (c) 2015 Sébastien Millet\n");
 }
 
 void output_count_ref_report(const char *name, int count_ref)
 {
-	if (opt_ol >= OL_VERBOSE || count_ref != 0) {
-		fprintf(stderr, "%s  %s count (should be 0): %i\n", (count_ref != 0 ? "** ERROR **" : "OK         "), name, count_ref);
-	}
+	outln(count_ref != 0 ? L_ERROR : L_VERBOSE,
+		"%s  %s count (should be 0): %i", (count_ref != 0 ? "** ERROR **" : "OK         "), name, count_ref);
 }
 
 void rt_warn(const char *fmt, ...)
@@ -147,6 +174,18 @@ void out_of_memory()
 	fatal("Out of memory");
 }
 
+void opt_check(int n, const char *opt)
+{
+	static int defined_options[3] = {0, 0};
+
+	assert(n < sizeof(defined_options) / sizeof(*defined_options));
+
+	if (defined_options[n]) {
+		fprintf(stderr, "Option %s already set", opt);
+		exit(-2);
+	} else
+		defined_options[n] = 1;
+}
 
 int main(int argc, char *argv[])
 {
@@ -155,10 +194,9 @@ int main(int argc, char *argv[])
 	yydebug = 1;
 #endif
 
-	num_init();
-
 	int optset_verbose = 0;
 	int optset_quiet = 0;
+	int optset_debug = 0;
 
 	int a = 1;
 	while (a >= 1 && a < argc) {
@@ -170,14 +208,18 @@ int main(int argc, char *argv[])
 		} else if (!strcmp(argv[a], "-verbose") || !strcmp(argv[a], "-V")) {
 			opt_check(0, argv[a]);
 			optset_verbose = 1;
-			opt_ol = OL_VERBOSE;
+			out_level = L_VERBOSE;
 		} else if (!strcmp(argv[a], "-quiet") || !strcmp(argv[a], "-q")) {
 			opt_check(1, argv[a]);
 			optset_quiet = 1;
-			opt_ol = OL_QUIET;
+			out_level = L_QUIET;
+		} else if (!strcmp(argv[a], "-debug") || !strcmp(argv[a], "-d")) {
+			opt_check(2, argv[a]);
+			optset_debug = 1;
+			out_level = L_DEBUG;
 		} else if (argv[a][0] == '-') {
 			if (strcmp(argv[a], "--")) {
-				out_err("%s: invalid option -- '%s'", PACKAGE_NAME, argv[a]);
+				fprintf(stderr, "%s: invalid option -- '%s'\n", PACKAGE_NAME, argv[a]);
 				a = -1;
 				break;
 			} else {
@@ -191,36 +233,24 @@ int main(int argc, char *argv[])
 			++a;
 	}
 
-	if (optset_verbose && optset_quiet) {
-		opt_ol = OL_NORMAL;
-	}
+	if (optset_verbose && optset_quiet)
+		out_level = L_NORMAL;
+	if (optset_debug)
+		out_level = L_DEBUG;
+
 	if (a < 0)
 		usage();
 
-	if (opt_ol >= OL_NORMAL) {
+	if (out_level >= L_NORMAL)
 		version();
-		num_lib_may_i_ask_you_to_identify_yourself_please();
-	}
+
+	num_init();
 
 	out_dbg("DEBUG mode activated\n");
 
-
-	vars_init();
-
 	yyparse();
 
-/*    bc_init_numbers();*/
-/*    bc_num num;*/
-/*    bc_init_num(&num);*/
-/*    bc_str2num(&num, "102", 10);*/
-/*    bc_out_num(num, 10, myputchar, 0);*/
-/*    printf("\n");*/
-/*    bc_free_num(&num);*/
-
-/*    nwptr x = nw_const_number("153");*/
-/*    nw_print(x);*/
-
-	vars_terminate();
+	num_terminate();
 
 	int n = num_get_count_ref();
 	output_count_ref_report("number", n);

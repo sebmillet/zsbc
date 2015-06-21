@@ -29,20 +29,37 @@
 #include "../extracfg.h"
 #endif
 
+#ifndef FALSE
+#define FALSE 0
+#endif
+#ifndef TRUE
+#define TRUE 1
+#endif
+
 #ifdef DEBUG
 #define out_dbg(...) \
-	out(__VA_ARGS__)
+	out(L_DEBUG, __VA_ARGS__)
 #else
 #define out_dbg(...) ;
 #endif
 
-enum {ERR_NONE = 0, ERR_DIV0};
+#define ERROR_NONE	0
+#define ERROR_DIV0	1
+void outln_error_code(int e);
 
-int out(const char *fmt, ...);
-int out_err(const char *fmt, ...);
-void out_err_code(int e);
+#define L_ENFORCE	(-1)
+#define L_ERROR		0
+#define L_WARNING	1
+#define L_QUIET		2
+#define L_NORMAL	3
+#define L_VERBOSE	4
+#define L_DEBUG		5
+int out(int level, const char *fmt, ...);
+int outln(int level, const char *fmt, ...);
+int outln_error(const char *fmt, ...);
 
 char *s_strncpy(char *dest, const char *src, size_t n);
+char *s_strncat(char *dest, const char *src, size_t n);
 
 #endif /* COMMON_H */
 

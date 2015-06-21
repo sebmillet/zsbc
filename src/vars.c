@@ -22,10 +22,37 @@
 #include <string.h>
 #include <stdio.h>
 
-vars_t *head;
+static void vars_t_destruct(vars_t *var);
+
+context_t *ctx = NULL;
+
+context_t *context_construct()
+{
+	context_t *c = malloc(sizeof(context_t));
+	c->head = NULL;
+	return c;
+}
+
+void context_destruct(context_t *c)
+{
+	vars_t *w;
+	vars_t *wnext;
+	for (w = c->head; w != NULL; w = wnext) {
+		wnext = w->next;
+		vars_t_destruct(w);
+	}
+	free(c);
+}
+
+void context_switch(context_t *c)
+{
+	ctx = c;
+}
 
 static vars_t *vars_t_construct(const char *name)
 {
+	out_dbg("Constructing one vars_t of name %s\n", name);
+
 	vars_t *v = malloc(sizeof(vars_t));
 	int l = strlen(name) + 1;
 	v->name = (char *)malloc(l);
@@ -44,25 +71,10 @@ static void vars_t_destruct(vars_t *var)
 	free(var);
 }
 
-void vars_init()
-{
-	head = NULL;
-}
-
-void vars_terminate()
-{
-	vars_t *w;
-	vars_t *wnext;
-	for (w = head; w != NULL; w = wnext) {
-		wnext = w->next;
-		vars_t_destruct(w);
-	}
-}
-
 numptr *vars_get_value(const char *name)
 {
 	vars_t *w;
-	for (w = head; w != NULL; w = w->next) {
+	for (w = ctx->head; w != NULL; w = w->next) {
 		if (!strcmp(w->name, name)) {
 			return &w->num;
 		}
@@ -75,8 +87,8 @@ void vars_set_value(const char *name, const numptr new_value)
 	numptr *pval = vars_get_value(name);
 	if (pval == NULL) {
 		vars_t *var = vars_t_construct(name);
-		var->next = head;
-		head = var;
+		var->next = ctx->head;
+		ctx->head = var;
 		pval = &(var->num);
 	} else {
 		num_destruct(pval);
@@ -87,7 +99,7 @@ void vars_set_value(const char *name, const numptr new_value)
 void vars_display_all()
 {
 	vars_t *w;
-	for (w = head; w != NULL; w = w->next) {
+	for (w = ctx->head; w != NULL; w = w->next) {
 		printf("%s=", w->name);
 		num_print(w->num, 10);
 		printf("\n");

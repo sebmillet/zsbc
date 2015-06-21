@@ -18,17 +18,24 @@
  */
 
 #include "numwrap.h"
+#include "vars.h"	/* Needed for context management */
+
 #include <stdio.h>
+#include <string.h>
+int asprintf(char **strp, const char *fmt, ...);
+char *strcasestr(const char *haystack, const char *needle);
 
 
 	/* GMP LIBRARY */
 #include <gmp.h>
-static void register_gmp();
+static void gmp_register();
+
 
 	/* BC LIBRARY */
 #include "number.h"
 #define BC_VERSION	"1.06.95"
-static void register_libbc();
+static void libbc_register();
+
 
 typedef struct lib_t {
 	const char *id;
@@ -36,24 +43,27 @@ typedef struct lib_t {
 	const char *libname;
 	const char *version;
 	void (*libactivate)();
+	void (*libterminate)();
+
+	context_t *context;
+
 	struct lib_t *next;
 } lib_t;
 lib_t *libhead = NULL;
-static void lib_register(const char *id, const char *description, const char *libname, const char *version, void (*libactivate)());
-static void libswitch(lib_t *l);
+static void lib_register(const char *id, const char *description, const char *libname, const char *version,
+	void (*libactivate)(), void (*libterminate)());
+static void libswitch(lib_t *l, int quiet);
 
 static int num_count_ref = 0;
 
-static void (*Llib_may_i_ask_you_to_identify_yourself_please)();
+static const char* (*Llib_identify_yourself)();
 static numptr (*Lconstruct)();
 static numptr (*Lconstruct_from_num)(const numptr num);
 static numptr (*Lconstruct_from_str)(const char *str, int base);
 static void (*Ldestruct)(numptr *pnum);
-
 static void (*Lprint)(const numptr num, int base);
 static int (*Lis_zero)(const numptr num);
 static long int (*Lgetlongint)(const numptr num);
-
 static int (*Ladd)(numptr *pr, const numptr a, const numptr b);
 static int (*Lsub)(numptr *pr, const numptr a, const numptr b);
 static int (*Lmul)(numptr *pr, const numptr a, const numptr b);
@@ -71,24 +81,64 @@ static int (*Lneg)(numptr *pr, const numptr a);
 void num_init()
 {
 
-	register_gmp();
-	register_libbc();
+	gmp_register();
+	libbc_register();
 
 		/* By default, activate the first registered library */
 	lib_t *l = libhead;
 	while (l->next != NULL)
 		l = l->next;
-	libswitch(l);
+	libswitch(l, FALSE);
 }
 
-static void libswitch(lib_t *l)
+void num_terminate()
 {
-	l->libactivate();
+	lib_t *l = libhead;
+	lib_t *lnext;
+	for(l = libhead; l != NULL; l = lnext) {
+		libswitch(l, TRUE);
+		context_destruct(l->context);
+		l->libterminate();
+		free(l);
+
+		lnext = l->next;
+	}
 }
 
-static void lib_register(const char *id, const char *description, const char *libname, const char *version, void (*libactivate)())
+static char *asurround(const char *str)
+{
+	unsigned int s = strlen(str) + 3;
+	char *res = malloc(sizeof(char) * s);
+	s_strncpy(res, "|", s);
+	s_strncat(res, str, s);
+	s_strncat(res, "|", s);
+	return res;
+}
+
+int num_libswitch(const char *id)
+{
+	lib_t *l = libhead;
+	for (l = libhead; l != NULL; l = l->next) {
+		char *slid = asurround(l->id);
+		char *sid = asurround(id);
+		out_dbg("Will match '%s' against '%s'\n", sid, slid);
+		char *p = strcasestr(slid, sid);
+		free(sid);
+		free(slid);
+		if (p != NULL) {
+			out_dbg("** MATCH\n");
+			libswitch(l, FALSE);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static void lib_register(const char *id, const char *description, const char *libname, const char *version,
+		void (*libactivate)(), void (*libterminate)())
 {
 	assert(libactivate != NULL);
+	assert(libterminate != NULL);
 
 	lib_t *lib = malloc(sizeof(lib_t));
 	lib->next = libhead;
@@ -99,8 +149,59 @@ static void lib_register(const char *id, const char *description, const char *li
 	lib->libname = libname;
 	lib->version = version;
 	lib->libactivate = libactivate;
+	lib->libterminate = libterminate;
+
+	lib->context = context_construct();
 
 	out_dbg("Registered library\n\tId: %s\n\tDescription: %s\n\tLibname: %s\n\tVersion: %s\n", id, description, libname, version);
+}
+
+static void libswitch(lib_t *l, int quiet)
+{
+
+	/*-----------------------------------------------------------------------------
+	 *  Yes it is a bit heavy.
+	 *  Programmers need being helped. The below will immediately detect
+	 *  (while lib is being registered) a missing function assignment.
+	 *-----------------------------------------------------------------------------*/
+
+	Llib_identify_yourself = NULL;
+	Lconstruct = NULL;
+	Lconstruct_from_num = NULL;
+	Lconstruct_from_str = NULL;
+	Ldestruct = NULL;
+	Lprint = NULL;
+	Lis_zero = NULL;
+	Lgetlongint = NULL;
+	Ladd = NULL;
+	Lsub = NULL;
+	Lmul = NULL;
+	Ldiv = NULL;
+	Lpow = NULL;
+	Lmod = NULL;
+	Lneg = NULL;
+
+	l->libactivate();
+	context_switch(l->context);
+
+	assert(Llib_identify_yourself != NULL);
+	assert(Lconstruct != NULL);
+	assert(Lconstruct_from_num != NULL);
+	assert(Lconstruct_from_str != NULL);
+	assert(Ldestruct != NULL);
+	assert(Lprint != NULL);
+	assert(Lis_zero != NULL);
+	assert(Lgetlongint != NULL);
+	assert(Ladd != NULL);
+	assert(Lsub != NULL);
+	assert(Lmul != NULL);
+	assert(Ldiv != NULL);
+	assert(Lpow != NULL);
+	assert(Lmod != NULL);
+	assert(Lneg != NULL);
+
+	if (!quiet)
+		outln(L_VERBOSE, "%s", Llib_identify_yourself());
 }
 
 int num_get_count_ref()
@@ -108,9 +209,9 @@ int num_get_count_ref()
 	return num_count_ref;
 }
 
-void num_lib_may_i_ask_you_to_identify_yourself_please()
+const char *num_identify_yourself()
 {
-	Llib_may_i_ask_you_to_identify_yourself_please();
+	return Llib_identify_yourself();
 }
 
 numptr num_undefvalue() { return NULL; }
@@ -188,7 +289,7 @@ int num_div(numptr *pr, const numptr a, const numptr b)
 {
 	assert(num_is_not_initialized(*pr));
 	if (num_is_zero(b))
-		return ERR_DIV0;
+		return ERROR_DIV0;
 	return Ldiv(pr, a, b);
 }
 
@@ -202,7 +303,7 @@ int num_mod(numptr *pr, const numptr a, const numptr b)
 {
 	assert(num_is_not_initialized(*pr));
 	if (num_is_zero(b))
-		return ERR_DIV0;
+		return ERROR_DIV0;
 	return Lmod(pr, a, b);
 }
 
@@ -218,8 +319,10 @@ int num_neg(numptr *pr, const numptr a)
  *-----------------------------------------------------------------------------*/
 
 
-void activate_gmp();
-static void gmp_lib_may_i_ask_you_to_identify_yourself_please();
+char *gmp_identify_yourself = NULL;
+void gmp_activate();
+void gmp_terminate();
+static const char *gmp_lib_identify_yourself();
 static numptr gmp_construct();
 static numptr gmp_construct_from_num(const numptr num);
 static numptr gmp_construct_from_str(const char *str, int base);
@@ -235,14 +338,15 @@ static int gmp_pow(numptr *pr, const numptr a, const numptr b);
 static int gmp_mod(numptr *pr, const numptr a, const numptr b);
 static int gmp_neg(numptr *pr, const numptr a);
 
-static void register_gmp()
+static void gmp_register()
 {
-	lib_register("gmp|gmpz|gmp-mpz", "GNU MP integers library", "libgmp", gmp_version, activate_gmp);
+	asprintf(&gmp_identify_yourself, "GMP library version %s", gmp_version);
+	lib_register("gmp|gmpz|gmp-mpz", "GNU MP integers library", "libgmp", gmp_version, gmp_activate, gmp_terminate);
 }
 
-void activate_gmp()
+void gmp_activate()
 {
-	Llib_may_i_ask_you_to_identify_yourself_please = gmp_lib_may_i_ask_you_to_identify_yourself_please;
+	Llib_identify_yourself = gmp_lib_identify_yourself;
 	Lconstruct = gmp_construct;
 	Lconstruct_from_num = gmp_construct_from_num;
 	Lconstruct_from_str = gmp_construct_from_str;
@@ -259,9 +363,14 @@ void activate_gmp()
 	Lneg = gmp_neg;
 }
 
-static void gmp_lib_may_i_ask_you_to_identify_yourself_please()
+void gmp_terminate()
 {
-	out("GMP library version %s\n", gmp_version);
+
+}
+
+static const char *gmp_lib_identify_yourself()
+{
+	return gmp_identify_yourself;
 }
 
 static numptr gmp_construct()
@@ -296,7 +405,6 @@ static void gmp_destruct(numptr *pnum)
 static void gmp_print(const numptr num, int base)
 {
 	mpz_out_str(NULL, base, *(const mpz_t *)num);
-	printf("\n");
 }
 
 static int gmp_is_zero(const numptr num)
@@ -367,13 +475,15 @@ static int gmp_neg(numptr *pr, const numptr a)
  *-----------------------------------------------------------------------------*/
 
 
+char *libbc_identify_yourself = NULL;
 static int libbc_scale;
 #define LIBBC_DEFAULT_SCALE	0
 static int libbc_get_scale();
 static void libbc_set_scale(int scale);
 
-void activate_libbc();
-static void libbc_lib_may_i_ask_you_to_identify_yourself_please();
+void libbc_activate();
+void libbc_terminate();
+static const char *libbc_lib_identify_yourself();
 static numptr libbc_construct();
 static numptr libbc_construct_from_num(const numptr num);
 static numptr libbc_construct_from_str(const char *str, int base);
@@ -389,12 +499,14 @@ static int libbc_pow(numptr *pr, const numptr a, const numptr b);
 static int libbc_mod(numptr *pr, const numptr a, const numptr b);
 static int libbc_neg(numptr *pr, const numptr a);
 
-static void register_libbc()
+static void libbc_register()
 {
 	bc_init_numbers();
 	libbc_set_scale(LIBBC_DEFAULT_SCALE);
 
-	lib_register("libbc|bc", "GNU BC library", "libbc", BC_VERSION, activate_libbc);
+	asprintf(&libbc_identify_yourself, "BC library version %s", BC_VERSION);
+
+	lib_register("libbc|bc", "GNU BC library", "libbc", BC_VERSION, libbc_activate, libbc_terminate);
 }
 
 int libbc_get_scale()
@@ -407,9 +519,9 @@ void libbc_set_scale(int scale)
 	libbc_scale = scale;
 }
 
-void activate_libbc()
+void libbc_activate()
 {
-	Llib_may_i_ask_you_to_identify_yourself_please = libbc_lib_may_i_ask_you_to_identify_yourself_please;
+	Llib_identify_yourself = libbc_lib_identify_yourself;
 	Lconstruct = libbc_construct;
 	Lconstruct_from_num = libbc_construct_from_num;
 	Lconstruct_from_str = libbc_construct_from_str;
@@ -426,9 +538,14 @@ void activate_libbc()
 	Lneg = libbc_neg;
 }
 
-static void libbc_lib_may_i_ask_you_to_identify_yourself_please()
+void libbc_terminate()
 {
-	out("BC library version %s\n", BC_VERSION);
+
+}
+
+static const char *libbc_lib_identify_yourself()
+{
+	return libbc_identify_yourself;
 }
 
 static numptr libbc_construct()
@@ -470,7 +587,6 @@ static void myputchar(int c)
 static void libbc_print(const numptr num, int base)
 {
 	bc_out_num((bc_num)num, 10, myputchar, 0);
-	printf("\n");
 }
 
 static int libbc_is_zero(const numptr num)
@@ -490,7 +606,7 @@ static int libbc_add(numptr *pr, const numptr a, const numptr b)
 	int nb = ((bc_num)b)->n_scale;
 	int scale_min = (na < nb ? nb : na);
 	bc_add((bc_num)a, (bc_num)b, (bc_num *)pr, scale_min);
-	return 0;
+	return ERROR_NONE;
 }
 
 static int libbc_sub(numptr *pr, const numptr a, const numptr b)
@@ -500,35 +616,35 @@ static int libbc_sub(numptr *pr, const numptr a, const numptr b)
 	int nb = ((bc_num)b)->n_scale;
 	int scale_min = (na < nb ? nb : na);
 	bc_sub((bc_num)a, (bc_num)b, (bc_num *)pr, scale_min);
-	return 0;
+	return ERROR_NONE;
 }
 
 static int libbc_mul(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
 	bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());
-	return 0;
+	return ERROR_NONE;
 }
 
 static int libbc_div(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
 	bc_divide((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());
-	return 0;
+	return ERROR_NONE;
 }
 
 static int libbc_pow(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
 	bc_raise((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());
-	return 0;
+	return ERROR_NONE;
 }
 
 static int libbc_mod(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
 	bc_modulo((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());
-	return 0;
+	return ERROR_NONE;
 }
 
 static int libbc_neg(numptr *pr, const numptr a)
@@ -536,6 +652,6 @@ static int libbc_neg(numptr *pr, const numptr a)
 	*pr = num_construct();
 	int na = ((bc_num)a)->n_scale;
 	bc_sub(_zero_, (bc_num)a, (bc_num *)pr, na);
-	return 0;
+	return ERROR_NONE;
 }
 

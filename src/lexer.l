@@ -53,7 +53,8 @@ void yyerror(char *s, ...);
 number			([A-Z0-9]|\\\n)+(\.([A-Z0-9]|\\\n)*)?
 /*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
 /*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
-identifier	[a-z][[:alnum:]]*
+identifier		[a-z][[:alnum:]]*
+string			\"[^\"]*\"
 
 %%
 
@@ -78,20 +79,31 @@ identifier	[a-z][[:alnum:]]*
 (?i:quit)		return QUIT;
 (?i:exit)		return QUIT;
 out				return OUTPUT;
+libswitch		return LIBSWITCH;
 (?i:outbase)	return OUTPUT;
 (?i:vars)		return VARS;
 (?i:variables)	return VARS;
 
 {identifier}	{
-	unsigned int l = strlen(yytext) + 1;
-	yylval.id = (char *)malloc(l);
-	s_strncpy(yylval.id, yytext, l);
+	unsigned int s = strlen(yytext) + 1;
+	yylval.str = (char *)malloc(s);
+	s_strncpy(yylval.str, yytext, s);
 	return IDENTIFIER;
 }
 
-"\n"	{ yycolumn = 1; return NEWLINE; }
+{string}	{
+	unsigned int len = strlen(yytext);
+	assert(yytext[len - 1] == '"');
+	yytext[len - 1] = '\0';
+	unsigned int s = strlen(yytext) + 1;
+	yylval.str = (char *)malloc(s);
+	s_strncpy(yylval.str, yytext + 1, s);
+	return STRING;
+}
+
+"\n"		{ yycolumn = 1; return NEWLINE; }
 \\\n
-.		{ yyerror("illegal character: %s", yytext); }
+.			{ yyerror("illegal character: %s", yytext); }
 
 %%
 

@@ -47,21 +47,25 @@ extern int yydebug;
   {
     INTEGER = 258,
     IDENTIFIER = 259,
-    QUIT = 260,
-    OUTPUT = 261,
-    VARS = 262,
-    NEWLINE = 263,
-    NEG = 264
+    STRING = 260,
+    QUIT = 261,
+    OUTPUT = 262,
+    VARS = 263,
+    LIBSWITCH = 264,
+    NEWLINE = 265,
+    NEG = 266
   };
 #endif
 /* Tokens.  */
 #define INTEGER 258
 #define IDENTIFIER 259
-#define QUIT 260
-#define OUTPUT 261
-#define VARS 262
-#define NEWLINE 263
-#define NEG 264
+#define STRING 260
+#define QUIT 261
+#define OUTPUT 262
+#define VARS 263
+#define LIBSWITCH 264
+#define NEWLINE 265
+#define NEG 266
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -72,9 +76,9 @@ union YYSTYPE
 
 	numptr num;
 	expr_t *enode;
-	char *id;
+	char *str;
 
-#line 78 "parser.h" /* yacc.c:1909  */
+#line 82 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1

@@ -55,14 +55,15 @@ void display_base();
 %union {
 	numptr num;
 	expr_t *enode;
-	char *id;
+	char *str;
 };
 
 %token <num> INTEGER
 %type <enode> expression expr_assignment
-%token <id> IDENTIFIER
+%token <str> IDENTIFIER
+%token <str> STRING
 
-%token QUIT OUTPUT VARS
+%token QUIT OUTPUT VARS LIBSWITCH
 
 %token NEWLINE
 
@@ -74,7 +75,7 @@ void display_base();
 
 %destructor { num_destruct(&$$); } <num>
 %destructor { expr_destruct($$); } <enode>
-%destructor { free($$); } <id>
+%destructor { free($$); } <str>
 
 %start input
 
@@ -91,10 +92,12 @@ instruction:
 	| expression NEWLINE {
 		numptr num = num_undefvalue();
 		int r = expr_eval($1, &num);
-		if (r != 0)
-			out_err_code(r);
-		else
+		if (r != 0) {
+			outln_error_code(r);
+		} else {
 			num_print(num, 10);
+			printf("\n");
+		}
 		num_destruct(&num);
 		expr_destruct($1);
 		loc_reset();
@@ -109,7 +112,7 @@ bare_assignment:
 		numptr num = num_undefvalue();
 		int r = expr_eval(enode, &num);
 		if (r != 0)
-			out_err_code(r);
+			outln_error_code(r);
 		num_destruct(&num);
 		expr_destruct(enode);
 	}
@@ -152,7 +155,7 @@ statement:
 			n = 16;
 		}
 		if (n == 0) {
-			out_err("Unknown base name: %s", $2);
+			outln_error("Unknown base name: %s", $2);
 			free($2);
 			YYERROR;
 		} else {
@@ -164,7 +167,7 @@ statement:
 	| OUTPUT INTEGER {
 		unsigned long int exp = num_getlongint($2);
 		if (exp < 2 || exp > 62) {
-			out_err("Base value must be in the range [2, 62]");
+			outln_error("Base value must be in the range [2, 62]");
 			num_destruct(&$2);
 			YYERROR;
 		} else {
@@ -176,12 +179,20 @@ statement:
 	| VARS {
 		vars_display_all();
 	}
+	| LIBSWITCH STRING {
+		if (num_libswitch($2) == 0) {
+			outln_error("Unknown library");
+		}
+	}
+	| LIBSWITCH {
+		outln(L_ENFORCE, "%s", num_identify_yourself());
+	}
 ;
 
 %%
 
 void display_base()
 {
-	printf("Output base: %i\n", opt_output_base);
+	outln(L_ENFORCE, "Output base: %i", opt_output_base);
 }
 

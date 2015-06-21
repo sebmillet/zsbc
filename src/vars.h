@@ -28,8 +28,14 @@ typedef struct vars_t {
 	struct vars_t *next;
 } vars_t;
 
-void vars_init();
-void vars_terminate();
+typedef struct context_t {
+	vars_t *head;
+} context_t;
+
+context_t *context_construct();
+void context_destruct(context_t *c);
+void context_switch(context_t *c);
+
 void vars_display_all();
 
 numptr *vars_get_value(const char *name);

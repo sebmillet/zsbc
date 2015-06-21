@@ -139,14 +139,14 @@ int expr_eval(const expr_t *self, numptr *pval)
 	if (self->nb_args >= 1)
 		value_args = malloc(sizeof(numptr) * (unsigned)self->nb_args);
 	int i;
-	int r;
+	int r = ERROR_NONE;
 	for (i = 0; i < self->nb_args; ++i)
 		value_args[i] = num_undefvalue();
 	for (i = 0; i < self->nb_args; ++i) {
-		if ((r = expr_eval(self->args[i], &value_args[i])) != ERR_NONE)
+		if ((r = expr_eval(self->args[i], &value_args[i])) != ERROR_NONE)
 			break;
 	}
-	if (r == ERR_NONE) {
+	if (r == ERROR_NONE) {
 		r = (table_eval[self->type])(self, (const numptr *)value_args, pval);
 	}
 	for (i = 0; i < self->nb_args; ++i)
@@ -161,7 +161,7 @@ static int eval_number(const expr_t *self, const numptr *value_args, numptr *pva
 	assert(self->type == TNODE_NUMBER && self->nb_args == 0 && value_args == NULL);
 	assert(num_is_not_initialized(*pval));
 	*pval = num_construct_from_num(self->num);
-	return 0;
+	return ERROR_NONE;
 }
 
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
@@ -173,7 +173,7 @@ static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pva
 		*pval = num_construct();
 	else
 		*pval = num_construct_from_num(*pnum);
-	return 0;
+	return ERROR_NONE;
 }
 
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval)
@@ -182,7 +182,7 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 	assert(num_is_not_initialized(*pval));
 	vars_set_value(self->varname, value_args[0]);
 	*pval = num_construct_from_num(value_args[0]);
-	return 0;
+	return ERROR_NONE;
 }
 
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval)
