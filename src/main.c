@@ -155,8 +155,7 @@ int main(int argc, char *argv[])
 	yydebug = 1;
 #endif
 
-/*    num_init_gmp();*/
-	num_init_libbc();
+	num_init();
 
 	int optset_verbose = 0;
 	int optset_quiet = 0;

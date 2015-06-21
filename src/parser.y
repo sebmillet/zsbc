@@ -89,7 +89,7 @@ instruction:
 	NEWLINE { loc_reset(); }
 	| bare_assignment NEWLINE
 	| expression NEWLINE {
-		numptr num = num_preinit();
+		numptr num = num_undefvalue();
 		int r = expr_eval($1, &num);
 		if (r != 0)
 			out_err_code(r);
@@ -106,7 +106,7 @@ instruction:
 bare_assignment:
 	IDENTIFIER '=' expression {
 		expr_t *enode = expr_const_setvar($1, $3);
-		numptr num = num_preinit();
+		numptr num = num_undefvalue();
 		int r = expr_eval(enode, &num);
 		if (r != 0)
 			out_err_code(r);

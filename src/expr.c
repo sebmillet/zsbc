@@ -141,7 +141,7 @@ int expr_eval(const expr_t *self, numptr *pval)
 	int i;
 	int r;
 	for (i = 0; i < self->nb_args; ++i)
-		value_args[i] = num_preinit();
+		value_args[i] = num_undefvalue();
 	for (i = 0; i < self->nb_args; ++i) {
 		if ((r = expr_eval(self->args[i], &value_args[i])) != ERR_NONE)
 			break;

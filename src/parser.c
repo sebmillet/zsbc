@@ -1408,7 +1408,7 @@ yyreduce:
   case 6:
 #line 91 "parser.y" /* yacc.c:1646  */
     {
-		numptr num = num_preinit();
+		numptr num = num_undefvalue();
 		int r = expr_eval((yyvsp[-1].enode), &num);
 		if (r != 0)
 			out_err_code(r);
@@ -1431,7 +1431,7 @@ yyreduce:
 #line 107 "parser.y" /* yacc.c:1646  */
     {
 		expr_t *enode = expr_const_setvar((yyvsp[-2].id), (yyvsp[0].enode));
-		numptr num = num_preinit();
+		numptr num = num_undefvalue();
 		int r = expr_eval(enode, &num);
 		if (r != 0)
 			out_err_code(r);

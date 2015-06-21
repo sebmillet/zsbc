@@ -22,32 +22,49 @@
 #include <string.h>
 #include <stdio.h>
 
+vars_t *head;
+
+static vars_t *vars_t_construct(const char *name)
+{
+	vars_t *v = malloc(sizeof(vars_t));
+	int l = strlen(name) + 1;
+	v->name = (char *)malloc(l);
+	s_strncpy(v->name, name, l);
+	v->num = num_undefvalue();
+	v->next = NULL;
+	return v;
+}
+
+static void vars_t_destruct(vars_t *var)
+{
+	if (var->name != NULL)
+		free(var->name);
+	num_destruct(&var->num);
+
+	free(var);
+}
+
 void vars_init()
 {
-	vars = NULL;
-	vars_ar = 0;
-	vars_nb = 0;
+	head = NULL;
 }
 
 void vars_terminate()
 {
-	int i;
-	for (i = 0; i < vars_nb; ++i) {
-		free(vars[i].name);
-		num_destruct(&vars[i].num);
+	vars_t *w;
+	vars_t *wnext;
+	for (w = head; w != NULL; w = wnext) {
+		wnext = w->next;
+		vars_t_destruct(w);
 	}
-	free(vars);
-	vars = NULL;
-	vars_ar = 0;
-	vars_nb = 0;
 }
 
 numptr *vars_get_value(const char *name)
 {
-	int i;
-	for (i = 0; i < vars_nb; ++i) {
-		if (!strcmp(vars[i].name, name)) {
-			return &vars[i].num;
+	vars_t *w;
+	for (w = head; w != NULL; w = w->next) {
+		if (!strcmp(w->name, name)) {
+			return &w->num;
 		}
 	}
 	return NULL;
@@ -57,17 +74,10 @@ void vars_set_value(const char *name, const numptr new_value)
 {
 	numptr *pval = vars_get_value(name);
 	if (pval == NULL) {
-		if (++vars_nb >= vars_ar) {
-			int new_vars_ar = vars_ar * 2;
-			if (new_vars_ar <= 0)
-				new_vars_ar = 1;
-			vars = (vars_t *)realloc(vars, sizeof(vars_t) * new_vars_ar);
-			vars_ar = new_vars_ar;
-		}
-		int l = strlen(name) + 1;
-		vars[vars_nb - 1].name = (char *)malloc(l);
-		s_strncpy(vars[vars_nb - 1].name, name, l);
-		pval = &(vars[vars_nb - 1].num);
+		vars_t *var = vars_t_construct(name);
+		var->next = head;
+		head = var;
+		pval = &(var->num);
 	} else {
 		num_destruct(pval);
 	}
@@ -76,10 +86,10 @@ void vars_set_value(const char *name, const numptr new_value)
 
 void vars_display_all()
 {
-	int i;
-	for (i = 0; i < vars_nb; ++i) {
-		printf("%s=", vars[i].name);
-		num_print(vars[i].num, 10);
+	vars_t *w;
+	for (w = head; w != NULL; w = w->next) {
+		printf("%s=", w->name);
+		num_print(w->num, 10);
 		printf("\n");
 	}
 }

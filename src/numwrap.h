@@ -24,10 +24,12 @@
 struct ToBeOrNotToBeAStructThatIsTheQuestion;
 typedef struct ToBeOrNotToBeAStructThatIsTheQuestion* numptr;
 
+void num_init();
+
 int num_get_count_ref();
 
 void num_lib_may_i_ask_you_to_identify_yourself_please();
-numptr num_preinit();
+numptr num_undefvalue();
 void num_postcleanup(numptr *pnum);
 int num_is_not_initialized(numptr pnum);
 numptr num_construct();
@@ -52,7 +54,7 @@ int num_neg(numptr *pr, const numptr a);
  *-----------------------------------------------------------------------------*/
 
 
-void num_init_libbc();
+//void num_init_libbc();
 
 
 /*-----------------------------------------------------------------------------
@@ -60,7 +62,7 @@ void num_init_libbc();
  *-----------------------------------------------------------------------------*/
 
 
-void num_init_gmp();
+//void num_init_gmp();
 
 #endif	/* NUMWRAP_H */
 

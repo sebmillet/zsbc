@@ -23,11 +23,24 @@
 
 	/* GMP LIBRARY */
 #include <gmp.h>
-
+static void register_gmp();
 
 	/* BC LIBRARY */
 #include "number.h"
 #define BC_VERSION	"1.06.95"
+static void register_libbc();
+
+typedef struct lib_t {
+	const char *id;
+	const char *description;
+	const char *libname;
+	const char *version;
+	void (*libactivate)();
+	struct lib_t *next;
+} lib_t;
+lib_t *libhead = NULL;
+static void lib_register(const char *id, const char *description, const char *libname, const char *version, void (*libactivate)());
+static void libswitch(lib_t *l);
 
 static int num_count_ref = 0;
 
@@ -55,6 +68,41 @@ static int (*Lneg)(numptr *pr, const numptr a);
  *-----------------------------------------------------------------------------*/
 
 
+void num_init()
+{
+
+	register_gmp();
+	register_libbc();
+
+		/* By default, activate the first registered library */
+	lib_t *l = libhead;
+	while (l->next != NULL)
+		l = l->next;
+	libswitch(l);
+}
+
+static void libswitch(lib_t *l)
+{
+	l->libactivate();
+}
+
+static void lib_register(const char *id, const char *description, const char *libname, const char *version, void (*libactivate)())
+{
+	assert(libactivate != NULL);
+
+	lib_t *lib = malloc(sizeof(lib_t));
+	lib->next = libhead;
+	libhead = lib;
+
+	lib->id = id;
+	lib->description = description;
+	lib->libname = libname;
+	lib->version = version;
+	lib->libactivate = libactivate;
+
+	out_dbg("Registered library\n\tId: %s\n\tDescription: %s\n\tLibname: %s\n\tVersion: %s\n", id, description, libname, version);
+}
+
 int num_get_count_ref()
 {
 	return num_count_ref;
@@ -65,7 +113,7 @@ void num_lib_may_i_ask_you_to_identify_yourself_please()
 	Llib_may_i_ask_you_to_identify_yourself_please();
 }
 
-numptr num_preinit() { return NULL; }
+numptr num_undefvalue() { return NULL; }
 void num_postcleanup(numptr *pnum) { *pnum = NULL; }
 int num_is_not_initialized(numptr num) { return (num == NULL); }
 
@@ -170,6 +218,7 @@ int num_neg(numptr *pr, const numptr a)
  *-----------------------------------------------------------------------------*/
 
 
+void activate_gmp();
 static void gmp_lib_may_i_ask_you_to_identify_yourself_please();
 static numptr gmp_construct();
 static numptr gmp_construct_from_num(const numptr num);
@@ -186,7 +235,12 @@ static int gmp_pow(numptr *pr, const numptr a, const numptr b);
 static int gmp_mod(numptr *pr, const numptr a, const numptr b);
 static int gmp_neg(numptr *pr, const numptr a);
 
-void num_init_gmp()
+static void register_gmp()
+{
+	lib_register("gmp|gmpz|gmp-mpz", "GNU MP integers library", "libgmp", gmp_version, activate_gmp);
+}
+
+void activate_gmp()
 {
 	Llib_may_i_ask_you_to_identify_yourself_please = gmp_lib_may_i_ask_you_to_identify_yourself_please;
 	Lconstruct = gmp_construct;
@@ -318,6 +372,7 @@ static int libbc_scale;
 static int libbc_get_scale();
 static void libbc_set_scale(int scale);
 
+void activate_libbc();
 static void libbc_lib_may_i_ask_you_to_identify_yourself_please();
 static numptr libbc_construct();
 static numptr libbc_construct_from_num(const numptr num);
@@ -334,6 +389,14 @@ static int libbc_pow(numptr *pr, const numptr a, const numptr b);
 static int libbc_mod(numptr *pr, const numptr a, const numptr b);
 static int libbc_neg(numptr *pr, const numptr a);
 
+static void register_libbc()
+{
+	bc_init_numbers();
+	libbc_set_scale(LIBBC_DEFAULT_SCALE);
+
+	lib_register("libbc|bc", "GNU BC library", "libbc", BC_VERSION, activate_libbc);
+}
+
 int libbc_get_scale()
 {
 	return libbc_scale;
@@ -344,11 +407,8 @@ void libbc_set_scale(int scale)
 	libbc_scale = scale;
 }
 
-void num_init_libbc()
+void activate_libbc()
 {
-	bc_init_numbers();
-	libbc_set_scale(LIBBC_DEFAULT_SCALE);
-
 	Llib_may_i_ask_you_to_identify_yourself_please = libbc_lib_may_i_ask_you_to_identify_yourself_please;
 	Lconstruct = libbc_construct;
 	Lconstruct_from_num = libbc_construct_from_num;

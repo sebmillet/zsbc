@@ -25,11 +25,8 @@
 typedef struct vars_t {
 	char *name;
 	numptr num;
+	struct vars_t *next;
 } vars_t;
-
-vars_t *vars;
-int vars_nb;
-int vars_ar;
 
 void vars_init();
 void vars_terminate();
