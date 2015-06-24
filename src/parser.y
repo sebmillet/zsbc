@@ -63,7 +63,7 @@ void display_base();
 %token <str> IDENTIFIER
 %token <str> STRING
 
-%token QUIT OUTPUT VARS LIBSWITCH
+%token QUIT OUTPUT VARS LIBSWITCH LIBLIST
 
 %token NEWLINE
 
@@ -186,6 +186,20 @@ statement:
 	}
 	| LIBSWITCH {
 		outln(L_ENFORCE, "%s", num_identify_yourself());
+	}
+	| LIBLIST {
+		char *w = NULL;
+		const char *id;
+		const char *description;
+		const char *libname;
+		const char *version;
+		outln(L_ENFORCE, "%-20s %-30s %-12s %-12s", "ID", "DESCRIPTION", "LIBNAME", "VERSION");
+		outln(L_ENFORCE, "%-20s %-30s %-12s %-12s", "--------------------", "------------------------------",
+				"------------", "------------");
+		do {
+			num_lib_enumerate(&w, &id, &description, &libname, &version);
+			outln(L_ENFORCE, "%-20s %-30s %-12s %-12s", id, description, libname, version);
+		} while (w != NULL);
 	}
 ;
 

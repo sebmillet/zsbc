@@ -1,4 +1,4 @@
-# tests/zsbc.test/zsbc2.exp
+# tests/zsbc.test/zsbc02.exp
 
 set timeout 3
 spawn "$ZSBC" -V
@@ -60,7 +60,7 @@ expect {
 	default { fail "$test" }
 }
 
-set test "Checking object count ref at the end of zsbc2.exp"
+set test "Checking object count ref at the end of zsbc02.exp"
 send "quit\n"
 expect {
 	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }

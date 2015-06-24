@@ -80,6 +80,7 @@ string			\"[^\"]*\"
 (?i:exit)		return QUIT;
 out				return OUTPUT;
 libswitch		return LIBSWITCH;
+liblist			return LIBLIST;
 (?i:outbase)	return OUTPUT;
 (?i:vars)		return VARS;
 (?i:variables)	return VARS;

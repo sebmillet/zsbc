@@ -30,9 +30,10 @@ typedef struct vars_t {
 
 typedef struct context_t {
 	vars_t *head;
+	int lib_reg_number;
 } context_t;
 
-context_t *context_construct();
+context_t *context_construct(int lib_reg_number);
 void context_destruct(context_t *c);
 void context_switch(context_t *c);
 

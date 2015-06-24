@@ -1,4 +1,4 @@
-# tests/zsbc.test/zsbc1.exp
+# tests/zsbc.test/zsbc01.exp
 
 set timeout 3
 send_user "***   Arithmetic tests\n"
@@ -98,7 +98,7 @@ expect {
 	default { fail "$test" }
 }
 
-set test "Checking object count ref at the end of zsbc1.exp"
+set test "Checking object count ref at the end of zsbc01.exp"
 send "quit\n"
 expect {
 	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }

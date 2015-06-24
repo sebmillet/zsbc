@@ -52,8 +52,9 @@ extern int yydebug;
     OUTPUT = 262,
     VARS = 263,
     LIBSWITCH = 264,
-    NEWLINE = 265,
-    NEG = 266
+    LIBLIST = 265,
+    NEWLINE = 266,
+    NEG = 267
   };
 #endif
 /* Tokens.  */
@@ -64,8 +65,9 @@ extern int yydebug;
 #define OUTPUT 262
 #define VARS 263
 #define LIBSWITCH 264
-#define NEWLINE 265
-#define NEG 266
+#define LIBLIST 265
+#define NEWLINE 266
+#define NEG 267
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -78,7 +80,7 @@ union YYSTYPE
 	expr_t *enode;
 	char *str;
 
-#line 82 "parser.h" /* yacc.c:1909  */
+#line 84 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1

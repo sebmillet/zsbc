@@ -46,10 +46,12 @@ typedef struct lib_t {
 	void (*libterminate)();
 
 	context_t *context;
+	int reg_number;		/* Live ID given at run time to uniquely identify the library */
 
 	struct lib_t *next;
 } lib_t;
 lib_t *libhead = NULL;
+lib_t *libcurrent = NULL;
 static void lib_register(const char *id, const char *description, const char *libname, const char *version,
 	void (*libactivate)(), void (*libterminate)());
 static void libswitch(lib_t *l, int quiet);
@@ -97,11 +99,12 @@ void num_terminate()
 	lib_t *lnext;
 	for(l = libhead; l != NULL; l = lnext) {
 		libswitch(l, TRUE);
+
 		context_destruct(l->context);
 		l->libterminate();
-		free(l);
 
 		lnext = l->next;
+		free(l); l = NULL;
 	}
 }
 
@@ -113,6 +116,11 @@ static char *asurround(const char *str)
 	s_strncat(res, str, s);
 	s_strncat(res, "|", s);
 	return res;
+}
+
+int num_get_current_lib_number()
+{
+	return libcurrent->reg_number;
 }
 
 int num_libswitch(const char *id)
@@ -134,9 +142,23 @@ int num_libswitch(const char *id)
 	return 0;
 }
 
+void num_lib_enumerate(char **paraml, const char **id, const char **description, const char **libname, const char **version)
+{
+	if (*paraml == NULL)
+		*paraml = (char *)libhead;
+	lib_t *l = (lib_t *)*paraml;
+	*id = l->id;
+	*description = l->description;
+	*libname = l->libname;
+	*version = l->version;
+	*paraml = (char *)l->next;
+}
+
 static void lib_register(const char *id, const char *description, const char *libname, const char *version,
 		void (*libactivate)(), void (*libterminate)())
 {
+	static int lib_reg_number = 0;
+
 	assert(libactivate != NULL);
 	assert(libterminate != NULL);
 
@@ -150,10 +172,12 @@ static void lib_register(const char *id, const char *description, const char *li
 	lib->version = version;
 	lib->libactivate = libactivate;
 	lib->libterminate = libterminate;
+	lib->reg_number = ++lib_reg_number;
 
-	lib->context = context_construct();
+	lib->context = context_construct(lib->reg_number);
 
-	out_dbg("Registered library\n\tId: %s\n\tDescription: %s\n\tLibname: %s\n\tVersion: %s\n", id, description, libname, version);
+	out_dbg("Registered library\n\tId: %s\n\tDescription: %s\n\tLibname: %s\n\tVersion: %s\n\tReg number: %d\n",
+		id, description, libname, version, lib->reg_number);
 }
 
 static void libswitch(lib_t *l, int quiet)
@@ -181,8 +205,9 @@ static void libswitch(lib_t *l, int quiet)
 	Lmod = NULL;
 	Lneg = NULL;
 
-	l->libactivate();
-	context_switch(l->context);
+	libcurrent = l;
+	libcurrent->libactivate();
+	context_switch(libcurrent->context);
 
 	assert(Llib_identify_yourself != NULL);
 	assert(Lconstruct != NULL);
@@ -506,7 +531,7 @@ static void libbc_register()
 
 	asprintf(&libbc_identify_yourself, "BC library version %s", BC_VERSION);
 
-	lib_register("libbc|bc", "GNU BC library", "libbc", BC_VERSION, libbc_activate, libbc_terminate);
+	lib_register("bc|bcnum", "GNU BC library", "libbc", BC_VERSION, libbc_activate, libbc_terminate);
 }
 
 int libbc_get_scale()

@@ -27,7 +27,9 @@ typedef struct ToBeOrNotToBeAStructThatIsTheQuestion* numptr;
 void num_init();
 void num_terminate();
 
+int num_get_current_lib_number();
 int num_libswitch(const char *id);
+void num_lib_enumerate(char **paramw, const char **id, const char **description, const char **libname, const char **version);
 
 int num_get_count_ref();
 
