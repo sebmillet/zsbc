@@ -1,0 +1,76 @@
+# tests/zsbc.test/zsbc04.exp
+
+set timeout 3
+spawn "$ZSBC" -V
+send_user "***   Comparison and logical operators\n"
+
+set test "Testing <"
+send -- "-3<-2\n-2<-2\n-2<-3\n3<2\n2<2\n2<3\n-3<2\n3<-2\n"
+expect {
+	-re "1\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+1\[^0-9\]+1\[^0-9\]+0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Testing <="
+send -- "-3<=-2\n-2<=-2\n-2<=-3\n3<=2\n2<=2\n2<=3\n-3<=2\n3<=-2\n"
+expect {
+	-re "1\[^0-9\]+1\[^0-9\]+0\[^0-9\]+0\[^0-9\]+1\[^0-9\]+1\[^0-9\]+1\[^0-9\]+0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Testing >"
+send -- "-3>-2\n-2>-2\n-2>-3\n3>2\n2>2\n2>3\n-3>2\n3>-2\n"
+expect {
+	-re "0\[^0-9\]+0\[^0-9\]+1\[^0-9\]+1\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+1\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Testing >="
+send -- "-3>=-2\n-2>=-2\n-2>=-3\n3>=2\n2>=2\n2>=3\n-3>=2\n3>=-2\n"
+expect {
+	-re "0\[^0-9\]+1\[^0-9\]+1\[^0-9\]+1\[^0-9\]+1\[^0-9\]+0\[^0-9\]+0\[^0-9\]+1\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Testing =="
+send -- "-3==-2\n-2==-2\n-2==-3\n3==2\n2==2\n2==3\n-3==2\n3==-2\n"
+expect {
+	-re "0\[^0-9\]+1\[^0-9\]+0\[^0-9\]+0\[^0-9\]+1\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Testing !="
+send -- "-3!=-2\n-2!=-2\n-2!=-3\n3!=2\n2!=2\n2!=3\n-3!=2\n3!=-2\n"
+expect {
+	-re "1\[^0-9\]+0\[^0-9\]+1\[^0-9\]+1\[^0-9\]+0\[^0-9\]+1\[^0-9\]+1\[^0-9\]+1\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Testing &&"
+send -- "0&&0\n0&&1\n1&&0\n1&&1\n"
+expect {
+	-re "0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+1\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Testing ||"
+send -- "0||0\n0||1\n1||0\n1||1\n"
+expect {
+	-re "0\[^0-9\]+1\[^0-9\]+1\[^0-9\]+1\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Testing !"
+send -- "!0\n!1\n"
+expect {
+	-re "1\[^0-9\]+0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref at the end of zsbc04.exp"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

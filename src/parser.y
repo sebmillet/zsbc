@@ -17,6 +17,9 @@
 
 /* Inspired from
  *   http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
+ *
+ * And for the arithmetic operators precedence and associativity definitions,
+ * it is just a rewording of bc source.
  */
 
 
@@ -37,17 +40,13 @@ void yyerror(char *s, ...);
 
 void loc_reset();
 
-int opt_output_base = 10;
-void display_base();
-
 #ifdef BISON_DEBUG
 #define YYDEBUG 1
 #endif
 
-%}
+builtin_id get_comparison_code(const char *s);
 
-/*%code requires {*/
-/*}*/
+%}
 
 %defines
 %locations
@@ -60,22 +59,25 @@ void display_base();
 
 %token <num> INTEGER
 %type <enode> expression expr_assignment
-%token <str> IDENTIFIER
-%token <str> STRING
+%token <str> IDENTIFIER STRING COMPARISON
 
-%token QUIT OUTPUT VARS LIBSWITCH LIBLIST
+%token QUIT VARS LIBSWITCH LIBLIST
 
 %token NEWLINE
 
+%left LOGIC_OR
+%left LOGIC_AND
+%nonassoc LOGIC_NOT
+%left COMPARISON
 %right '='
-%left '-' '+'
+%left '+' '-'
 %left '*' '/' '%'
-%precedence NEG
 %right '^'
+%nonassoc NEG
 
-%destructor { num_destruct(&$$); } <num>
-%destructor { expr_destruct($$); } <enode>
-%destructor { free($$); } <str>
+%destructor { num_destruct(&$$); out_dbg("parser.y: freed one num\n"); } <num>
+%destructor { expr_destruct($$); out_dbg("parser.y: freed one enode\n"); } <enode>
+%destructor { free($$); out_dbg("parser.y: freed one str\n"); } <str>
 
 %start input
 
@@ -135,47 +137,15 @@ expression:
 	| expression '^' expression { $$ = expr_const_op2(FN_POW, $1, $3); }
 	| expression '%' expression { $$ = expr_const_op2(FN_MOD, $1, $3); }
 	| '-' expression %prec NEG { $$ = expr_const_op1(FN_NEG, $2); }
+	| expression COMPARISON expression { $$ = expr_const_op2(get_comparison_code($2), $1, $3); free($2); }
+	| expression LOGIC_AND expression { $$ = expr_const_op2(FN_AND, $1, $3); }
+	| expression LOGIC_OR expression { $$ = expr_const_op2(FN_OR, $1, $3); }
+	| LOGIC_NOT expression { $$ = expr_const_op1(FN_NOT, $2); }
 	| '(' expression ')' { $$ = $2; }
 ;
 
 statement:
 	QUIT NEWLINE { YYABORT; }
-	| OUTPUT {
-		display_base();
-	}
-	| OUTPUT IDENTIFIER {
-		int n = 0;
-		if (!strcmp($2, "bin") || !strcmp($2, "binary")) {
-			n = 2;
-		} else if (!strcmp($2, "oct") || !strcmp($2, "octal")) {
-			n = 8;
-		} else if (!strcmp($2, "dec") || !strcmp($2, "decimal")) {
-			n = 10;
-		} else if (!strcmp($2, "hex") || !strcmp($2, "hexadecimal")) {
-			n = 16;
-		}
-		if (n == 0) {
-			outln_error("Unknown base name: %s", $2);
-			free($2);
-			YYERROR;
-		} else {
-			free($2);
-			opt_output_base = n;
-			display_base();
-		}
-	}
-	| OUTPUT INTEGER {
-		unsigned long int exp = num_getlongint($2);
-		if (exp < 2 || exp > 62) {
-			outln_error("Base value must be in the range [2, 62]");
-			num_destruct(&$2);
-			YYERROR;
-		} else {
-			opt_output_base = exp;
-			display_base();
-			num_destruct(&$2);
-		}
-	}
 	| VARS {
 		vars_display_all();
 	}
@@ -183,6 +153,7 @@ statement:
 		if (num_libswitch($2) == 0) {
 			outln_error("Unknown library");
 		}
+		free($2);
 	}
 	| LIBSWITCH {
 		outln(L_ENFORCE, "%s", num_identify_yourself());
@@ -205,8 +176,20 @@ statement:
 
 %%
 
-void display_base()
+builtin_id get_comparison_code(const char *s)
 {
-	outln(L_ENFORCE, "Output base: %i", opt_output_base);
+	if (!strcmp(s, "<"))
+		return FN_CMPLT;
+	else if (!strcmp(s, "<="))
+		return FN_CMPLE;
+	else if (!strcmp(s, ">"))
+		return FN_CMPGT;
+	else if (!strcmp(s, ">="))
+		return FN_CMPGE;
+	else if (!strcmp(s, "=="))
+		return FN_CMPEQ;
+	else if (!strcmp(s, "!="))
+		return FN_CMPNE;
+	assert(0);
 }
 

@@ -210,6 +210,35 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 		case FN_NEG:
 			assert(self->nb_args == 1 && value_args != NULL);
 			return num_neg(pval, value_args[0]);
+
+		case FN_CMPLT:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_cmplt(pval, value_args[0], value_args[1]);
+		case FN_CMPLE:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_cmple(pval, value_args[0], value_args[1]);
+		case FN_CMPGT:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_cmpgt(pval, value_args[0], value_args[1]);
+		case FN_CMPGE:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_cmpge(pval, value_args[0], value_args[1]);
+		case FN_CMPEQ:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_cmpeq(pval, value_args[0], value_args[1]);
+		case FN_CMPNE:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_cmpne(pval, value_args[0], value_args[1]);
+		case FN_AND:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_and(pval, value_args[0], value_args[1]);
+		case FN_OR:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_or(pval, value_args[0], value_args[1]);
+		case FN_NOT:
+			assert(self->nb_args == 1 && value_args != NULL);
+			return num_not(pval, value_args[0]);
+
 		default:
 			assert(0);
 	}

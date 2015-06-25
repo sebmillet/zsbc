@@ -52,6 +52,15 @@ int num_div(numptr *pr, const numptr a, const numptr b);
 int num_pow(numptr *pr, const numptr a, const numptr b);
 int num_mod(numptr *pr, const numptr a, const numptr b);
 int num_neg(numptr *pr, const numptr a);
+int num_cmplt(numptr *pr, const numptr a, const numptr b);
+int num_cmple(numptr *pr, const numptr a, const numptr b);
+int num_cmpgt(numptr *pr, const numptr a, const numptr b);
+int num_cmpge(numptr *pr, const numptr a, const numptr b);
+int num_cmpeq(numptr *pr, const numptr a, const numptr b);
+int num_cmpne(numptr *pr, const numptr a, const numptr b);
+int num_and(numptr *pr, const numptr a, const numptr b);
+int num_or(numptr *pr, const numptr a, const numptr b);
+int num_not(numptr *pr, const numptr a);
 
 
 /*-----------------------------------------------------------------------------

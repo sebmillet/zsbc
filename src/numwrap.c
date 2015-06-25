@@ -73,6 +73,15 @@ static int (*Ldiv)(numptr *pr, const numptr a, const numptr b);
 static int (*Lpow)(numptr *pr, const numptr a, const numptr b);
 static int (*Lmod)(numptr *pr, const numptr a, const numptr b);
 static int (*Lneg)(numptr *pr, const numptr a);
+static int (*Lcmplt)(numptr *pr, const numptr a, const numptr b);
+static int (*Lcmple)(numptr *pr, const numptr a, const numptr b);
+static int (*Lcmpgt)(numptr *pr, const numptr a, const numptr b);
+static int (*Lcmpge)(numptr *pr, const numptr a, const numptr b);
+static int (*Lcmpeq)(numptr *pr, const numptr a, const numptr b);
+static int (*Lcmpne)(numptr *pr, const numptr a, const numptr b);
+static int (*Land)(numptr *pr, const numptr a, const numptr b);
+static int (*Lor)(numptr *pr, const numptr a, const numptr b);
+static int (*Lnot)(numptr *pr, const numptr a);
 
 
 /*-----------------------------------------------------------------------------
@@ -204,6 +213,15 @@ static void libswitch(lib_t *l, int quiet)
 	Lpow = NULL;
 	Lmod = NULL;
 	Lneg = NULL;
+	Lcmplt = NULL;
+	Lcmple = NULL;
+	Lcmpgt = NULL;
+	Lcmpge = NULL;
+	Lcmpeq = NULL;
+	Lcmpne = NULL;
+	Land = NULL;
+	Lor = NULL;
+	Lnot = NULL;
 
 	libcurrent = l;
 	libcurrent->libactivate();
@@ -224,6 +242,15 @@ static void libswitch(lib_t *l, int quiet)
 	assert(Lpow != NULL);
 	assert(Lmod != NULL);
 	assert(Lneg != NULL);
+	assert(Lcmplt != NULL);
+	assert(Lcmple != NULL);
+	assert(Lcmpgt != NULL);
+	assert(Lcmpge != NULL);
+	assert(Lcmpeq != NULL);
+	assert(Lcmpne != NULL);
+	assert(Land != NULL);
+	assert(Lor != NULL);
+	assert(Lnot != NULL);
 
 	if (!quiet)
 		outln(L_VERBOSE, "%s", Llib_identify_yourself());
@@ -338,6 +365,60 @@ int num_neg(numptr *pr, const numptr a)
 	return Lneg(pr, a);
 }
 
+int num_cmplt(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lcmplt(pr, a, b);
+}
+
+int num_cmple(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lcmple(pr, a, b);
+}
+
+int num_cmpgt(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lcmpgt(pr, a, b);
+}
+
+int num_cmpge(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lcmpge(pr, a, b);
+}
+
+int num_cmpeq(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lcmpeq(pr, a, b);
+}
+
+int num_cmpne(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lcmpne(pr, a, b);
+}
+
+int num_and(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	return Land(pr, a, b);
+}
+
+int num_or(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lor(pr, a, b);
+}
+
+int num_not(numptr *pr, const numptr a)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lnot(pr, a);
+}
+
 
 /*-----------------------------------------------------------------------------
  *  GMP library functions
@@ -362,6 +443,15 @@ static int gmp_div(numptr *pr, const numptr a, const numptr b);
 static int gmp_pow(numptr *pr, const numptr a, const numptr b);
 static int gmp_mod(numptr *pr, const numptr a, const numptr b);
 static int gmp_neg(numptr *pr, const numptr a);
+static int gmp_cmplt(numptr *pr, const numptr a, const numptr b);
+static int gmp_cmple(numptr *pr, const numptr a, const numptr b);
+static int gmp_cmpgt(numptr *pr, const numptr a, const numptr b);
+static int gmp_cmpge(numptr *pr, const numptr a, const numptr b);
+static int gmp_cmpeq(numptr *pr, const numptr a, const numptr b);
+static int gmp_cmpne(numptr *pr, const numptr a, const numptr b);
+static int gmp_and(numptr *pr, const numptr a, const numptr b);
+static int gmp_or(numptr *pr, const numptr a, const numptr b);
+static int gmp_not(numptr *pr, const numptr a);
 
 static void gmp_register()
 {
@@ -386,12 +476,18 @@ void gmp_activate()
 	Lpow = gmp_pow;
 	Lmod = gmp_mod;
 	Lneg = gmp_neg;
+	Lcmplt = gmp_cmplt;
+	Lcmple = gmp_cmple;
+	Lcmpgt = gmp_cmpgt;
+	Lcmpge = gmp_cmpge;
+	Lcmpeq = gmp_cmpeq;
+	Lcmpne = gmp_cmpne;
+	Land = gmp_and;
+	Lor = gmp_or;
+	Lnot = gmp_not;
 }
 
-void gmp_terminate()
-{
-
-}
+void gmp_terminate() { }
 
 static const char *gmp_lib_identify_yourself()
 {
@@ -494,6 +590,80 @@ static int gmp_neg(numptr *pr, const numptr a)
 	return 0;
 }
 
+static int gmp_cmplt(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+	long int c = mpz_cmp(*(const mpz_t *)a, *(const mpz_t *)b);
+	mpz_set_si(*(mpz_t *)*pr, c < 0 ? 1L : 0L);
+	return 0;
+}
+
+static int gmp_cmple(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+	long int c = mpz_cmp(*(const mpz_t *)a, *(const mpz_t *)b);
+	mpz_set_si(*(mpz_t *)*pr, c <= 0 ? 1L : 0L);
+	return 0;
+}
+
+static int gmp_cmpgt(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+	long int c = mpz_cmp(*(const mpz_t *)a, *(const mpz_t *)b);
+	mpz_set_si(*(mpz_t *)*pr, c > 0 ? 1L : 0L);
+	return 0;
+}
+
+static int gmp_cmpge(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+	long int c = mpz_cmp(*(const mpz_t *)a, *(const mpz_t *)b);
+	mpz_set_si(*(mpz_t *)*pr, c >= 0 ? 1L : 0L);
+	return 0;
+}
+
+static int gmp_cmpeq(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+	long int c = mpz_cmp(*(const mpz_t *)a, *(const mpz_t *)b);
+	mpz_set_si(*(mpz_t *)*pr, c == 0 ? 1L : 0L);
+	return 0;
+}
+
+static int gmp_cmpne(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+	long int c = mpz_cmp(*(const mpz_t *)a, *(const mpz_t *)b);
+	mpz_set_si(*(mpz_t *)*pr, c != 0 ? 1L : 0L);
+	return 0;
+}
+
+static int gmp_and(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+	long int logical_a = mpz_get_si(*(mpz_t *)a);
+	long int logical_b = mpz_get_si(*(mpz_t *)b);
+	mpz_set_si(*(mpz_t *)*pr, logical_a && logical_b ? 1L : 0L);
+	return 0;
+}
+
+static int gmp_or(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+	long int logical_a = mpz_get_si(*(mpz_t *)a);
+	long int logical_b = mpz_get_si(*(mpz_t *)b);
+	mpz_set_si(*(mpz_t *)*pr, logical_a || logical_b ? 1L : 0L);
+	return 0;
+}
+
+static int gmp_not(numptr *pr, const numptr a)
+{
+	*pr = num_construct();
+	long int logical_a = mpz_get_si(*(mpz_t *)a);
+	mpz_set_si(*(mpz_t *)*pr, logical_a ? 0L : 1L);
+	return 0;
+}
+
 
 /*-----------------------------------------------------------------------------
  *  BC functions
@@ -523,6 +693,15 @@ static int libbc_div(numptr *pr, const numptr a, const numptr b);
 static int libbc_pow(numptr *pr, const numptr a, const numptr b);
 static int libbc_mod(numptr *pr, const numptr a, const numptr b);
 static int libbc_neg(numptr *pr, const numptr a);
+static int libbc_cmplt(numptr *pr, const numptr a, const numptr b);
+static int libbc_cmple(numptr *pr, const numptr a, const numptr b);
+static int libbc_cmpgt(numptr *pr, const numptr a, const numptr b);
+static int libbc_cmpge(numptr *pr, const numptr a, const numptr b);
+static int libbc_cmpeq(numptr *pr, const numptr a, const numptr b);
+static int libbc_cmpne(numptr *pr, const numptr a, const numptr b);
+static int libbc_and(numptr *pr, const numptr a, const numptr b);
+static int libbc_or(numptr *pr, const numptr a, const numptr b);
+static int libbc_not(numptr *pr, const numptr a);
 
 static void libbc_register()
 {
@@ -561,12 +740,18 @@ void libbc_activate()
 	Lpow = libbc_pow;
 	Lmod = libbc_mod;
 	Lneg = libbc_neg;
+	Lcmplt = libbc_cmplt;
+	Lcmple = libbc_cmple;
+	Lcmpgt = libbc_cmpgt;
+	Lcmpge = libbc_cmpge;
+	Lcmpeq = libbc_cmpeq;
+	Lcmpne = libbc_cmpne;
+	Land = libbc_and;
+	Lor = libbc_or;
+	Lnot = libbc_not;
 }
 
-void libbc_terminate()
-{
-
-}
+void libbc_terminate() { }
 
 static const char *libbc_lib_identify_yourself()
 {
@@ -677,6 +862,70 @@ static int libbc_neg(numptr *pr, const numptr a)
 	*pr = num_construct();
 	int na = ((bc_num)a)->n_scale;
 	bc_sub(_zero_, (bc_num)a, (bc_num *)pr, na);
+	return ERROR_NONE;
+}
+
+static int libbc_cmplt(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	return ERROR_NONE;
+}
+
+static int libbc_cmple(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	return ERROR_NONE;
+}
+
+static int libbc_cmpgt(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	return ERROR_NONE;
+}
+
+static int libbc_cmpge(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	return ERROR_NONE;
+}
+
+static int libbc_cmpeq(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	return ERROR_NONE;
+}
+
+static int libbc_cmpne(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	return ERROR_NONE;
+}
+
+static int libbc_and(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	return ERROR_NONE;
+}
+
+static int libbc_or(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	return ERROR_NONE;
+}
+
+static int libbc_not(numptr *pr, const numptr a)
+{
+	*pr = num_construct();
+/*    int na = ((bc_num)a)->n_scale;*/
+/*    bc_sub(_zero_, (bc_num)a, (bc_num *)pr, na);*/
 	return ERROR_NONE;
 }
 

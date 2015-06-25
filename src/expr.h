@@ -24,7 +24,8 @@
 
 typedef enum {TNODE_NUMBER = 0, TNODE_GETVAR, TNODE_SETVAR, TNODE_BUILTIN_OP, TNODE_LAST = TNODE_BUILTIN_OP} expr_node_t;
 
-typedef enum {FN_ADD, FN_SUB, FN_MUL, FN_DIV, FN_POW, FN_MOD, FN_NEG} builtin_id;
+typedef enum {FN_ADD, FN_SUB, FN_MUL, FN_DIV, FN_POW, FN_MOD, FN_NEG,
+	FN_CMPLT, FN_CMPLE, FN_CMPGT, FN_CMPGE, FN_CMPEQ, FN_CMPNE, FN_OR, FN_AND, FN_NOT} builtin_id;
 
 struct expr_t {
 	expr_node_t type;

@@ -36,6 +36,8 @@
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
 
+void s_alloc_and_copy(char **dst, const char *src);
+
 void yyerror(char *s, ...);
 
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
@@ -69,6 +71,17 @@ string			\"[^\"]*\"
 ")"			return ')';
 "^"			return '^';
 "%"			return '%';
+";"			return ';';
+","			return ',';
+"{"			return '{';
+"}"			return '}';
+"||"		return LOGIC_OR;
+"&&"		return LOGIC_AND;
+"!"			return LOGIC_NOT;
+"<"|"<="|">"|">="|"=="|"!="	{
+	s_alloc_and_copy(&yylval.str, yytext);
+	return COMPARISON;
+}
 
 {number}	{
 	cleanup_inputnumber(yytext);
@@ -76,19 +89,14 @@ string			\"[^\"]*\"
 	return INTEGER;
 }
 
-(?i:quit)		return QUIT;
+(?i:quit)		return QUIT;	/* FIXME - either case sensitive or insensitive but should be consistent for all tokens */
 (?i:exit)		return QUIT;
-out				return OUTPUT;
 libswitch		return LIBSWITCH;
 liblist			return LIBLIST;
-(?i:outbase)	return OUTPUT;
 (?i:vars)		return VARS;
-(?i:variables)	return VARS;
 
 {identifier}	{
-	unsigned int s = strlen(yytext) + 1;
-	yylval.str = (char *)malloc(s);
-	s_strncpy(yylval.str, yytext, s);
+	s_alloc_and_copy(&yylval.str, yytext);
 	return IDENTIFIER;
 }
 
@@ -96,9 +104,7 @@ liblist			return LIBLIST;
 	unsigned int len = strlen(yytext);
 	assert(yytext[len - 1] == '"');
 	yytext[len - 1] = '\0';
-	unsigned int s = strlen(yytext) + 1;
-	yylval.str = (char *)malloc(s);
-	s_strncpy(yylval.str, yytext + 1, s);
+	s_alloc_and_copy(&yylval.str, yytext + 1);
 	return STRING;
 }
 
@@ -144,5 +150,12 @@ void yyerror(char *s, ...)
 	}
 	vfprintf(stderr, s, ap);
 	fprintf(stderr, "\n");
+}
+
+void s_alloc_and_copy(char **dst, const char *src)
+{
+	unsigned int s = strlen(src) + 1;
+	*dst = (char *)malloc(s);
+	s_strncpy(*dst, src, s);
 }
 
