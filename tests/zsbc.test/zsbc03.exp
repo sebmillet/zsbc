@@ -36,14 +36,21 @@ expect {
 set test "Embedded variables assignment"
 send "a=1+(b=1+(c=1+(d=1+(e=1+(f=1)))))\na\nb\nc\nd\ne\nf\n"
 expect {
-	-re "6.*5.*4.*3.*2.*1.*" { pass "$test" }
+	-re "6\[^0-9\]+5\[^0-9\]+4\[^0-9\]+3\[^0-9\]+2\[^0-9\]+1\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 
-set test "minus Variable"
+set test "Minus variable"
 send -- "a=12\n-a\n"
 expect {
 	-- "-12" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "All variables display"
+send "vars\n"
+expect {
+	-re "d=3\[^0-9\]+zeta=13\[^0-9\]+golf=12\[^0-9\]+g=11\[^0-9\]+f=1\[^0-9\]+e=2\[^0-9\]+delta=8\[^0-9\]+charlie=7\[^0-9\]+bb1=6\[^0-9\]+a0=5\[^0-9\]+def=4\[^0-9\]+c=4\[^0-9\]+b=5\[^0-9\]+a=12\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 
