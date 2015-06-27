@@ -3,7 +3,7 @@
  *
  *       Filename:  main.c
  *
- *    Description:  Manage zsbc execution.
+ *    Description:  Manages zsbc execution.
  *
  *        Version:  1.0
  *        Created:  14/06/2015 13:45:56
@@ -26,6 +26,7 @@
 #include "common.h"
 #include "vars.h"
 #include "expr.h"
+#include "program.h"
 #include "parser.h"
 #include "numwrap.h"
 
@@ -37,8 +38,9 @@
 static int out_level = L_NORMAL;
 
 const char *table_errors[] = {
-	"No error",			/* ERR_NONE */
-	"Division by 0"		/* ERR_DIV0 */
+	"No error",							/* ERROR_NONE */
+	"Division by 0",						/* ERROR_DIV0 */
+	"Negative exponent not authorized"	/* ERROR_NEGATIVE_EXP */
 };
 
 char *s_strncpy(char *dest, const char *src, size_t n)
@@ -62,11 +64,11 @@ int outln(int level, const char *fmt, ...)
 		va_start(args, fmt);
 		int r;
 		if (level == L_ERROR || level == L_WARNING) {
-			r = vprintf(fmt, args);
-			printf("\n");
-		} else {
 			r = vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
+		} else {
+			r = vprintf(fmt, args);
+			printf("\n");
 		}
 		va_end(args);
 		return r;
@@ -191,7 +193,7 @@ int main(int argc, char *argv[])
 {
 
 #ifdef BISON_DEBUG
-	yydebug = 1;
+	activate_bison_debug();
 #endif
 
 	int optset_verbose = 0;

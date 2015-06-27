@@ -3,7 +3,7 @@
  *
  *       Filename:  vars.c
  *
- *    Description:  Manage variables: simple ones (containing a number)
+ *    Description:  Manages variables: simple ones (containing a number)
  *    				and array (var[]) variables.
  *
  *        Version:  1.0

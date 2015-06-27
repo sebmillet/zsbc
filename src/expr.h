@@ -22,31 +22,20 @@
 #include "common.h"
 #include "numwrap.h"
 
-typedef enum {TNODE_NUMBER = 0, TNODE_GETVAR, TNODE_SETVAR, TNODE_BUILTIN_OP, TNODE_LAST = TNODE_BUILTIN_OP} expr_node_t;
-
 typedef enum {FN_ADD, FN_SUB, FN_MUL, FN_DIV, FN_POW, FN_MOD, FN_NEG,
 	FN_CMPLT, FN_CMPLE, FN_CMPGT, FN_CMPGE, FN_CMPEQ, FN_CMPNE, FN_OR, FN_AND, FN_NOT} builtin_id;
 
-struct expr_t {
-	expr_node_t type;
-	union {
-		char *varname;
-		numptr num;
-		builtin_id builtin;
-	};
-	int nb_args;
-	struct expr_t *args[2];
-};
+struct expr_t;
 typedef struct expr_t expr_t;
 
 void expr_destruct(expr_t *self);
 
-expr_t *expr_const_number(numptr num);
-expr_t *expr_const_getvar(char *varname);
-expr_t *expr_const_setvar(char *varname, expr_t *e1);
-expr_t *expr_const_op1(builtin_id builtin, expr_t *e1);
-expr_t *expr_const_op2(builtin_id builtin, expr_t *e1, expr_t *e2);
-expr_t *expr_const_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1);
+expr_t *expr_construct_number(numptr num);
+expr_t *expr_construct_getvar(char *varname);
+expr_t *expr_construct_setvar(char *varname, expr_t *e1);
+expr_t *expr_construct_op1(builtin_id builtin, expr_t *e1);
+expr_t *expr_construct_op2(builtin_id builtin, expr_t *e1, expr_t *e2);
+expr_t *expr_construct_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1);
 
 int expr_eval(const expr_t *self, numptr *pval);
 int expr_get_count_ref();

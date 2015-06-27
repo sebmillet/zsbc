@@ -53,11 +53,12 @@ extern int yydebug;
     VARS = 263,
     LIBSWITCH = 264,
     LIBLIST = 265,
-    NEWLINE = 266,
-    LOGIC_OR = 267,
-    LOGIC_AND = 268,
-    LOGIC_NOT = 269,
-    NEG = 270
+    WHILE = 266,
+    NEWLINE = 267,
+    LOGIC_OR = 268,
+    LOGIC_AND = 269,
+    LOGIC_NOT = 270,
+    NEG = 271
   };
 #endif
 /* Tokens.  */
@@ -69,24 +70,26 @@ extern int yydebug;
 #define VARS 263
 #define LIBSWITCH 264
 #define LIBLIST 265
-#define NEWLINE 266
-#define LOGIC_OR 267
-#define LOGIC_AND 268
-#define LOGIC_NOT 269
-#define NEG 270
+#define WHILE 266
+#define NEWLINE 267
+#define LOGIC_OR 268
+#define LOGIC_AND 269
+#define LOGIC_NOT 270
+#define NEG 271
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 54 "parser.y" /* yacc.c:1909  */
+#line 60 "parser.y" /* yacc.c:1909  */
 
 	numptr num;
 	expr_t *enode;
 	char *str;
+	program_t *prog;
 
-#line 90 "parser.h" /* yacc.c:1909  */
+#line 93 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -110,5 +113,11 @@ struct YYLTYPE
 extern YYSTYPE yylval;
 extern YYLTYPE yylloc;
 int yyparse (void);
+/* "%code provides" blocks.  */
+#line 53 "parser.y" /* yacc.c:1909  */
+
+void activate_bison_debug();
+
+#line 122 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */

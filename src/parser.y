@@ -3,7 +3,7 @@
  *
  *       Filename:  parser.y
  *
- *    Description:  Manage zsbc input (grammar level).
+ *    Description:  Manages zsbc input (grammar level).
  *
  *        Version:  1.0
  *        Created:  03/06/2015 23:22:00
@@ -15,7 +15,8 @@
  * =====================================================================================
  */
 
-/* Inspired from
+/*
+ * Inspired from
  *   http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
  *
  * And for the arithmetic operators precedence and associativity definitions,
@@ -33,6 +34,7 @@
 #include "numwrap.h"
 #include "vars.h"
 #include "expr.h"
+#include "program.h"
 
 extern int yylex();
 
@@ -48,6 +50,10 @@ builtin_id get_comparison_code(const char *s);
 
 %}
 
+%code provides {
+void activate_bison_debug();
+}
+
 %defines
 %locations
 
@@ -55,13 +61,17 @@ builtin_id get_comparison_code(const char *s);
 	numptr num;
 	expr_t *enode;
 	char *str;
+	program_t *prog;
 };
 
 %token <num> INTEGER
 %type <enode> expression expr_assignment
 %token <str> IDENTIFIER STRING COMPARISON
+%type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty bare_assignment
+%type <prog> loop_while
 
 %token QUIT VARS LIBSWITCH LIBLIST
+%token WHILE
 
 %token NEWLINE
 
@@ -78,6 +88,7 @@ builtin_id get_comparison_code(const char *s);
 %destructor { num_destruct(&$$); out_dbg("parser.y: freed one num\n"); } <num>
 %destructor { expr_destruct($$); out_dbg("parser.y: freed one enode\n"); } <enode>
 %destructor { free($$); out_dbg("parser.y: freed one str\n"); } <str>
+%destructor { program_destruct($$); out_dbg("parser.y: freed one program\n"); } <prog>
 
 %start input
 
@@ -85,67 +96,89 @@ builtin_id get_comparison_code(const char *s);
 
 input:
 	%empty
-	| instruction input
+	| NEWLINE input { loc_reset(); }
+	| program NEWLINE input
+	| statement NEWLINE input
+	| error NEWLINE input { out_dbg("Error encountered, ran yyclearin and yyerrok\n"); yyclearin; yyerrok; }
+;
+
+program:
+	instruction_list {
+		program_execute($1);
+		program_destruct($1);
+	}
+;
+
+instruction_block:
+	'{' instruction_inside_block '}' { $$ = $2; }
+;
+
+instruction_inside_block:
+	instruction_list { $$ = $1; }
+	| instruction_inside_block NEWLINE instruction_list { $$ = program_chain($1, $3); }
+;
+
+instruction_list:
+	instruction
+	| instruction_list ';' instruction { $$ = program_chain($1, $3); }
 ;
 
 instruction:
-	NEWLINE { loc_reset(); }
-	| bare_assignment NEWLINE
-	| expression NEWLINE {
-		numptr num = num_undefvalue();
-		int r = expr_eval($1, &num);
-		if (r != 0) {
-			outln_error_code(r);
-		} else {
-			num_print(num, 10);
-			printf("\n");
-		}
-		num_destruct(&num);
-		expr_destruct($1);
-		loc_reset();
-	}
-	| statement NEWLINE
-	| error NEWLINE { yyclearin; yyerrok; }
+	%empty { $$ = NULL; }
+	| instruction_non_empty
+;
+
+instruction_non_empty:
+	bare_assignment
+	| expression { $$ = program_construct_expr($1, FALSE); }
+	| STRING { $$ = program_construct_string($1); }
+	| loop_while
+	| instruction_block { $$ = $1; }
 ;
 
 bare_assignment:
 	IDENTIFIER '=' expression {
-		expr_t *enode = expr_const_setvar($1, $3);
-		numptr num = num_undefvalue();
-		int r = expr_eval(enode, &num);
-		if (r != 0)
-			outln_error_code(r);
-		num_destruct(&num);
-		expr_destruct(enode);
+		expr_t *enode = expr_construct_setvar($1, $3);
+		$$ = program_construct_expr(enode, TRUE);
 	}
 ;
 
 expr_assignment:
-	IDENTIFIER '=' expression {
-		$$ = expr_const_setvar($1, $3);
-	}
+	IDENTIFIER '=' expression { $$ = expr_construct_setvar($1, $3); }
 ;
 
 expression:
-    INTEGER { $$ = expr_const_number($1); }
-	| IDENTIFIER { $$ = expr_const_getvar($1); }
+    INTEGER { $$ = expr_construct_number($1); }
+	| IDENTIFIER { $$ = expr_construct_getvar($1); }
 	| expr_assignment
-	| expression '+' expression { $$ = expr_const_op2(FN_ADD, $1, $3); }
-	| expression '-' expression { $$ = expr_const_op2(FN_SUB, $1, $3); }
-	| expression '*' expression { $$ = expr_const_op2(FN_MUL, $1, $3); }
-	| expression '/' expression { $$ = expr_const_op2(FN_DIV, $1, $3); }
-	| expression '^' expression { $$ = expr_const_op2(FN_POW, $1, $3); }
-	| expression '%' expression { $$ = expr_const_op2(FN_MOD, $1, $3); }
-	| '-' expression %prec NEG { $$ = expr_const_op1(FN_NEG, $2); }
-	| expression COMPARISON expression { $$ = expr_const_op2(get_comparison_code($2), $1, $3); free($2); }
-	| expression LOGIC_AND expression { $$ = expr_const_op2(FN_AND, $1, $3); }
-	| expression LOGIC_OR expression { $$ = expr_const_op2(FN_OR, $1, $3); }
-	| LOGIC_NOT expression { $$ = expr_const_op1(FN_NOT, $2); }
+	| expression '+' expression { $$ = expr_construct_op2(FN_ADD, $1, $3); }
+	| expression '-' expression { $$ = expr_construct_op2(FN_SUB, $1, $3); }
+	| expression '*' expression { $$ = expr_construct_op2(FN_MUL, $1, $3); }
+	| expression '/' expression { $$ = expr_construct_op2(FN_DIV, $1, $3); }
+	| expression '^' expression { $$ = expr_construct_op2(FN_POW, $1, $3); }
+	| expression '%' expression { $$ = expr_construct_op2(FN_MOD, $1, $3); }
+	| '-' expression %prec NEG { $$ = expr_construct_op1(FN_NEG, $2); }
+	| expression COMPARISON expression { $$ = expr_construct_op2(get_comparison_code($2), $1, $3); free($2); }
+	| expression LOGIC_AND expression { $$ = expr_construct_op2(FN_AND, $1, $3); }
+	| expression LOGIC_OR expression { $$ = expr_construct_op2(FN_OR, $1, $3); }
+	| LOGIC_NOT expression { $$ = expr_construct_op1(FN_NOT, $2); }
 	| '(' expression ')' { $$ = $2; }
 ;
 
+loop_while:
+	WHILE '(' expression ')' instruction_non_empty {
+		program_loop_t loop;
+		loop.prgbefore = NULL;
+		loop.expbefore = $3;
+		loop.core = $5;
+		loop.expafter = NULL;
+		loop.prgafter = NULL;
+		$$ = program_construct_loop(&loop);
+	}
+;
+
 statement:
-	QUIT NEWLINE { YYABORT; }
+	QUIT { YYABORT; }
 	| VARS {
 		vars_display_all();
 	}
@@ -160,16 +193,13 @@ statement:
 	}
 	| LIBLIST {
 		char *w = NULL;
-		const char *id;
-		const char *description;
-		const char *libname;
-		const char *version;
-		outln(L_ENFORCE, "%-20s %-30s %-12s %-12s", "ID", "DESCRIPTION", "LIBNAME", "VERSION");
-		outln(L_ENFORCE, "%-20s %-30s %-12s %-12s", "--------------------", "------------------------------",
-				"------------", "------------");
+		libinfo_t li;
+		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "ID", "DESCRIPTION", "LIBNAME", "VERSION", "NUMSET");
+		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "------------", "------------------------------",
+				"----------", "----------", "----------");
 		do {
-			num_lib_enumerate(&w, &id, &description, &libname, &version);
-			outln(L_ENFORCE, "%-20s %-30s %-12s %-12s", id, description, libname, version);
+			num_lib_enumerate(&w, &li);
+			outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", li.id, li.description, li.libname, li.version, li.number_set);
 		} while (w != NULL);
 	}
 ;
@@ -191,5 +221,17 @@ builtin_id get_comparison_code(const char *s)
 	else if (!strcmp(s, "!="))
 		return FN_CMPNE;
 	assert(0);
+}
+
+void activate_bison_debug()
+{
+	/*
+	* Double test with caller (in main.c) as main.c also checks for BISON_DEBUG,
+	* but I find it clearer. This way, main.c highlights it is only when debug
+	* is activated. Below, the test is mandatory (yydebug undefined if no BISON_DEBUG)
+	*/
+#ifdef BISON_DEBUG
+	yydebug = 1;
+#endif
 }
 

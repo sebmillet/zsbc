@@ -43,8 +43,9 @@
 #define out_dbg(...) ;
 #endif
 
-#define ERROR_NONE	0
-#define ERROR_DIV0	1
+#define ERROR_NONE			0
+#define ERROR_DIV0			1
+#define ERROR_NEGATIVE_EXP	2
 void outln_error_code(int e);
 
 #define L_ENFORCE	(-1)

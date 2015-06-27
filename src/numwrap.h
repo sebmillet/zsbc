@@ -24,12 +24,20 @@
 struct ToBeOrNotToBeAStructThatIsTheQuestion;
 typedef struct ToBeOrNotToBeAStructThatIsTheQuestion* numptr;
 
+typedef struct libinfo_t {
+	const char *id;
+	const char *description;
+	const char *libname;
+	const char *version;
+	const char *number_set;
+} libinfo_t;
+
 void num_init();
 void num_terminate();
 
 int num_get_current_lib_number();
 int num_libswitch(const char *id);
-void num_lib_enumerate(char **paramw, const char **id, const char **description, const char **libname, const char **version);
+void num_lib_enumerate(char **paraml, libinfo_t *libinfo);
 
 int num_get_count_ref();
 

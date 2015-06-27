@@ -3,7 +3,7 @@
  *
  *       Filename:  lexer.l
  *
- *    Description:  Manage scanner of zsbc input.
+ *    Description:  Manages scanner of zsbc input.
  *
  *        Version:  1.0
  *        Created:  03/06/2015 23:22:00
@@ -15,7 +15,8 @@
  * =====================================================================================
  */
 
-/* Inspired from
+/*
+ * Inspired from
  * http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
  */
 
@@ -28,6 +29,7 @@
 #include "common.h"
 #include "numwrap.h"
 #include "expr.h"
+#include "program.h"
 #include "parser.h"
 
 #define YY_NO_INPUT
@@ -94,6 +96,7 @@ string			\"[^\"]*\"
 libswitch		return LIBSWITCH;
 liblist			return LIBLIST;
 (?i:vars)		return VARS;
+while			return WHILE;
 
 {identifier}	{
 	s_alloc_and_copy(&yylval.str, yytext);
@@ -143,6 +146,8 @@ void yyerror(char *s, ...)
 {
 	va_list ap;
 	va_start(ap, s);
+
+	out_dbg("yyerror() invocation\n");
 
 	if(yylloc.first_line) {
 		fprintf(stderr, "%d.%d-%d.%d: ", yylloc.first_line, yylloc.first_column,

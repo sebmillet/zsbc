@@ -10,7 +10,7 @@ send_user "Using $P version $version, executable is $ZSBC\n"
 set test "Checking $P version"
 spawn echo $version
 expect {
-	-re "\[0-9.\]+d" { fail "\n\n   *****************\n   ***  WARNING  ***\n   *****************\n\n$P compiled with a DEBUG option\n\n" }
+	-re "\[0-9.\]+d" { pass "\n\n   *****************\n   ***  WARNING  ***\n   *****************\n\n$P compiled with a DEBUG option\n\n" }
 	-re "\[0-9.\]+"  { pass "$test" }
 }
 

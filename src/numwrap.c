@@ -38,10 +38,7 @@ static void libbc_register();
 
 
 typedef struct lib_t {
-	const char *id;
-	const char *description;
-	const char *libname;
-	const char *version;
+	libinfo_t libinfo;
 	void (*libactivate)();
 	void (*libterminate)();
 
@@ -52,8 +49,7 @@ typedef struct lib_t {
 } lib_t;
 lib_t *libhead = NULL;
 lib_t *libcurrent = NULL;
-static void lib_register(const char *id, const char *description, const char *libname, const char *version,
-	void (*libactivate)(), void (*libterminate)());
+static void lib_register(libinfo_t li, void (*libactivate)(), void (*libterminate)());
 static void libswitch(lib_t *l, int quiet);
 
 static int num_count_ref = 0;
@@ -136,7 +132,7 @@ int num_libswitch(const char *id)
 {
 	lib_t *l = libhead;
 	for (l = libhead; l != NULL; l = l->next) {
-		char *slid = asurround(l->id);
+		char *slid = asurround(l->libinfo.id);
 		char *sid = asurround(id);
 		out_dbg("Will match '%s' against '%s'\n", sid, slid);
 		char *p = strcasestr(slid, sid);
@@ -151,20 +147,16 @@ int num_libswitch(const char *id)
 	return 0;
 }
 
-void num_lib_enumerate(char **paraml, const char **id, const char **description, const char **libname, const char **version)
+void num_lib_enumerate(char **paraml, libinfo_t *libinfo)
 {
 	if (*paraml == NULL)
 		*paraml = (char *)libhead;
 	lib_t *l = (lib_t *)*paraml;
-	*id = l->id;
-	*description = l->description;
-	*libname = l->libname;
-	*version = l->version;
+	*libinfo = l->libinfo;
 	*paraml = (char *)l->next;
 }
 
-static void lib_register(const char *id, const char *description, const char *libname, const char *version,
-		void (*libactivate)(), void (*libterminate)())
+static void lib_register(const libinfo_t li, void (*libactivate)(), void (*libterminate)())
 {
 	static int lib_reg_number = 0;
 
@@ -175,18 +167,15 @@ static void lib_register(const char *id, const char *description, const char *li
 	lib->next = libhead;
 	libhead = lib;
 
-	lib->id = id;
-	lib->description = description;
-	lib->libname = libname;
-	lib->version = version;
+	lib->libinfo = li;
 	lib->libactivate = libactivate;
 	lib->libterminate = libterminate;
 	lib->reg_number = ++lib_reg_number;
 
 	lib->context = context_construct(lib->reg_number);
 
-	out_dbg("Registered library\n\tId: %s\n\tDescription: %s\n\tLibname: %s\n\tVersion: %s\n\tReg number: %d\n",
-		id, description, libname, version, lib->reg_number);
+	out_dbg("Registered library\n\tId: %s\n\tDescription: %s\n\tLibname: %s\n\tVersion: %s\n\tNumber set: %s\n\tReg number: %d\n",
+		li.id, li.description, li.libname, li.version, li.number_set, lib->reg_number);
 }
 
 static void libswitch(lib_t *l, int quiet)
@@ -456,7 +445,14 @@ static int gmp_not(numptr *pr, const numptr a);
 static void gmp_register()
 {
 	asprintf(&gmp_identify_yourself, "GMP library version %s", gmp_version);
-	lib_register("gmp|gmpz|gmp-mpz", "GNU MP integers library", "libgmp", gmp_version, gmp_activate, gmp_terminate);
+
+	libinfo_t li;
+	li.id = "gmp|gmpz";
+	li.description = "GNU MP integers library";
+	li.libname = "libgmp";
+	li.version = gmp_version;
+	li.number_set = "Integers";
+	lib_register(li, gmp_activate, gmp_terminate);
 }
 
 void gmp_activate()
@@ -569,7 +565,9 @@ static int gmp_div(numptr *pr, const numptr a, const numptr b)
 
 static int gmp_pow(numptr *pr, const numptr a, const numptr b)
 {
-	unsigned long int exp = mpz_get_ui(*(mpz_t *)b);
+	signed long int exp = mpz_get_si(*(mpz_t *)b);
+	if (exp < 0)
+		return ERROR_NEGATIVE_EXP;
 	*pr = num_construct();
 	mpz_pow_ui(*(mpz_t *)*pr, *(const mpz_t *)a, exp);
 	return 0;
@@ -710,7 +708,13 @@ static void libbc_register()
 
 	asprintf(&libbc_identify_yourself, "BC library version %s", BC_VERSION);
 
-	lib_register("bc|bcnum", "GNU BC library", "libbc", BC_VERSION, libbc_activate, libbc_terminate);
+	libinfo_t li;
+	li.id = "bc|bcnum";
+	li.description = "GNU BC library";
+	li.libname = "libbc";
+	li.version = BC_VERSION;
+	li.number_set = "Reals";
+	lib_register(li, libbc_activate, libbc_terminate);
 }
 
 int libbc_get_scale()
@@ -868,6 +872,7 @@ static int libbc_neg(numptr *pr, const numptr a)
 static int libbc_cmplt(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
 	return ERROR_NONE;
 }
@@ -875,6 +880,7 @@ static int libbc_cmplt(numptr *pr, const numptr a, const numptr b)
 static int libbc_cmple(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
 	return ERROR_NONE;
 }
@@ -882,6 +888,7 @@ static int libbc_cmple(numptr *pr, const numptr a, const numptr b)
 static int libbc_cmpgt(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
 	return ERROR_NONE;
 }
@@ -889,6 +896,7 @@ static int libbc_cmpgt(numptr *pr, const numptr a, const numptr b)
 static int libbc_cmpge(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
 	return ERROR_NONE;
 }
@@ -896,6 +904,7 @@ static int libbc_cmpge(numptr *pr, const numptr a, const numptr b)
 static int libbc_cmpeq(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
 	return ERROR_NONE;
 }
@@ -903,6 +912,7 @@ static int libbc_cmpeq(numptr *pr, const numptr a, const numptr b)
 static int libbc_cmpne(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
 	return ERROR_NONE;
 }
@@ -910,6 +920,7 @@ static int libbc_cmpne(numptr *pr, const numptr a, const numptr b)
 static int libbc_and(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
 	return ERROR_NONE;
 }
@@ -917,6 +928,7 @@ static int libbc_and(numptr *pr, const numptr a, const numptr b)
 static int libbc_or(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
 	return ERROR_NONE;
 }
@@ -924,6 +936,7 @@ static int libbc_or(numptr *pr, const numptr a, const numptr b)
 static int libbc_not(numptr *pr, const numptr a)
 {
 	*pr = num_construct();
+	/* TODO - FIXME */
 /*    int na = ((bc_num)a)->n_scale;*/
 /*    bc_sub(_zero_, (bc_num)a, (bc_num *)pr, na);*/
 	return ERROR_NONE;

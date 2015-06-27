@@ -3,7 +3,8 @@
  *
  *       Filename:  expr.c
  *
- *    Description:  Manage expressions with expr_t structure.
+ *    Description:  Manages expressions with expr_t structure and provides
+ *    				functions to *evaluate* it.
  *
  *        Version:  1.0
  *        Created:  07/06/2015 20:25:40
@@ -19,9 +20,20 @@
 #include "expr.h"
 #include "vars.h"
 
-/*#include <string.h>*/
+typedef enum {ENODE_NUMBER = 0, ENODE_GETVAR, ENODE_SETVAR, ENODE_BUILTIN_OP} enode_t;
 
-int expr_count_ref = 0;
+struct expr_t {
+	enode_t type;
+	union {
+		char *varname;
+		numptr num;
+		builtin_id builtin;
+	};
+	int nb_args;
+	expr_t *args[2];
+};
+
+static int expr_count_ref = 0;
 
 static void destruct_number(expr_t *self);
 static void destruct_getvar(expr_t *self);
@@ -34,17 +46,17 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval);
 
 static void (*table_destruct[])(expr_t *self) = {
-	destruct_number,	/* TNODE_NUMBER */
-	destruct_getvar,	/* TNODE_GETVAR */
-	destruct_setvar,	/* TNODE_SETVAR */
-	destruct_builtin_op	/* TNODE_BUILTIN_OP */
+	destruct_number,	/* ENODE_NUMBER */
+	destruct_getvar,	/* ENODE_GETVAR */
+	destruct_setvar,	/* ENODE_SETVAR */
+	destruct_builtin_op	/* ENODE_BUILTIN_OP */
 };
 
 static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr *pval) = {
-	eval_number,		/* TNODE_NUMBER */
-	eval_getvar,		/* TNODE_GETVAR */
-	eval_setvar,		/* TNODE_SETVAR */
-	eval_builtin_op		/* TNODE_BUILTIN_OP */
+	eval_number,		/* ENODE_NUMBER */
+	eval_getvar,		/* ENODE_GETVAR */
+	eval_setvar,		/* ENODE_SETVAR */
+	eval_builtin_op		/* ENODE_BUILTIN_OP */
 };
 
 static void destruct_number(expr_t *self)
@@ -73,9 +85,9 @@ void expr_destruct(expr_t *self)
 	--expr_count_ref;
 }
 
-static expr_t *expr_construct(expr_node_t type, int nb_args)
+static expr_t *expr_construct(enode_t type, int nb_args)
 {
-	out_dbg("Constructing expression, type: %d, #args: %d\n", type, nb_args);
+	out_dbg("Constructing one expression, type: %d, #args: %d\n", type, nb_args);
 	expr_t *self = (expr_t *)malloc(sizeof(expr_t));
 	self->type = type;
 	self->nb_args = nb_args;
@@ -86,50 +98,50 @@ static expr_t *expr_construct(expr_node_t type, int nb_args)
 	return self;
 }
 
-expr_t *expr_const_number(numptr num)
+expr_t *expr_construct_number(numptr num)
 {
-	expr_t *self = expr_construct(TNODE_NUMBER, 0);
+	expr_t *self = expr_construct(ENODE_NUMBER, 0);
 	self->num = num;
 	return self;
 }
 
-expr_t *expr_const_getvar(char *varname)
+expr_t *expr_construct_getvar(char *varname)
 {
-	expr_t *self =  expr_construct(TNODE_GETVAR, 0);
+	expr_t *self =  expr_construct(ENODE_GETVAR, 0);
 	self->varname = varname;
 	return self;
 }
 
-expr_t *expr_const_setvar(char *varname, expr_t *e1)
+expr_t *expr_construct_setvar(char *varname, expr_t *e1)
 {
-	expr_t *self = expr_construct(TNODE_SETVAR, 1);
+	expr_t *self = expr_construct(ENODE_SETVAR, 1);
 	self->varname = varname;
 	self->args[0] = e1;
 	return self;
 }
 
-expr_t *expr_const_op1(builtin_id builtin, expr_t *e1)
+expr_t *expr_construct_op1(builtin_id builtin, expr_t *e1)
 {
-	expr_t *self = expr_construct(TNODE_BUILTIN_OP, 1);
+	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 1);
 	self->builtin = builtin;
 	self->args[0] = e1;
 	return self;
 }
 
-expr_t *expr_const_op2(builtin_id builtin, expr_t *e1, expr_t *e2)
+expr_t *expr_construct_op2(builtin_id builtin, expr_t *e1, expr_t *e2)
 {
-	expr_t *self = expr_construct(TNODE_BUILTIN_OP, 2);
+	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 2);
 	self->builtin = builtin;
 	self->args[0] = e1;
 	self->args[1] = e2;
 	return self;
 }
 
-expr_t *expr_const_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1)
+expr_t *expr_construct_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1)
 {
-	expr_t *evar = expr_const_getvar(varname);
-	expr_t *etop = expr_const_op2(builtin, evar, e1);
-	return expr_const_setvar(varname, etop);
+	expr_t *evar = expr_construct_getvar(varname);
+	expr_t *etop = expr_construct_op2(builtin, evar, e1);
+	return expr_construct_setvar(varname, etop);
 }
 
 int expr_eval(const expr_t *self, numptr *pval)
@@ -158,7 +170,7 @@ int expr_eval(const expr_t *self, numptr *pval)
 
 static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == TNODE_NUMBER && self->nb_args == 0 && value_args == NULL);
+	assert(self->type == ENODE_NUMBER && self->nb_args == 0 && value_args == NULL);
 	assert(num_is_not_initialized(*pval));
 	*pval = num_construct_from_num(self->num);
 	return ERROR_NONE;
@@ -166,7 +178,7 @@ static int eval_number(const expr_t *self, const numptr *value_args, numptr *pva
 
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == TNODE_GETVAR && self->nb_args == 0 && value_args == NULL);
+	assert(self->type == ENODE_GETVAR && self->nb_args == 0 && value_args == NULL);
 	assert(num_is_not_initialized(*pval));
 	numptr *pnum = vars_get_value(self->varname);
 	if (pnum == NULL)
@@ -178,7 +190,7 @@ static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pva
 
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == TNODE_SETVAR && self->nb_args == 1 && value_args != NULL);
+	assert(self->type == ENODE_SETVAR && self->nb_args == 1 && value_args != NULL);
 	assert(num_is_not_initialized(*pval));
 	vars_set_value(self->varname, value_args[0]);
 	*pval = num_construct_from_num(value_args[0]);
@@ -187,7 +199,7 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == TNODE_BUILTIN_OP);
+	assert(self->type == ENODE_BUILTIN_OP);
 	switch (self->builtin) {
 		case FN_ADD:
 			assert(self->nb_args == 2 && value_args != NULL);

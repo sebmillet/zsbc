@@ -97,7 +97,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_zsbc_OBJECTS = main.$(OBJEXT) expr.$(OBJEXT) vars.$(OBJEXT) \
-	numwrap.$(OBJEXT) parser.$(OBJEXT) lexer.$(OBJEXT)
+	numwrap.$(OBJEXT) program.$(OBJEXT) parser.$(OBJEXT) \
+	lexer.$(OBJEXT)
 zsbc_OBJECTS = $(am_zsbc_OBJECTS)
 zsbc_DEPENDENCIES = $(LIBBC)
 zsbc_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(zsbc_LDFLAGS) $(LDFLAGS) \
@@ -279,7 +280,7 @@ SUFFIXES = .c .h .y .l
 AM_CPPFLAGS = -Wshadow -Wall -I$(srcdir) -I$(srcdir)/../h
 AM_YFLAGS = -d
 @DEBUG_FLEX_TRUE@AM_LFLAGS = --debug
-zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h parser.y lexer.l common.h
+zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h program.c program.h parser.y lexer.l common.h
 zsbc_LDFLAGS = 
 LIBBC = ../lib/libbc.a
 zsbc_LDADD = -lgmp $(LIBBC)
@@ -384,6 +385,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/numwrap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parser.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/program.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vars.Po@am__quote@
 
 .c.o:
