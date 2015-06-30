@@ -65,9 +65,9 @@ void activate_bison_debug();
 };
 
 %token <num> INTEGER
-%type <enode> expression expr_assignment
+%type <enode> expression expression_no_assignment expression_assignment
 %token <str> IDENTIFIER STRING COMPARISON
-%type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty bare_assignment
+%type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_assignment
 %type <prog> loop_while
 
 %token QUIT VARS LIBSWITCH LIBLIST
@@ -95,8 +95,7 @@ void activate_bison_debug();
 %%
 
 input:
-	%empty
-	| NEWLINE input { loc_reset(); }
+	%empty { loc_reset(); }
 	| program NEWLINE input
 	| statement NEWLINE input
 	| error NEWLINE input { out_dbg("Error encountered, ran yyclearin and yyerrok\n"); yyclearin; yyerrok; }
@@ -129,28 +128,32 @@ instruction:
 ;
 
 instruction_non_empty:
-	bare_assignment
-	| expression { $$ = program_construct_expr($1, FALSE); }
+	instruction_assignment
+	| expression_no_assignment { $$ = program_construct_expr($1, FALSE); }
 	| STRING { $$ = program_construct_string($1); }
 	| loop_while
 	| instruction_block { $$ = $1; }
 ;
 
-bare_assignment:
+instruction_assignment:
 	IDENTIFIER '=' expression {
 		expr_t *enode = expr_construct_setvar($1, $3);
 		$$ = program_construct_expr(enode, TRUE);
 	}
 ;
 
-expr_assignment:
+expression:
+	expression_no_assignment
+	| expression_assignment
+;
+
+expression_assignment:
 	IDENTIFIER '=' expression { $$ = expr_construct_setvar($1, $3); }
 ;
 
-expression:
+expression_no_assignment:
     INTEGER { $$ = expr_construct_number($1); }
 	| IDENTIFIER { $$ = expr_construct_getvar($1); }
-	| expr_assignment
 	| expression '+' expression { $$ = expr_construct_op2(FN_ADD, $1, $3); }
 	| expression '-' expression { $$ = expr_construct_op2(FN_SUB, $1, $3); }
 	| expression '*' expression { $$ = expr_construct_op2(FN_MUL, $1, $3); }
