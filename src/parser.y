@@ -168,12 +168,17 @@ expression_no_assignment:
 	| '(' expression ')' { $$ = $2; }
 ;
 
+newlines_or_empty:
+	%empty
+	| NEWLINE newlines_or_empty
+;
+
 loop_while:
-	WHILE '(' expression ')' instruction_non_empty {
+	WHILE '(' expression ')' newlines_or_empty instruction_non_empty {
 		program_loop_t loop;
 		loop.prgbefore = NULL;
 		loop.expbefore = $3;
-		loop.core = $5;
+		loop.core = $6;
 		loop.expafter = NULL;
 		loop.prgafter = NULL;
 		$$ = program_construct_loop(&loop);

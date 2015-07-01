@@ -98,7 +98,7 @@ expect {
 	default { fail "$test" }
 }
 
-set test "Checking object count ref at the end of zsbc01.exp"
+set test "Checking object count ref is null"
 send "quit\n"
 expect {
 	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }

@@ -1,0 +1,41 @@
+# tests/zsbc.test/zsbc20.exp
+
+set timeout 3
+spawn "$ZSBC" -V
+send_user "***   Programs - blocks and semicolons\n"
+
+set test "Semicolon list of expressions"
+send ";;2;;3;;\n"
+expect {
+	-re "2\[^0-9\]+3\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Block {}"
+send "a=101;b=202\n{a;b;\"allo\";a;b}\n"
+expect {
+	-re "101\[^0-9\]+202\[^0-9\]+allo101\[^0-9\]+202\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Block {} with many semicolons and newlines (1)"
+send "x=303;z=404\n\n;;;;{;;;;\n\n\nx+z;;;a\n\n\nx*z+a\n\"londres\"\n(a=909)\n\na\n\n;;;;\n\n;;;;};;;;b;;;;\n"
+expect {
+	-re "707\[^0-9\]+101\[^0-9\]+122513\[^0-9\]+londres909\[^0-9\]+909\[^0-9\]+202\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Block {} with many semicolons and newlines (2)"
+send "x=303;z=404;{x+z;a\nx*z+a;\"londres\";(a=909);a};b\n"
+expect {
+	-re "707\[^0-9\]+909\[^0-9\]+123321\[^0-9\]+londres909\[^0-9\]+909\[^0-9\]+202\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
