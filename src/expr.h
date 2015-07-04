@@ -31,11 +31,11 @@ typedef struct expr_t expr_t;
 void expr_destruct(expr_t *self);
 
 expr_t *expr_construct_number(numptr num);
-expr_t *expr_construct_getvar(char *varname);
-expr_t *expr_construct_setvar(char *varname, expr_t *e1);
+expr_t *expr_construct_getvar(const char *varname, expr_t *index);
+expr_t *expr_construct_setvar(const char *varname, expr_t *index, expr_t *e1);
 expr_t *expr_construct_op1(builtin_id builtin, expr_t *e1);
 expr_t *expr_construct_op2(builtin_id builtin, expr_t *e1, expr_t *e2);
-expr_t *expr_construct_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1);
+expr_t *expr_construct_op2_and_setvar(const char *varname, builtin_id builtin, expr_t *index, expr_t *e1);
 
 int expr_eval(const expr_t *self, numptr *pval);
 int expr_get_count_ref();

@@ -531,7 +531,7 @@ static int gmp_is_zero(const numptr num)
 
 static long int gmp_getlongint(const numptr num)
 {
-	return mpz_get_ui(*(mpz_t *)num);
+	return mpz_get_si(*(mpz_t *)num);
 }
 
 static int gmp_add(numptr *pr, const numptr a, const numptr b)

@@ -84,6 +84,7 @@ void activate_bison_debug();
 %left '*' '/' '%'
 %right '^'
 %nonassoc NEG
+%nonassoc PLUSPLUS_MINMIN
 
 %destructor { num_destruct(&$$); out_dbg("parser.y: freed one num\n"); } <num>
 %destructor { expr_destruct($$); out_dbg("parser.y: freed one enode\n"); } <enode>
@@ -137,7 +138,11 @@ instruction_non_empty:
 
 instruction_assignment:
 	IDENTIFIER '=' expression {
-		expr_t *enode = expr_construct_setvar($1, $3);
+		expr_t *enode = expr_construct_setvar($1, NULL, $3);
+		$$ = program_construct_expr(enode, TRUE);
+	}
+	| IDENTIFIER '[' expression ']' '=' expression {
+		expr_t *enode = expr_construct_setvar($1, $3, $6);
 		$$ = program_construct_expr(enode, TRUE);
 	}
 ;
@@ -148,12 +153,14 @@ expression:
 ;
 
 expression_assignment:
-	IDENTIFIER '=' expression { $$ = expr_construct_setvar($1, $3); }
+	IDENTIFIER '=' expression { $$ = expr_construct_setvar($1, NULL, $3); }
+	| IDENTIFIER '[' expression ']' '=' expression { $$ = expr_construct_setvar($1, $3, $6); }
 ;
 
 expression_no_assignment:
     INTEGER { $$ = expr_construct_number($1); }
-	| IDENTIFIER { $$ = expr_construct_getvar($1); }
+	| IDENTIFIER { $$ = expr_construct_getvar($1, NULL); }
+	| IDENTIFIER '[' expression ']' { $$ = expr_construct_getvar($1, $3); }
 	| expression '+' expression { $$ = expr_construct_op2(FN_ADD, $1, $3); }
 	| expression '-' expression { $$ = expr_construct_op2(FN_SUB, $1, $3); }
 	| expression '*' expression { $$ = expr_construct_op2(FN_MUL, $1, $3); }

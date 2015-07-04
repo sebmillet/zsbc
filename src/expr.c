@@ -20,7 +20,24 @@
 #include "expr.h"
 #include "vars.h"
 
-typedef enum {ENODE_NUMBER = 0, ENODE_GETVAR, ENODE_SETVAR, ENODE_BUILTIN_OP} enode_t;
+	/*
+	 *  	***********
+	 *  	* WARNING *
+	 *  	***********
+	 *
+	 *  The constants below are used, with these values, to address
+	 *  the elements of the following arrays:
+	 *  	table_destruct
+	 *  	table_eval
+	 *
+	*/
+
+typedef enum {
+	ENODE_NUMBER = 0,
+	ENODE_GETVAR = 1,
+	ENODE_SETVAR = 2,
+	ENODE_BUILTIN_OP = 3
+} enode_t;
 
 struct expr_t {
 	enode_t type;
@@ -46,17 +63,17 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval);
 
 static void (*table_destruct[])(expr_t *self) = {
-	destruct_number,	/* ENODE_NUMBER */
-	destruct_getvar,	/* ENODE_GETVAR */
-	destruct_setvar,	/* ENODE_SETVAR */
-	destruct_builtin_op	/* ENODE_BUILTIN_OP */
+	destruct_number,		/* ENODE_NUMBER */
+	destruct_getvar,		/* ENODE_GETVAR */
+	destruct_setvar,		/* ENODE_SETVAR */
+	destruct_builtin_op		/* ENODE_BUILTIN_OP */
 };
 
 static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr *pval) = {
-	eval_number,		/* ENODE_NUMBER */
-	eval_getvar,		/* ENODE_GETVAR */
-	eval_setvar,		/* ENODE_SETVAR */
-	eval_builtin_op		/* ENODE_BUILTIN_OP */
+	eval_number,			/* ENODE_NUMBER */
+	eval_getvar,			/* ENODE_GETVAR */
+	eval_setvar,			/* ENODE_SETVAR */
+	eval_builtin_op			/* ENODE_BUILTIN_OP */
 };
 
 static void destruct_number(expr_t *self)
@@ -72,6 +89,9 @@ static void destruct_builtin_op(expr_t *self) { }
 
 void expr_destruct(expr_t *self)
 {
+	if (self == NULL)
+		return;
+
 	out_dbg("Destructing expression, type: %d, #args: %d\n", self->type, self->nb_args);
 	int i;
 	for (i = 0; i < self->nb_args; ++i)
@@ -105,18 +125,20 @@ expr_t *expr_construct_number(numptr num)
 	return self;
 }
 
-expr_t *expr_construct_getvar(char *varname)
+expr_t *expr_construct_getvar(const char *varname, expr_t *index)
 {
-	expr_t *self =  expr_construct(ENODE_GETVAR, 0);
-	self->varname = varname;
+	expr_t *self =  expr_construct(ENODE_GETVAR, 1);
+	self->varname = (char *)varname;
+	self->args[0] = index;
 	return self;
 }
 
-expr_t *expr_construct_setvar(char *varname, expr_t *e1)
+expr_t *expr_construct_setvar(const char *varname, expr_t *index, expr_t *e1)
 {
-	expr_t *self = expr_construct(ENODE_SETVAR, 1);
-	self->varname = varname;
-	self->args[0] = e1;
+	expr_t *self = expr_construct(ENODE_SETVAR, 2);
+	self->varname = (char *)varname;
+	self->args[0] = index;
+	self->args[1] = e1;
 	return self;
 }
 
@@ -137,15 +159,19 @@ expr_t *expr_construct_op2(builtin_id builtin, expr_t *e1, expr_t *e2)
 	return self;
 }
 
-expr_t *expr_construct_op2_and_setvar(char *varname, builtin_id builtin, expr_t *e1)
+expr_t *expr_construct_op2_and_setvar(const char *varname, builtin_id builtin, expr_t *index, expr_t *e1)
 {
-	expr_t *evar = expr_construct_getvar(varname);
+	expr_t *evar = expr_construct_getvar(varname, index);
 	expr_t *etop = expr_construct_op2(builtin, evar, e1);
-	return expr_construct_setvar(varname, etop);
+	return expr_construct_setvar(varname, index, etop);
 }
 
 int expr_eval(const expr_t *self, numptr *pval)
 {
+	if (self == NULL) {
+		*pval = num_undefvalue();
+		return ERROR_NONE;
+	}
 	out_dbg("Evaluating expression, type: %d, #args: %d\n", self->type, self->nb_args);
 	numptr *value_args = NULL;
 	if (self->nb_args >= 1)
@@ -178,9 +204,17 @@ static int eval_number(const expr_t *self, const numptr *value_args, numptr *pva
 
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == ENODE_GETVAR && self->nb_args == 0 && value_args == NULL);
+	assert(self->type == ENODE_GETVAR && self->nb_args == 1 && value_args != NULL);
 	assert(num_is_not_initialized(*pval));
-	numptr *pnum = vars_get_value(self->varname);
+
+	const numptr *pnum;
+	if (self->args[0] != NULL) {
+		long int index = num_getlongint(value_args[0]);
+		pnum = vars_array_get_value(self->varname, index);
+	} else {
+		pnum = vars_get_value(self->varname);
+	}
+
 	if (pnum == NULL)
 		*pval = num_construct();
 	else
@@ -190,10 +224,16 @@ static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pva
 
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == ENODE_SETVAR && self->nb_args == 1 && value_args != NULL);
+	assert(self->type == ENODE_SETVAR && self->nb_args == 2 && value_args != NULL);
 	assert(num_is_not_initialized(*pval));
-	vars_set_value(self->varname, value_args[0]);
-	*pval = num_construct_from_num(value_args[0]);
+
+	if (self->args[0] != NULL) {
+		long int index = num_getlongint(value_args[0]);
+		vars_array_set_value(self->varname, index, value_args[1]);
+	} else {
+		vars_set_value(self->varname, value_args[1]);
+	}
+	*pval = num_construct_from_num(value_args[1]);
 	return ERROR_NONE;
 }
 

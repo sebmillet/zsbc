@@ -74,7 +74,8 @@ string			\"[^\"]*\"
 "^"			return '^';
 "%"			return '%';
 ";"			return ';';
-","			return ',';
+"["			return '[';
+"]"			return ']';
 "{"			return '{';
 "}"			return '}';
 "||"		return LOGIC_OR;

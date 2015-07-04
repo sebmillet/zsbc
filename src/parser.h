@@ -58,7 +58,8 @@ extern int yydebug;
     LOGIC_OR = 268,
     LOGIC_AND = 269,
     LOGIC_NOT = 270,
-    NEG = 271
+    NEG = 271,
+    PLUSPLUS_MINMIN = 272
   };
 #endif
 /* Tokens.  */
@@ -76,6 +77,7 @@ extern int yydebug;
 #define LOGIC_AND 269
 #define LOGIC_NOT 270
 #define NEG 271
+#define PLUSPLUS_MINMIN 272
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -89,7 +91,7 @@ union YYSTYPE
 	char *str;
 	program_t *prog;
 
-#line 93 "parser.h" /* yacc.c:1909  */
+#line 95 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -118,6 +120,6 @@ int yyparse (void);
 
 void activate_bison_debug();
 
-#line 122 "parser.h" /* yacc.c:1909  */
+#line 124 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */
