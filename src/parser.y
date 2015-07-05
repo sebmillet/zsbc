@@ -163,6 +163,8 @@ expression_no_assignment:
 	| IDENTIFIER '[' expression ']' { $$ = expr_construct_getvar($1, $3); }
 	| PLUSPLUS_MINMIN IDENTIFIER { $$ = expr_construct_incdecvar($2, NULL, $1, 0); free($1); }
 	| IDENTIFIER PLUSPLUS_MINMIN { $$ = expr_construct_incdecvar($1, NULL, $2, 1); free($2); }
+	| PLUSPLUS_MINMIN IDENTIFIER '[' expression ']' { $$ = expr_construct_incdecvar($2, $4, $1, 0); free($1); }
+	| IDENTIFIER '[' expression ']' PLUSPLUS_MINMIN { $$ = expr_construct_incdecvar($1, $3, $5, 1); free($5); }
 	| expression '+' expression { $$ = expr_construct_op2("+", $1, $3); }
 	| expression '-' expression { $$ = expr_construct_op2("-", $1, $3); }
 	| expression '*' expression { $$ = expr_construct_op2("*", $1, $3); }

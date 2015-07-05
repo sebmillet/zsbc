@@ -38,8 +38,6 @@
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
 
-void s_alloc_and_copy(char **dst, const char *src);
-
 void yyerror(char *s, ...);
 
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
@@ -163,12 +161,5 @@ void yyerror(char *s, ...)
 	}
 	vfprintf(stderr, s, ap);
 	fprintf(stderr, "\n");
-}
-
-void s_alloc_and_copy(char **dst, const char *src)
-{
-	unsigned int s = strlen(src) + 1;
-	*dst = (char *)malloc(s);
-	s_strncpy(*dst, src, s);
 }
 

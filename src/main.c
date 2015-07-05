@@ -57,6 +57,21 @@ char *s_strncat(char *dest, const char *src, size_t n)
 	return r;
 }
 
+	/*
+	 * Returns a copied (allocated) string.
+	 * dst can be null, in which case the new string is to be retrieved
+	 * by the function return value.
+	 */
+char *s_alloc_and_copy(char **dst, const char *src)
+{
+	unsigned int s = strlen(src) + 1;
+	char *target = (char *)malloc(s);
+	s_strncpy(target, src, s);
+	if (dst != NULL)
+		*dst = target;
+	return target;
+}
+
 int outln(int level, const char *fmt, ...)
 {
 	if (level <= out_level || level == L_ENFORCE) {

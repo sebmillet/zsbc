@@ -36,12 +36,22 @@
 	*/
 
 typedef enum {
+	ENODE_MIN = 0,
 	ENODE_NUMBER = 0,
 	ENODE_GETVAR = 1,
 	ENODE_SETVAR = 2,
 	ENODE_SETVAR_POSTFIX = 3,
-	ENODE_BUILTIN_OP = 4
+	ENODE_BUILTIN_OP = 4,
+	ENODE_MAX = 4
 } enode_t;
+
+const char *ENODE_TYPES[] = {
+	"ENODE_NUMBER",
+	"ENODE_GETVAR",
+	"ENODE_SETVAR",
+	"ENODE_SETVAR_POSTFIX",
+	"ENODE_BUILTIN_OP"
+};
 
 struct expr_t {
 	enode_t type;
@@ -61,6 +71,11 @@ static void destruct_getvar(expr_t *self);
 static void destruct_setvar(expr_t *self);
 static void destruct_builtin_op(expr_t *self);
 
+static void copy_number(expr_t *dst, const expr_t *src);
+static void copy_getvar(expr_t *dst, const expr_t *src);
+static void copy_setvar(expr_t *dst, const expr_t *src);
+static void copy_builtin_op(expr_t *dst, const expr_t *src);
+
 static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval);
@@ -72,6 +87,14 @@ static void (*table_destruct[])(expr_t *self) = {
 	destruct_setvar,		/* ENODE_SETVAR */
 	destruct_setvar,		/* ENODE_SETVAR_POSTFIX */
 	destruct_builtin_op		/* ENODE_BUILTIN_OP */
+};
+
+static void (*table_copy[])(expr_t *dst, const expr_t *src) = {
+	copy_number,			/* ENODE_NUMBER */
+	copy_getvar,			/* ENODE_GETVAR */
+	copy_setvar,			/* ENODE_SETVAR */
+	copy_setvar,			/* ENODE_SETVAR_POSTFIX */
+	copy_builtin_op			/* ENODE_BUILTIN_OP */
 };
 
 static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr *pval) = {
@@ -87,9 +110,15 @@ static void destruct_number(expr_t *self)
 	num_destruct(&self->num);
 }
 
-static void destruct_getvar(expr_t *self) { }
+static void destruct_getvar(expr_t *self)
+{
+	free(self->varname);
+}
 
-static void destruct_setvar(expr_t *self) { }
+static void destruct_setvar(expr_t *self)
+{
+	free(self->varname);
+}
 
 static void destruct_builtin_op(expr_t *self) { }
 
@@ -98,10 +127,14 @@ void expr_destruct(expr_t *self)
 	if (self == NULL)
 		return;
 
-	out_dbg("Destructing expression, type: %d, #args: %d\n", self->type, self->nb_args);
+	assert(self->type >= ENODE_MIN && self->type <= ENODE_MAX);
+
+	out_dbg("expr_t destruct,  address: %lu, type: %s, #args: %d\n", self, ENODE_TYPES[self->type], self->nb_args);
 	int i;
-	for (i = 0; i < self->nb_args; ++i)
+	for (i = 0; i < self->nb_args; ++i) {
+		out_dbg("\t%lu -> call args[%d] destruct, address: %lu\n", self, i, self->args[i]);
 		expr_destruct(self->args[i]);
+	}
 
 	(table_destruct[self->type])(self);
 
@@ -113,7 +146,6 @@ void expr_destruct(expr_t *self)
 
 static expr_t *expr_construct(enode_t type, int nb_args)
 {
-	out_dbg("Constructing one expression, type: %d, #args: %d\n", type, nb_args);
 	expr_t *self = (expr_t *)malloc(sizeof(expr_t));
 	self->type = type;
 	self->nb_args = nb_args;
@@ -121,7 +153,43 @@ static expr_t *expr_construct(enode_t type, int nb_args)
 	for (i = 0; i < nb_args; ++i)
 		self->args[i] = NULL;
 	++expr_count_ref;
+	out_dbg("expr_t construct, address: %lu, type: %s, #args: %d\n", self, ENODE_TYPES[type], nb_args);
 	return self;
+}
+
+static expr_t *expr_copy(const expr_t *src)
+{
+	if (src == NULL)
+		return NULL;
+
+	expr_t *copy = expr_construct(src->type, src->nb_args);
+
+	(table_copy[copy->type])(copy, src);
+
+	int i;
+	for (i = 0; i < copy->nb_args; ++i)
+		copy->args[i] = expr_copy(src->args[i]);
+	return copy;
+}
+
+static void copy_number(expr_t *dst, const expr_t *src)
+{
+	dst->num = num_construct_from_num(src->num);
+}
+
+static void copy_getvar(expr_t *dst, const expr_t *src)
+{
+	s_alloc_and_copy(&dst->varname, src->varname);
+}
+
+static void copy_setvar(expr_t *dst, const expr_t *src)
+{
+	s_alloc_and_copy(&dst->varname, src->varname);
+}
+
+static void copy_builtin_op(expr_t *dst, const expr_t *src)
+{
+	dst->builtin = src->builtin;
 }
 
 expr_t *expr_construct_number(numptr num)
@@ -214,7 +282,7 @@ expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op
 			rewritten_op[strlen(rewritten_op) - 1] = '\0';
 
 		expr_t *etop = expr_construct_op2(rewritten_op, evar, e1);
-		return construct_setvar(varname, FALSE, index, etop);
+		return construct_setvar(s_alloc_and_copy(NULL, varname), FALSE, expr_copy(index), etop);
 	}
 }
 
@@ -231,7 +299,7 @@ expr_t *expr_construct_incdecvar(const char *varname, expr_t *index, const char 
 	expr_t *evar = expr_construct_getvar(varname, index);
 	expr_t *eone = expr_construct_number(num_construct_from_int(1));
 	expr_t *calc = expr_construct_op2(delta < 0 ? "-" : "+", evar, eone);
-	return construct_setvar(varname, is_postfix, index, calc);
+	return construct_setvar(s_alloc_and_copy(NULL, varname), is_postfix, expr_copy(index), calc);
 }
 
 int expr_eval(const expr_t *self, numptr *pval)
@@ -303,7 +371,6 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 	assert(num_is_not_initialized(*pval));
 
 	numptr oldvalue = num_undefvalue();
-
 	if (is_postfix)
 		getvar(self->varname, self->args[0] == NULL ? NULL : &value_args[0], &oldvalue);
 
@@ -313,6 +380,7 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 	} else {
 		vars_set_value(self->varname, value_args[1]);
 	}
+
 	*pval = num_construct_from_num(is_postfix ? oldvalue : value_args[1]);
 
 	if (is_postfix)
