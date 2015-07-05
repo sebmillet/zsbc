@@ -165,15 +165,20 @@ void rt_error(const char *fmt, ...)
 	exit(1);
 }
 
-void fatal(const char *err)
+void fatalln(const char *file, int line, const char *fmt, ...)
 {
-	fprintf(stderr, "%s\n", err);
+	va_list args;
+	va_start(args, fmt);
+	fprintf(stderr, "File %s line %d: ", file, line);
+	vfprintf(stderr, fmt, args);
+	fprintf(stderr, "\n");
+	va_end(args);
 	exit(1);
 }
 
 void out_of_memory()
 {
-	fatal("Out of memory");
+	rt_error("%s", "Out of memory");
 }
 
 void opt_check(int n, const char *opt)

@@ -46,8 +46,6 @@ void loc_reset();
 #define YYDEBUG 1
 #endif
 
-builtin_id get_comparison_code(const char *s);
-
 %}
 
 %code provides {
@@ -66,7 +64,7 @@ void activate_bison_debug();
 
 %token <num> INTEGER
 %type <enode> expression expression_no_assignment expression_assignment
-%token <str> IDENTIFIER STRING COMPARISON
+%token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
 %type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_assignment
 %type <prog> loop_while
 
@@ -79,7 +77,7 @@ void activate_bison_debug();
 %left LOGIC_AND
 %nonassoc LOGIC_NOT
 %left COMPARISON
-%right '='
+%right OP_AND_ASSIGN
 %left '+' '-'
 %left '*' '/' '%'
 %right '^'
@@ -137,13 +135,15 @@ instruction_non_empty:
 ;
 
 instruction_assignment:
-	IDENTIFIER '=' expression {
-		expr_t *enode = expr_construct_setvar($1, NULL, $3);
+	IDENTIFIER OP_AND_ASSIGN expression {
+		expr_t *enode = expr_construct_setvar($1, NULL, $2, $3);
 		$$ = program_construct_expr(enode, TRUE);
+		free($2);
 	}
-	| IDENTIFIER '[' expression ']' '=' expression {
-		expr_t *enode = expr_construct_setvar($1, $3, $6);
+	| IDENTIFIER '[' expression ']' OP_AND_ASSIGN expression {
+		expr_t *enode = expr_construct_setvar($1, $3, $5, $6);
 		$$ = program_construct_expr(enode, TRUE);
+		free($5);
 	}
 ;
 
@@ -153,24 +153,26 @@ expression:
 ;
 
 expression_assignment:
-	IDENTIFIER '=' expression { $$ = expr_construct_setvar($1, NULL, $3); }
-	| IDENTIFIER '[' expression ']' '=' expression { $$ = expr_construct_setvar($1, $3, $6); }
+	IDENTIFIER OP_AND_ASSIGN expression { $$ = expr_construct_setvar($1, NULL, $2, $3); free($2); }
+	| IDENTIFIER '[' expression ']' OP_AND_ASSIGN expression { $$ = expr_construct_setvar($1, $3, $5, $6); free($5); }
 ;
 
 expression_no_assignment:
     INTEGER { $$ = expr_construct_number($1); }
 	| IDENTIFIER { $$ = expr_construct_getvar($1, NULL); }
 	| IDENTIFIER '[' expression ']' { $$ = expr_construct_getvar($1, $3); }
-	| expression '+' expression { $$ = expr_construct_op2(FN_ADD, $1, $3); }
-	| expression '-' expression { $$ = expr_construct_op2(FN_SUB, $1, $3); }
-	| expression '*' expression { $$ = expr_construct_op2(FN_MUL, $1, $3); }
-	| expression '/' expression { $$ = expr_construct_op2(FN_DIV, $1, $3); }
-	| expression '^' expression { $$ = expr_construct_op2(FN_POW, $1, $3); }
-	| expression '%' expression { $$ = expr_construct_op2(FN_MOD, $1, $3); }
+	| PLUSPLUS_MINMIN IDENTIFIER { $$ = expr_construct_incdecvar($2, NULL, $1, 0); free($1); }
+	| IDENTIFIER PLUSPLUS_MINMIN { $$ = expr_construct_incdecvar($1, NULL, $2, 1); free($2); }
+	| expression '+' expression { $$ = expr_construct_op2("+", $1, $3); }
+	| expression '-' expression { $$ = expr_construct_op2("-", $1, $3); }
+	| expression '*' expression { $$ = expr_construct_op2("*", $1, $3); }
+	| expression '/' expression { $$ = expr_construct_op2("/", $1, $3); }
+	| expression '^' expression { $$ = expr_construct_op2("^", $1, $3); }
+	| expression '%' expression { $$ = expr_construct_op2("%", $1, $3); }
 	| '-' expression %prec NEG { $$ = expr_construct_op1(FN_NEG, $2); }
-	| expression COMPARISON expression { $$ = expr_construct_op2(get_comparison_code($2), $1, $3); free($2); }
-	| expression LOGIC_AND expression { $$ = expr_construct_op2(FN_AND, $1, $3); }
-	| expression LOGIC_OR expression { $$ = expr_construct_op2(FN_OR, $1, $3); }
+	| expression COMPARISON expression { $$ = expr_construct_op2($2, $1, $3); free($2); }
+	| expression LOGIC_AND expression { $$ = expr_construct_op2("&&", $1, $3); }
+	| expression LOGIC_OR expression { $$ = expr_construct_op2("||", $1, $3); }
 	| LOGIC_NOT expression { $$ = expr_construct_op1(FN_NOT, $2); }
 	| '(' expression ')' { $$ = $2; }
 ;
@@ -220,23 +222,6 @@ statement:
 ;
 
 %%
-
-builtin_id get_comparison_code(const char *s)
-{
-	if (!strcmp(s, "<"))
-		return FN_CMPLT;
-	else if (!strcmp(s, "<="))
-		return FN_CMPLE;
-	else if (!strcmp(s, ">"))
-		return FN_CMPGT;
-	else if (!strcmp(s, ">="))
-		return FN_CMPGE;
-	else if (!strcmp(s, "=="))
-		return FN_CMPEQ;
-	else if (!strcmp(s, "!="))
-		return FN_CMPNE;
-	assert(0);
-}
 
 void activate_bison_debug()
 {

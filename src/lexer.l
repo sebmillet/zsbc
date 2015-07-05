@@ -64,7 +64,10 @@ string			\"[^\"]*\"
 
 [ \t]+		{ }
 
-"="			return '=';
+"="|"+="|"-="|"*="|"/="|"^="|"%="	{
+	s_alloc_and_copy(&yylval.str, yytext);
+	return OP_AND_ASSIGN;
+}
 "+"			return '+';
 "-"			return '-';
 "*"			return '*';
@@ -73,6 +76,10 @@ string			\"[^\"]*\"
 ")"			return ')';
 "^"			return '^';
 "%"			return '%';
+"++"|"--"	{
+	s_alloc_and_copy(&yylval.str, yytext);
+	return PLUSPLUS_MINMIN;
+}
 ";"			return ';';
 "["			return '[';
 "]"			return ']';

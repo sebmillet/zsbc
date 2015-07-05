@@ -49,17 +49,18 @@ extern int yydebug;
     IDENTIFIER = 259,
     STRING = 260,
     COMPARISON = 261,
-    QUIT = 262,
-    VARS = 263,
-    LIBSWITCH = 264,
-    LIBLIST = 265,
-    WHILE = 266,
-    NEWLINE = 267,
-    LOGIC_OR = 268,
-    LOGIC_AND = 269,
-    LOGIC_NOT = 270,
-    NEG = 271,
-    PLUSPLUS_MINMIN = 272
+    OP_AND_ASSIGN = 262,
+    PLUSPLUS_MINMIN = 263,
+    QUIT = 264,
+    VARS = 265,
+    LIBSWITCH = 266,
+    LIBLIST = 267,
+    WHILE = 268,
+    NEWLINE = 269,
+    LOGIC_OR = 270,
+    LOGIC_AND = 271,
+    LOGIC_NOT = 272,
+    NEG = 273
   };
 #endif
 /* Tokens.  */
@@ -67,31 +68,32 @@ extern int yydebug;
 #define IDENTIFIER 259
 #define STRING 260
 #define COMPARISON 261
-#define QUIT 262
-#define VARS 263
-#define LIBSWITCH 264
-#define LIBLIST 265
-#define WHILE 266
-#define NEWLINE 267
-#define LOGIC_OR 268
-#define LOGIC_AND 269
-#define LOGIC_NOT 270
-#define NEG 271
-#define PLUSPLUS_MINMIN 272
+#define OP_AND_ASSIGN 262
+#define PLUSPLUS_MINMIN 263
+#define QUIT 264
+#define VARS 265
+#define LIBSWITCH 266
+#define LIBLIST 267
+#define WHILE 268
+#define NEWLINE 269
+#define LOGIC_OR 270
+#define LOGIC_AND 271
+#define LOGIC_NOT 272
+#define NEG 273
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 60 "parser.y" /* yacc.c:1909  */
+#line 58 "parser.y" /* yacc.c:1909  */
 
 	numptr num;
 	expr_t *enode;
 	char *str;
 	program_t *prog;
 
-#line 95 "parser.h" /* yacc.c:1909  */
+#line 97 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -116,10 +118,10 @@ extern YYSTYPE yylval;
 extern YYLTYPE yylloc;
 int yyparse (void);
 /* "%code provides" blocks.  */
-#line 53 "parser.y" /* yacc.c:1909  */
+#line 51 "parser.y" /* yacc.c:1909  */
 
 void activate_bison_debug();
 
-#line 124 "parser.h" /* yacc.c:1909  */
+#line 126 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */

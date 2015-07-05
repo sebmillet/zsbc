@@ -20,6 +20,9 @@
 #include "expr.h"
 #include "vars.h"
 
+#include <string.h>
+
+
 	/*
 	 *  	***********
 	 *  	* WARNING *
@@ -36,7 +39,8 @@ typedef enum {
 	ENODE_NUMBER = 0,
 	ENODE_GETVAR = 1,
 	ENODE_SETVAR = 2,
-	ENODE_BUILTIN_OP = 3
+	ENODE_SETVAR_POSTFIX = 3,
+	ENODE_BUILTIN_OP = 4
 } enode_t;
 
 struct expr_t {
@@ -66,6 +70,7 @@ static void (*table_destruct[])(expr_t *self) = {
 	destruct_number,		/* ENODE_NUMBER */
 	destruct_getvar,		/* ENODE_GETVAR */
 	destruct_setvar,		/* ENODE_SETVAR */
+	destruct_setvar,		/* ENODE_SETVAR_POSTFIX */
 	destruct_builtin_op		/* ENODE_BUILTIN_OP */
 };
 
@@ -73,6 +78,7 @@ static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr 
 	eval_number,			/* ENODE_NUMBER */
 	eval_getvar,			/* ENODE_GETVAR */
 	eval_setvar,			/* ENODE_SETVAR */
+	eval_setvar,			/* ENODE_SETVAR_POSTFIX */
 	eval_builtin_op			/* ENODE_BUILTIN_OP */
 };
 
@@ -133,9 +139,13 @@ expr_t *expr_construct_getvar(const char *varname, expr_t *index)
 	return self;
 }
 
-expr_t *expr_construct_setvar(const char *varname, expr_t *index, expr_t *e1)
+	/*
+	 * is_postfix option is used to cause the old value of var to be returned,
+	 * useful to calculate var++ and var--
+	 */
+static expr_t *construct_setvar(const char *varname, int is_postfix, expr_t *index, expr_t *e1)
 {
-	expr_t *self = expr_construct(ENODE_SETVAR, 2);
+	expr_t *self = expr_construct(is_postfix ? ENODE_SETVAR_POSTFIX : ENODE_SETVAR, 2);
 	self->varname = (char *)varname;
 	self->args[0] = index;
 	self->args[1] = e1;
@@ -150,20 +160,78 @@ expr_t *expr_construct_op1(builtin_id builtin, expr_t *e1)
 	return self;
 }
 
-expr_t *expr_construct_op2(builtin_id builtin, expr_t *e1, expr_t *e2)
+expr_t *expr_construct_op2(const char *op, expr_t *e1, expr_t *e2)
 {
+	builtin_id id = FN_UNDEF;
+	if (!strcmp(op, "+"))
+		id = FN_ADD;
+	else if (!strcmp(op, "-"))
+		id = FN_SUB;
+	else if (!strcmp(op, "*"))
+		id = FN_MUL;
+	else if (!strcmp(op, "/"))
+		id = FN_DIV;
+	else if (!strcmp(op, "^"))
+		id = FN_POW;
+	else if (!strcmp(op, "%"))
+		id = FN_MOD;
+	else if (!strcmp(op, "&&"))
+		id = FN_AND;
+	else if (!strcmp(op, "||"))
+		id = FN_OR;
+	else if (!strcmp(op, "<"))
+		id = FN_CMPLT;
+	else if (!strcmp(op, "<="))
+		id = FN_CMPLE;
+	else if (!strcmp(op, ">"))
+		id = FN_CMPGT;
+	else if (!strcmp(op, ">="))
+		id = FN_CMPGE;
+	else if (!strcmp(op, "=="))
+		id = FN_CMPEQ;
+	else if (!strcmp(op, "!="))
+		id = FN_CMPNE;
+	else
+		FATAL_ERROR("Unknown operator: '%s'", op);
+
 	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 2);
-	self->builtin = builtin;
+	self->builtin = id;
 	self->args[0] = e1;
 	self->args[1] = e2;
 	return self;
 }
 
-expr_t *expr_construct_op2_and_setvar(const char *varname, builtin_id builtin, expr_t *index, expr_t *e1)
+expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op, expr_t *e1)
 {
+	if (!strcmp(op, "=")) {
+		return construct_setvar(varname, FALSE, index, e1);
+	} else {
+		expr_t *evar = expr_construct_getvar(varname, index);
+
+		char rewritten_op[10];
+		s_strncpy(rewritten_op, op, sizeof(rewritten_op));
+		if (rewritten_op[strlen(rewritten_op) - 1] == '=')
+			rewritten_op[strlen(rewritten_op) - 1] = '\0';
+
+		expr_t *etop = expr_construct_op2(rewritten_op, evar, e1);
+		return construct_setvar(varname, FALSE, index, etop);
+	}
+}
+
+expr_t *expr_construct_incdecvar(const char *varname, expr_t *index, const char *op, int is_postfix)
+{
+	int delta = 0;
+	if (!strcmp(op, "++"))
+		delta = 1;
+	else if (!strcmp(op, "--"))
+		delta = -1;
+	else
+		FATAL_ERROR("Unknown operator: '%s'", op);
+
 	expr_t *evar = expr_construct_getvar(varname, index);
-	expr_t *etop = expr_construct_op2(builtin, evar, e1);
-	return expr_construct_setvar(varname, index, etop);
+	expr_t *eone = expr_construct_number(num_construct_from_int(1));
+	expr_t *calc = expr_construct_op2(delta < 0 ? "-" : "+", evar, eone);
+	return construct_setvar(varname, is_postfix, index, calc);
 }
 
 int expr_eval(const expr_t *self, numptr *pval)
@@ -202,30 +270,42 @@ static int eval_number(const expr_t *self, const numptr *value_args, numptr *pva
 	return ERROR_NONE;
 }
 
-static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
+static void getvar(const char *varname, const numptr *numindex, numptr *pval)
 {
-	assert(self->type == ENODE_GETVAR && self->nb_args == 1 && value_args != NULL);
-	assert(num_is_not_initialized(*pval));
-
 	const numptr *pnum;
-	if (self->args[0] != NULL) {
-		long int index = num_getlongint(value_args[0]);
-		pnum = vars_array_get_value(self->varname, index);
+	if (numindex != NULL) {
+		long int index = num_getlongint(*numindex);
+		pnum = vars_array_get_value(varname, index);
 	} else {
-		pnum = vars_get_value(self->varname);
+		pnum = vars_get_value(varname);
 	}
 
 	if (pnum == NULL)
 		*pval = num_construct();
 	else
 		*pval = num_construct_from_num(*pnum);
+}
+
+static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
+{
+	assert(self->type == ENODE_GETVAR && self->nb_args == 1 && value_args != NULL);
+	assert(num_is_not_initialized(*pval));
+
+	getvar(self->varname, self->args[0] == NULL ? NULL : &value_args[0], pval);
+
 	return ERROR_NONE;
 }
 
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval)
 {
-	assert(self->type == ENODE_SETVAR && self->nb_args == 2 && value_args != NULL);
+	int is_postfix = (self->type == ENODE_SETVAR_POSTFIX);
+	assert((self->type == ENODE_SETVAR || self->type == ENODE_SETVAR_POSTFIX) && self->nb_args == 2 && value_args != NULL);
 	assert(num_is_not_initialized(*pval));
+
+	numptr oldvalue = num_undefvalue();
+
+	if (is_postfix)
+		getvar(self->varname, self->args[0] == NULL ? NULL : &value_args[0], &oldvalue);
 
 	if (self->args[0] != NULL) {
 		long int index = num_getlongint(value_args[0]);
@@ -233,7 +313,11 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 	} else {
 		vars_set_value(self->varname, value_args[1]);
 	}
-	*pval = num_construct_from_num(value_args[1]);
+	*pval = num_construct_from_num(is_postfix ? oldvalue : value_args[1]);
+
+	if (is_postfix)
+		num_destruct(&oldvalue);
+
 	return ERROR_NONE;
 }
 

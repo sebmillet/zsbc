@@ -58,6 +58,7 @@ static const char* (*Llib_identify_yourself)();
 static numptr (*Lconstruct)();
 static numptr (*Lconstruct_from_num)(const numptr num);
 static numptr (*Lconstruct_from_str)(const char *str, int base);
+static numptr (*Lconstruct_from_int)(int n);
 static void (*Ldestruct)(numptr *pnum);
 static void (*Lprint)(const numptr num, int base);
 static int (*Lis_zero)(const numptr num);
@@ -191,6 +192,7 @@ static void libswitch(lib_t *l, int quiet)
 	Lconstruct = NULL;
 	Lconstruct_from_num = NULL;
 	Lconstruct_from_str = NULL;
+	Lconstruct_from_int = NULL;
 	Ldestruct = NULL;
 	Lprint = NULL;
 	Lis_zero = NULL;
@@ -220,6 +222,7 @@ static void libswitch(lib_t *l, int quiet)
 	assert(Lconstruct != NULL);
 	assert(Lconstruct_from_num != NULL);
 	assert(Lconstruct_from_str != NULL);
+	assert(Lconstruct_from_int != NULL);
 	assert(Ldestruct != NULL);
 	assert(Lprint != NULL);
 	assert(Lis_zero != NULL);
@@ -281,6 +284,15 @@ numptr num_construct_from_str(const char *str, int base)
 {
 	out_dbg("Constructing one number from a string\n");
 	numptr r = Lconstruct_from_str(str, base);
+	if (r != NULL)
+		++num_count_ref;
+	return r;
+}
+
+numptr num_construct_from_int(int n)
+{
+	out_dbg("Constructing one number from an int\n");
+	numptr r = Lconstruct_from_int(n);
 	if (r != NULL)
 		++num_count_ref;
 	return r;
@@ -421,6 +433,7 @@ static const char *gmp_lib_identify_yourself();
 static numptr gmp_construct();
 static numptr gmp_construct_from_num(const numptr num);
 static numptr gmp_construct_from_str(const char *str, int base);
+static numptr gmp_construct_from_int(int n);
 static void gmp_destruct(numptr *num);
 static void gmp_print(const numptr num, int base);
 static int gmp_is_zero(const numptr num);
@@ -461,6 +474,7 @@ void gmp_activate()
 	Lconstruct = gmp_construct;
 	Lconstruct_from_num = gmp_construct_from_num;
 	Lconstruct_from_str = gmp_construct_from_str;
+	Lconstruct_from_int = gmp_construct_from_int;
 	Ldestruct = gmp_destruct;
 	Lprint = gmp_print;
 	Lis_zero = gmp_is_zero;
@@ -508,6 +522,13 @@ static numptr gmp_construct_from_str(const char *str, int base)
 {
 	mpz_t *mp = (mpz_t *)malloc(sizeof(mpz_t));
 	mpz_init_set_str(*mp, str, base);
+	return (numptr)mp;
+}
+
+static numptr gmp_construct_from_int(int n)
+{
+	mpz_t *mp = (mpz_t *)malloc(sizeof(mpz_t));
+	mpz_init_set_si(*mp, n);
 	return (numptr)mp;
 }
 
@@ -680,6 +701,7 @@ static const char *libbc_lib_identify_yourself();
 static numptr libbc_construct();
 static numptr libbc_construct_from_num(const numptr num);
 static numptr libbc_construct_from_str(const char *str, int base);
+static numptr libbc_construct_from_int(int n);
 static void libbc_destruct(numptr *pnum);
 static void libbc_print(const numptr num, int base);
 static int libbc_is_zero(const numptr num);
@@ -733,6 +755,7 @@ void libbc_activate()
 	Lconstruct = libbc_construct;
 	Lconstruct_from_num = libbc_construct_from_num;
 	Lconstruct_from_str = libbc_construct_from_str;
+	Lconstruct_from_int = libbc_construct_from_int;
 	Ldestruct = libbc_destruct;
 	Lprint = libbc_print;
 	Lis_zero = libbc_is_zero;
@@ -785,6 +808,13 @@ static numptr libbc_construct_from_str(const char *str, int base)
 		*/
 	bc_num bcn = NULL;
 	bc_str2num(&bcn, (char *)str, libbc_get_scale());
+	return (numptr)bcn;
+}
+
+static numptr libbc_construct_from_int(int n)
+{
+	bc_num bcn = NULL;
+	bc_int2num(&bcn, n);
 	return (numptr)bcn;
 }
 

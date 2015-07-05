@@ -58,6 +58,9 @@ void outln_error_code(int e);
 int out(int level, const char *fmt, ...);
 int outln(int level, const char *fmt, ...);
 int outln_error(const char *fmt, ...);
+void fatalln(const char *file, int line, const char *fmt, ...);
+#define FATAL_ERROR(s, ...) \
+	fatalln(__FILE__, __LINE__, s, __VA_ARGS__)
 
 char *s_strncpy(char *dest, const char *src, size_t n);
 char *s_strncat(char *dest, const char *src, size_t n);
