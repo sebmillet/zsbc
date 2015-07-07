@@ -84,13 +84,11 @@ void program_destruct(program_t *p)
 				free(p->str);
 				break;
 			case TINSTR_LOOP:
-				program_destruct(p->loop.prgbefore);
-				if (p->loop.expbefore != NULL)
-					expr_destruct(p->loop.expbefore);
+				expr_destruct(p->loop.exprbefore);
+				expr_destruct(p->loop.testbefore);
 				program_destruct(p->loop.core);
-				if (p->loop.expafter != NULL)
-					expr_destruct(p->loop.expafter);
-				program_destruct(p->loop.prgafter);
+				expr_destruct(p->loop.testafter);
+				expr_destruct(p->loop.exprafter);
 				break;
 			default:
 				assert(0);
@@ -131,15 +129,17 @@ int program_execute(program_t *p)
 				loop = &p->loop;
 
 					/* First term of 3-term for() */
-				if ((r = program_execute(loop->prgbefore)) != ERROR_NONE)
+				num = num_undefvalue();
+				if ((r = expr_eval(loop->exprbefore, &num)) != ERROR_NONE)
 					break;
+				num_destruct(&num);
 
 				while (TRUE) {
 
 						/* Second term of a 3-term for() or test part of a while() */
-					if (loop->expbefore != NULL) {
+					if (loop->testbefore != NULL) {
 						num = num_undefvalue();
-						if ((r = expr_eval(loop->expbefore, &num)) != ERROR_NONE)
+						if ((r = expr_eval(loop->testbefore, &num)) != ERROR_NONE)
 							break;
 						b = num_is_zero(num);
 						num_destruct(&num);
@@ -152,9 +152,9 @@ int program_execute(program_t *p)
 						break;
 
 						/* Test part of a do ... while() */
-					if (loop->expafter != NULL) {
+					if (loop->testafter != NULL) {
 						num = num_undefvalue();
-						if ((r = expr_eval(loop->expafter, &num)) != ERROR_NONE)
+						if ((r = expr_eval(loop->testafter, &num)) != ERROR_NONE)
 							break;
 						b = num_is_zero(num);
 						num_destruct(&num);
@@ -163,8 +163,10 @@ int program_execute(program_t *p)
 					}
 
 						/* Third term of a 3-term for() */
-					if ((r = program_execute(loop->prgafter)) != ERROR_NONE)
+					num = num_undefvalue();
+					if ((r = expr_eval(loop->exprafter, &num)) != ERROR_NONE)
 						break;
+					num_destruct(&num);
 
 				}
 				break;

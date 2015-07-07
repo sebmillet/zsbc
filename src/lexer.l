@@ -103,6 +103,7 @@ libswitch		return LIBSWITCH;
 liblist			return LIBLIST;
 (?i:vars)		return VARS;
 while			return WHILE;
+for				return FOR;
 
 {identifier}	{
 	s_alloc_and_copy(&yylval.str, yytext);

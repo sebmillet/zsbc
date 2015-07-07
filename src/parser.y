@@ -63,13 +63,13 @@ void activate_bison_debug();
 };
 
 %token <num> INTEGER
-%type <enode> expression expression_no_assignment expression_assignment
+%type <enode> expression expression_no_assignment expression_assignment expression_or_empty
 %token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
 %type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_assignment
-%type <prog> loop_while
+%type <prog> loop_while loop_for
 
 %token QUIT VARS LIBSWITCH LIBLIST
-%token WHILE
+%token WHILE FOR
 
 %token NEWLINE
 
@@ -131,17 +131,18 @@ instruction_non_empty:
 	| expression_no_assignment { $$ = program_construct_expr($1, FALSE); }
 	| STRING { $$ = program_construct_string($1); }
 	| loop_while
+	| loop_for
 	| instruction_block { $$ = $1; }
 ;
 
 instruction_assignment:
 	IDENTIFIER OP_AND_ASSIGN expression {
-		expr_t *enode = expr_construct_setvar($1, NULL, $2, $3);
+		expr_t *enode = expr_construct_setvar($1, NULL, $2, FALSE, $3);
 		$$ = program_construct_expr(enode, TRUE);
 		free($2);
 	}
 	| IDENTIFIER '[' expression ']' OP_AND_ASSIGN expression {
-		expr_t *enode = expr_construct_setvar($1, $3, $5, $6);
+		expr_t *enode = expr_construct_setvar($1, $3, $5, FALSE, $6);
 		$$ = program_construct_expr(enode, TRUE);
 		free($5);
 	}
@@ -153,28 +154,28 @@ expression:
 ;
 
 expression_assignment:
-	IDENTIFIER OP_AND_ASSIGN expression { $$ = expr_construct_setvar($1, NULL, $2, $3); free($2); }
-	| IDENTIFIER '[' expression ']' OP_AND_ASSIGN expression { $$ = expr_construct_setvar($1, $3, $5, $6); free($5); }
+	IDENTIFIER OP_AND_ASSIGN expression { $$ = expr_construct_setvar($1, NULL, $2, FALSE, $3); free($2); }
+	| IDENTIFIER '[' expression ']' OP_AND_ASSIGN expression { $$ = expr_construct_setvar($1, $3, $5, FALSE, $6); free($5); }
 ;
 
 expression_no_assignment:
     INTEGER { $$ = expr_construct_number($1); }
 	| IDENTIFIER { $$ = expr_construct_getvar($1, NULL); }
 	| IDENTIFIER '[' expression ']' { $$ = expr_construct_getvar($1, $3); }
-	| PLUSPLUS_MINMIN IDENTIFIER { $$ = expr_construct_incdecvar($2, NULL, $1, 0); free($1); }
-	| IDENTIFIER PLUSPLUS_MINMIN { $$ = expr_construct_incdecvar($1, NULL, $2, 1); free($2); }
-	| PLUSPLUS_MINMIN IDENTIFIER '[' expression ']' { $$ = expr_construct_incdecvar($2, $4, $1, 0); free($1); }
-	| IDENTIFIER '[' expression ']' PLUSPLUS_MINMIN { $$ = expr_construct_incdecvar($1, $3, $5, 1); free($5); }
-	| expression '+' expression { $$ = expr_construct_op2("+", $1, $3); }
-	| expression '-' expression { $$ = expr_construct_op2("-", $1, $3); }
-	| expression '*' expression { $$ = expr_construct_op2("*", $1, $3); }
-	| expression '/' expression { $$ = expr_construct_op2("/", $1, $3); }
-	| expression '^' expression { $$ = expr_construct_op2("^", $1, $3); }
-	| expression '%' expression { $$ = expr_construct_op2("%", $1, $3); }
+	| PLUSPLUS_MINMIN IDENTIFIER { $$ = expr_construct_setvar($2, NULL, $1, FALSE, NULL); free($1); }
+	| IDENTIFIER PLUSPLUS_MINMIN { $$ = expr_construct_setvar($1, NULL, $2, TRUE, NULL); free($2); }
+	| PLUSPLUS_MINMIN IDENTIFIER '[' expression ']' { $$ = expr_construct_setvar($2, $4, $1, FALSE, NULL); free($1); }
+	| IDENTIFIER '[' expression ']' PLUSPLUS_MINMIN { $$ = expr_construct_setvar($1, $3, $5, TRUE, NULL); free($5); }
+	| expression '+' expression { $$ = expr_construct_op2_str("+", $1, $3); }
+	| expression '-' expression { $$ = expr_construct_op2_str("-", $1, $3); }
+	| expression '*' expression { $$ = expr_construct_op2_str("*", $1, $3); }
+	| expression '/' expression { $$ = expr_construct_op2_str("/", $1, $3); }
+	| expression '^' expression { $$ = expr_construct_op2_str("^", $1, $3); }
+	| expression '%' expression { $$ = expr_construct_op2_str("%", $1, $3); }
 	| '-' expression %prec NEG { $$ = expr_construct_op1(FN_NEG, $2); }
-	| expression COMPARISON expression { $$ = expr_construct_op2($2, $1, $3); free($2); }
-	| expression LOGIC_AND expression { $$ = expr_construct_op2("&&", $1, $3); }
-	| expression LOGIC_OR expression { $$ = expr_construct_op2("||", $1, $3); }
+	| expression COMPARISON expression { $$ = expr_construct_op2_str($2, $1, $3); free($2); }
+	| expression LOGIC_AND expression { $$ = expr_construct_op2_str("&&", $1, $3); }
+	| expression LOGIC_OR expression { $$ = expr_construct_op2_str("||", $1, $3); }
 	| LOGIC_NOT expression { $$ = expr_construct_op1(FN_NOT, $2); }
 	| '(' expression ')' { $$ = $2; }
 ;
@@ -187,11 +188,28 @@ newlines_or_empty:
 loop_while:
 	WHILE '(' expression ')' newlines_or_empty instruction_non_empty {
 		program_loop_t loop;
-		loop.prgbefore = NULL;
-		loop.expbefore = $3;
+		loop.exprbefore = NULL;
+		loop.testbefore = $3;
 		loop.core = $6;
-		loop.expafter = NULL;
-		loop.prgafter = NULL;
+		loop.testafter = NULL;
+		loop.exprafter = NULL;
+		$$ = program_construct_loop(&loop);
+	}
+;
+
+expression_or_empty:
+	%empty	{ $$ = NULL; }
+	| expression
+;
+
+loop_for:
+	FOR '(' expression_or_empty ';' expression_or_empty ';' expression_or_empty ')' newlines_or_empty instruction_non_empty {
+		program_loop_t loop;
+		loop.exprbefore = $3;
+		loop.testbefore = $5;
+		loop.core = $10;
+		loop.testafter = NULL;
+		loop.exprafter = $7;
 		$$ = program_construct_loop(&loop);
 	}
 ;

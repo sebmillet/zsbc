@@ -27,11 +27,11 @@ struct program_t;
 typedef struct program_t program_t;
 
 typedef struct program_loop_t {
-	program_t *prgbefore;
-	expr_t *expbefore;
+	expr_t *exprbefore;
+	expr_t *testbefore;
 	program_t *core;
-	expr_t *expafter;
-	program_t *prgafter;
+	expr_t *testafter;
+	expr_t *exprafter;
 } program_loop_t;
 
 program_t *program_construct_expr(expr_t *e, int is_assignment);
