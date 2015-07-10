@@ -74,6 +74,27 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Error inside an array index (1)"
+send "828\nt\[1/(1-1)\]=10\nt\[0\]\nt\[1\]\n919\n"
+expect {
+	-re "828.+Division by 0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+919\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Error inside an array index (2)"
+send "838\n++t\[1/(1-1)\]\nt\[0\]\nt\[1\]\n929\n"
+expect {
+	-re "838.+Division by 0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+929\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Error inside an array index (3)"
+send "838\nt\[1/(1-1)\]++\nt\[0\]\nt\[1\]\n939\n"
+expect {
+	-re "838.+Division by 0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+939\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
 set test "Checking object count ref is null"
 send "quit\n"
 expect {

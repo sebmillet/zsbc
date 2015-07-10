@@ -1,0 +1,56 @@
+# tests/zsbc.test/zsbc05.exp
+
+set timeout 3
+send_user "***   Assignment operators\n"
+
+spawn "$ZSBC" -V
+
+set test "Addition"
+send "434\na=5;a+=2;b+=3\na;b\n121\n"
+expect {
+	-re "434\[^0-9\]+7\[^0-9\]+3\[^0-9\]+121\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Subtraction"
+send "454\nc=5;c-=12;d-=3\nc;d\n131\n"
+expect {
+	-re "454\[^0-9\]+-7\[^0-9\]+-3\[^0-9\]+131\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Multiplication"
+send "464\ne=5;e*=3;f*=1000\ne;f\n141\n"
+expect {
+	-re "464\[^0-9\]+15\[^0-9\]+0\[^0-9\]+141\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Division"
+send "474\ng=44;g/=11;h/=100\ng;h\n151\n"
+expect {
+	-re "474\[^0-9\]+4\[^0-9\]+0\[^0-9\]+151\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Power"
+send "474\ni=7;i^=3;j^=10\ni;j\n161\n"
+expect {
+	-re "474\[^0-9\]+343\[^0-9\]+0\[^0-9\]+161\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Mod"
+send "484\nk=54^3;k%=97;l%=10\nk;l\n171\n"
+expect {
+	-re "484\[^0-9\]+33\[^0-9\]+0\[^0-9\]+171\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

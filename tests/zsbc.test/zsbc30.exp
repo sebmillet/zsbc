@@ -39,6 +39,77 @@ expect {
 	default { fail "$test" }
 }
 
+set test "10K elements arrays (1)"
+send -- "for(i=0;i<=10000;++i)test\[i\]=i+1\nt=0;u=0\nfor(i=0;i<=10000;++i){t+=test\[i\];u+=(-1)^i*test\[i\]}\n606\nt\nu\nfor(i=0;i<=3;)2^test\[++i\]\n707\n"
+sleep 2
+expect {
+	-re "606\[^0-9\]+50015001\[^0-9\]+5001\[^0-9\]+4\[^0-9\]+8\[^0-9\]+16\[^0-9\]+32\[^0-9\]+707\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Inc operator (1)"
+send -- "a=1;uv\[++a\]=a;uw\[a++\]=a\n808\nuv\[1\]\nuv\[2\]\nuw\[2\]\nuw\[3\]\na\n909\n"
+expect {
+	-re "808\[^0-9\]+0\[^0-9\]+1\[^0-9\]+2\[^0-9\]+0\[^0-9\]+3\[^0-9\]+909\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Inc operator (2)"
+send -- "a=1;++ba\[++a\];++bb\[a++\]\n616\nba\[1\]\nba\[2\]\nbb\[2\]\nbb\[3\]\na\n171\n"
+expect {
+	-re "616\[^0-9\]+0\[^0-9\]+1\[^0-9\]+1\[^0-9\]+0\[^0-9\]+3\[^0-9\]+171\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Inc operator (3)"
+send -- "626\na=1;++uv\[++a\];++uw\[a++\]\nuv\[1\]\nuv\[2\]\nuw\[2\]\nuw\[3\]\na\n181\n"
+expect {
+	-re "626\[^0-9\]+2\[^0-9\]+3\[^0-9\]+0\[^0-9\]+2\[^0-9\]+3\[^0-9\]+0\[^0-9\]+3\[^0-9\]+181\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Inc operator (4)"
+send -- "636\na=1;uv\[++a\]++;uw\[a++\]++\nuv\[1\]\nuv\[2\]\nuw\[2\]\nuw\[3\]\na\n191\n"
+expect {
+	-re "636\[^0-9\]+2\[^0-9\]+3\[^0-9\]+0\[^0-9\]+3\[^0-9\]+4\[^0-9\]+0\[^0-9\]+3\[^0-9\]+191\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Dec operator (1)"
+send -- "a=10;er\[--a\]=a;es\[a--\]=a\n898\ner\[10\]\ner\[9\]\nes\[9\]\nes\[8\]\na\n989\n"
+expect {
+	-re "898\[^0-9\]+0\[^0-9\]+10\[^0-9\]+9\[^0-9\]+0\[^0-9\]+8\[^0-9\]+989\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Dec operator (2)"
+send -- "a=10;--ar\[--a\];--as\[a--\]\n676\nar\[10\]\nar\[9\]\nas\[9\]\nas\[8\]\na\n373\n"
+expect {
+	-re "676\[^0-9\]+0\[^0-9\]+-1\[^0-9\]+-1\[^0-9\]+0\[^0-9\]+8\[^0-9\]+373\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Dec operator (3)"
+send -- "656\na=10;--er\[--a\];--es\[a--\]\ner\[10\]\ner\[9\]\nes\[9\]\nes\[8\]\na\n484\n"
+expect {
+	-re "656\[^0-9\]+9\[^0-9\]+8\[^0-9\]+0\[^0-9\]+9\[^0-9\]+8\[^0-9\]+0\[^0-9\]+8\[^0-9\]+484\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Dec operator (4)"
+send -- "696\na=10;er\[--a\]--;es\[a--\]--\ner\[10\]\ner\[9\]\nes\[9\]\nes\[8\]\na\n494\n"
+expect {
+	-re "696\[^0-9\]+9\[^0-9\]+8\[^0-9\]+0\[^0-9\]+8\[^0-9\]+7\[^0-9\]+0\[^0-9\]+8\[^0-9\]+494\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Assignment operators with array (1)"
+send -- "575\nalpha\[0\]=3;alpha\[0\]^=2\nalpha\[0\]\n868\n"
+expect {
+	-re "575\[^0-9\]+9\[^0-9\]+868\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
 set test "Checking object count ref is null"
 send "quit\n"
 expect {
