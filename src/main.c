@@ -39,8 +39,10 @@ static int out_level = L_NORMAL;
 
 const char *table_errors[] = {
 	"No error",							/* ERROR_NONE */
-	"Division by 0",						/* ERROR_DIV0 */
-	"Negative exponent not authorized"	/* ERROR_NEGATIVE_EXP */
+	"Division by 0",					/* ERROR_DIV0 */
+	"Negative exponent not authorized",	/* ERROR_NEGATIVE_EXP */
+	"Function not defined",				/* ERROR_FUNCTION_NOT_DEFINED */
+	"Parameter number mismatch"			/* ERROR_PARAMETER_NUMBER_MISMATCH */
 };
 
 char *s_strncpy(char *dest, const char *src, size_t n)
@@ -114,6 +116,18 @@ int outln_error(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
+	fprintf(stderr, "Error: ");
+	int r = vfprintf(stderr, fmt, args);
+	fprintf(stderr, "\n");
+	va_end(args);
+	return r;
+}
+
+int outln_warning(const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	fprintf(stderr, "Warning: ");
 	int r = vfprintf(stderr, fmt, args);
 	fprintf(stderr, "\n");
 	va_end(args);

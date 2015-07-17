@@ -23,14 +23,14 @@
 
 int instr_count_ref = 0;
 
-typedef enum {TINSTR_EXPR, TINSTR_ASSIGN_EXPR, TINSTR_STRING, TINSTR_LOOP} instr_t;
+typedef enum {TINSTR_EXPR_EXPR, TINSTR_EXPR_ASSIGN_EXPR, TINSTR_EXPR_RETURN, TINSTR_STR, TINSTR_LOOP} instr_t;
 
 struct program_t {
 	instr_t type;
 
 	union {
-		expr_t *expr;			/* TINSTR_EXPR */
-		char *str;				/* TINSTR_STRING */
+		expr_t *expr;			/* TINSTR_EXPR* */
+		char *str;				/* TINSTR_STR */
 		program_loop_t loop;	/* TINSTR_LOOP */
 	};
 
@@ -47,15 +47,23 @@ static program_t *program_construct(instr_t type)
 
 program_t *program_construct_expr(expr_t *e, int is_assignment)
 {
-	program_t *p = program_construct(is_assignment ? TINSTR_ASSIGN_EXPR : TINSTR_EXPR);
+	program_t *p = program_construct(is_assignment ? TINSTR_EXPR_ASSIGN_EXPR : TINSTR_EXPR_EXPR);
 	p->expr = e;
 	out_dbg("Construct of one program of type %s, address = %lu\n", is_assignment ? "TINSTR_ASSIGN_EXPR" : "TINSTR_EXPR", p);
 	return p;
 }
 
-program_t *program_construct_string(const char *s)
+program_t *program_construct_return(expr_t *e)
 {
-	program_t *p = program_construct(TINSTR_STRING);
+	program_t *p = program_construct(TINSTR_EXPR_RETURN);
+	p->expr = e;
+	out_dbg("Construct of one program of type return, expression: %lu, address = %lu\n", e, p);
+	return p;
+}
+
+program_t *program_construct_str(const char *s)
+{
+	program_t *p = program_construct(TINSTR_STR);
 	p->str = (char *)s;
 	out_dbg("Construct one program of type string, string value: '%s', address = %lu\n", s, p);
 	return p;
@@ -76,11 +84,12 @@ void program_destruct(program_t *p)
 	while (p != NULL) {
 		out_dbg("Starting to destruct one program instruction, address = %lu\n", p);
 		switch (p->type) {
-			case TINSTR_EXPR:
-			case TINSTR_ASSIGN_EXPR:
+			case TINSTR_EXPR_EXPR:
+			case TINSTR_EXPR_ASSIGN_EXPR:
+			case TINSTR_EXPR_RETURN:
 				expr_destruct(p->expr);
 				break;
-			case TINSTR_STRING:
+			case TINSTR_STR:
 				free(p->str);
 				break;
 			case TINSTR_LOOP:
@@ -100,7 +109,7 @@ void program_destruct(program_t *p)
 	}
 }
 
-int program_execute(program_t *p)
+int program_execute(program_t *p, numptr *pval)
 {
 	out_dbg("Entering program_execute for %lu\n", p);
 	int r = ERROR_NONE;
@@ -109,20 +118,25 @@ int program_execute(program_t *p)
 		numptr num;
 		program_loop_t *loop;
 		int b;
+		int print_result;
 		switch (p->type) {
-			case TINSTR_EXPR:
-			case TINSTR_ASSIGN_EXPR:
+			case TINSTR_EXPR_EXPR:
+			case TINSTR_EXPR_ASSIGN_EXPR:
+			case TINSTR_EXPR_RETURN:
+				print_result = (p->type == TINSTR_EXPR_EXPR);
 				num = num_undefvalue();
-				r = expr_eval(p->expr, &num);
-				if (r != 0) {
+				if ((r = expr_eval(p->expr, &num)) != ERROR_NONE) {
 					outln_error_code(r);
-				} else if (p->type == TINSTR_EXPR) {
+				} else if (print_result && !num_is_not_initialized(num)) {
 					num_print(num, 10);
 					outln(L_ENFORCE, "");
 				}
-				num_destruct(&num);
+				if (p->type == TINSTR_EXPR_RETURN)
+					*pval = num;
+				else
+					num_destruct(&num);
 				break;
-			case TINSTR_STRING:
+			case TINSTR_STR:
 				out(L_ENFORCE, "%s", p->str);
 				break;
 			case TINSTR_LOOP:
@@ -148,7 +162,7 @@ int program_execute(program_t *p)
 					}
 
 						/* The content of the loop being executed, for every loops realms */
-					if ((r = program_execute(loop->core)) != ERROR_NONE)
+					if ((r = program_execute(loop->core, pval)) != ERROR_NONE)
 						break;
 
 						/* Test part of a do ... while() */

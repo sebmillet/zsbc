@@ -23,6 +23,13 @@
 #include <string.h>
 
 
+
+/*-----------------------------------------------------------------------------
+ *  expr_t management
+ *-----------------------------------------------------------------------------*/
+
+
+
 	/*
 	 *  	***********
 	 *  	* WARNING *
@@ -42,7 +49,8 @@ typedef enum {
 	ENODE_SETVAR = 2,
 	ENODE_SETVAR_POSTFIX = 3,
 	ENODE_BUILTIN_OP = 4,
-	ENODE_MAX = 4
+	ENODE_FUNCTION_CALL = 5,
+	ENODE_MAX = 5
 } enode_t;
 
 const char *ENODE_TYPES[] = {
@@ -50,14 +58,28 @@ const char *ENODE_TYPES[] = {
 	"ENODE_GETVAR",
 	"ENODE_SETVAR",
 	"ENODE_SETVAR_POSTFIX",
-	"ENODE_BUILTIN_OP"
+	"ENODE_BUILTIN_OP",
+	"ENODE_FUNCTION_CALL"
 };
+
+typedef enum {FN_UNDEF, FN_NOOP, FN_ADD, FN_SUB, FN_MUL, FN_DIV, FN_POW, FN_MOD, FN_NEG,
+	FN_CMPLT, FN_CMPLE, FN_CMPGT, FN_CMPGE, FN_CMPEQ, FN_CMPNE, FN_OR, FN_AND, FN_NOT,
+	FN_INC, FN_DEC} builtin_id;
 
 typedef struct accessvar_t {
 	char *name;
 	expr_t *index;
 	builtin_id builtin;
 } accessvar_t;
+
+typedef struct callargs_t {
+	callarg_type_t type;
+	union {
+		expr_t *e;
+		char *array_name;
+	};
+	struct callargs_t *next;
+} callargs_t;
 
 struct expr_t {
 	enode_t type;
@@ -67,32 +89,39 @@ struct expr_t {
 		builtin_id builtin;
 	};
 	int nb_args;
-	expr_t *args[2];
+	expr_t* *args;
 };
 
 static int expr_count_ref = 0;
+
+static expr_t *expr_construct_op2_builtin_id(builtin_id id, expr_t *e1, expr_t *e2);
+static expr_t *expr_construct_op1_builtin_id(builtin_id builtin, expr_t *e1);
 
 static void destruct_number(expr_t *self);
 static void destruct_getvar(expr_t *self);
 static void destruct_setvar(expr_t *self);
 static void destruct_builtin_op(expr_t *self);
+static void destruct_function_call(expr_t *self);
 
 static void copy_number(expr_t *dst, const expr_t *src);
 static void copy_getvar(expr_t *dst, const expr_t *src);
 static void copy_setvar(expr_t *dst, const expr_t *src);
 static void copy_builtin_op(expr_t *dst, const expr_t *src);
+static void copy_function_call(expr_t *dst, const expr_t *src);
 
 static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval);
+static int eval_function_call(const expr_t *self, const numptr *value_args, numptr *pval);
 
 static void (*table_destruct[])(expr_t *self) = {
 	destruct_number,		/* ENODE_NUMBER */
 	destruct_getvar,		/* ENODE_GETVAR */
 	destruct_setvar,		/* ENODE_SETVAR */
 	destruct_setvar,		/* ENODE_SETVAR_POSTFIX */
-	destruct_builtin_op		/* ENODE_BUILTIN_OP */
+	destruct_builtin_op,	/* ENODE_BUILTIN_OP */
+	destruct_function_call	/* ENODE_FUNCTION_CALL */
 };
 
 static void (*table_copy[])(expr_t *dst, const expr_t *src) = {
@@ -100,7 +129,8 @@ static void (*table_copy[])(expr_t *dst, const expr_t *src) = {
 	copy_getvar,			/* ENODE_GETVAR */
 	copy_setvar,			/* ENODE_SETVAR */
 	copy_setvar,			/* ENODE_SETVAR_POSTFIX */
-	copy_builtin_op			/* ENODE_BUILTIN_OP */
+	copy_builtin_op,		/* ENODE_BUILTIN_OP */
+	copy_function_call		/* ENODE_FUNCTION_CALL */
 };
 
 static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr *pval) = {
@@ -108,8 +138,17 @@ static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr 
 	eval_getvar,			/* ENODE_GETVAR */
 	eval_setvar,			/* ENODE_SETVAR */
 	eval_setvar,			/* ENODE_SETVAR_POSTFIX */
-	eval_builtin_op			/* ENODE_BUILTIN_OP */
+	eval_builtin_op,		/* ENODE_BUILTIN_OP */
+	eval_function_call		/* ENODE_FUNCTION_CALL */
 };
+
+
+
+/*-----------------------------------------------------------------------------
+ *  Constructors and destructors part
+ *-----------------------------------------------------------------------------*/
+
+
 
 static void destruct_number(expr_t *self)
 {
@@ -130,6 +169,8 @@ static void destruct_setvar(expr_t *self)
 
 static void destruct_builtin_op(expr_t *self) { }
 
+static void destruct_function_call(expr_t *self) { }
+
 void expr_destruct(expr_t *self)
 {
 	if (self == NULL)
@@ -142,6 +183,10 @@ void expr_destruct(expr_t *self)
 	for (i = 0; i < self->nb_args; ++i) {
 		out_dbg("\t%lu -> call args[%d] destruct, address: %lu\n", self, i, self->args[i]);
 		expr_destruct(self->args[i]);
+	}
+	if (self->args != NULL) {
+		free(self->args);
+		self->args = NULL;
 	}
 
 	(table_destruct[self->type])(self);
@@ -157,6 +202,10 @@ static expr_t *expr_construct(enode_t type, int nb_args)
 	expr_t *self = (expr_t *)malloc(sizeof(expr_t));
 	self->type = type;
 	self->nb_args = nb_args;
+	if (nb_args >= 1)
+		self->args = (expr_t **)malloc(sizeof(expr_t *) * nb_args);
+	else
+		self->args = NULL;
 	int i;
 	for (i = 0; i < nb_args; ++i)
 		self->args[i] = NULL;
@@ -204,6 +253,11 @@ static void copy_builtin_op(expr_t *dst, const expr_t *src)
 	dst->builtin = src->builtin;
 }
 
+static void copy_function_call(expr_t *dst, const expr_t *src)
+{
+	s_alloc_and_copy(&dst->var.name, src->var.name);
+}
+
 expr_t *expr_construct_number(numptr num)
 {
 	expr_t *self = expr_construct(ENODE_NUMBER, 0);
@@ -221,25 +275,25 @@ expr_t *expr_construct_getvar(const char *varname, expr_t *index)
 	return self;
 }
 
-	/*
-	 * is_postfix option is used to cause the old value of var to be returned,
-	 * useful to calculate var++ and var--
-	 */
-/*static expr_t *construct_setvar(const char *varname, int is_postfix, expr_t *index, expr_t *e1)*/
-/*{*/
-/*    expr_t *self = expr_construct(is_postfix ? ENODE_SETVAR_POSTFIX : ENODE_SETVAR, 1);*/
-/*    self->var->name = (char *)varname;*/
-/*    self->var->op = index;*/
-/*    self->args[0] = e1;*/
-/*    return self;*/
-/*}*/
-
-expr_t *expr_construct_op1(builtin_id builtin, expr_t *e1)
+static expr_t *expr_construct_op1_builtin_id(builtin_id builtin, expr_t *e1)
 {
 	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 1);
 	self->builtin = builtin;
 	self->args[0] = e1;
 	return self;
+}
+
+expr_t *expr_construct_op1_str(const char *op, expr_t *e1)
+{
+	builtin_id id = FN_UNDEF;
+	if (!strcmp(op, "-"))
+		id = FN_NEG;
+	else if (!strcmp(op, "!"))
+		id = FN_NOT;
+	else
+		FATAL_ERROR("Unknown operator: '%s'", op);
+
+	return expr_construct_op1_builtin_id(id, e1);
 }
 
 builtin_id str2builtin_id(const char *op)
@@ -282,7 +336,7 @@ builtin_id str2builtin_id(const char *op)
 	return id;
 }
 
-expr_t *expr_construct_op2_builtin_id(builtin_id id, expr_t *e1, expr_t *e2)
+static expr_t *expr_construct_op2_builtin_id(builtin_id id, expr_t *e1, expr_t *e2)
 {
 	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 2);
 	self->builtin = id;
@@ -302,49 +356,102 @@ expr_t *expr_construct_op2_str(const char *op, expr_t *e1, expr_t *e2)
 
 expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op, int is_postfix, expr_t *e1)
 {
+	char rewritten_op[10];
+	s_strncpy(rewritten_op, op, sizeof(rewritten_op));
+	if (rewritten_op[strlen(rewritten_op) - 1] == '=')
+		rewritten_op[strlen(rewritten_op) - 1] = '\0';
 
-/*    if (!strcmp(op, "=")) {*/
-/*        return construct_setvar(varname, FALSE, FN_NOOP, index, e1);*/
-/*    } else {*/
-/*        expr_t *evar = expr_construct_getvar(varname, index);*/
+	builtin_id id = str2builtin_id(rewritten_op);
+	if (id == FN_UNDEF)
+		FATAL_ERROR("Unknown operator: '%s'", op);
 
-		char rewritten_op[10];
-		s_strncpy(rewritten_op, op, sizeof(rewritten_op));
-		if (rewritten_op[strlen(rewritten_op) - 1] == '=')
-			rewritten_op[strlen(rewritten_op) - 1] = '\0';
-
-		builtin_id id = str2builtin_id(rewritten_op);
-		if (id == FN_UNDEF)
-			FATAL_ERROR("Unknown operator: '%s'", op);
-
-		expr_t *self = expr_construct(is_postfix ? ENODE_SETVAR_POSTFIX : ENODE_SETVAR, 1);
-		self->var.name = (char *)varname;
-		self->var.index = index;
-		self->var.builtin = id;
-		self->args[0] = e1;
-		return self;
-
-/*        expr_t *etop = expr_construct_op2(rewritten_op, evar, e1);*/
-/*        return construct_setvar(s_alloc_and_copy(NULL, varname), FALSE, expr_copy(index), etop);*/
-/*    }*/
-
+	expr_t *self = expr_construct(is_postfix ? ENODE_SETVAR_POSTFIX : ENODE_SETVAR, 1);
+	self->var.name = (char *)varname;
+	self->var.index = index;
+	self->var.builtin = id;
+	self->args[0] = e1;
+	return self;
 }
 
-/*expr_t *expr_construct_incdecvar(const char *varname, expr_t *index, const char *op, int is_postfix)*/
-/*{*/
-/*    int delta = 0;*/
-/*    if (!strcmp(op, "++"))*/
-/*        delta = 1;*/
-/*    else if (!strcmp(op, "--"))*/
-/*        delta = -1;*/
-/*    else*/
-/*        FATAL_ERROR("Unknown operator: '%s'", op);*/
+callargs_t *callargs_construct(callarg_type_t type, expr_t *e, const char *array_name)
+{
+	callargs_t *callarg = (callargs_t *)malloc(sizeof(callargs_t));
+	callarg->type = type;
+	if (callarg->type == CARG_EXPR) {
+		callarg->e = e;
+	} else if (callarg->type == CARG_ARRAY) {
+		callarg->array_name = (char *)array_name;
+	} else
+		FATAL_ERROR("Unknown call argument type: %d", callarg->type);
+	return callarg;
+}
 
-/*    expr_t *evar = expr_construct_getvar(varname, index);*/
-/*    expr_t *eone = expr_construct_number(num_construct_from_int(1));*/
-/*    expr_t *calc = expr_construct_op2(delta < 0 ? "-" : "+", evar, eone);*/
-/*    return construct_setvar(s_alloc_and_copy(NULL, varname), is_postfix, expr_copy(index), calc);*/
-/*}*/
+callargs_t *callargs_chain(callargs_t *base, callargs_t *append)
+{
+	/*
+	 * FIXME
+	 * Should save the base in the list to avoid systematical walk through
+	 * the entire list to append one element, that has O(n^2) execution time.
+	 */
+	assert(base != NULL && append != NULL);
+	callargs_t *w = base;
+	while (w->next != NULL)
+		w = w->next;
+	w->next = append;
+	return base;
+}
+
+void callargs_destruct(callargs_t *callargs)
+{
+	callargs_t *w = callargs;
+	callargs_t *wnext;
+	while (w != NULL) {
+		wnext = w->next;
+
+		if (w->type == CARG_EXPR)
+			expr_destruct(w->e);
+		else if (w->type == CARG_ARRAY)
+			FATAL_ERROR("%s", "Not done...");
+		else
+			FATAL_ERROR("Unknown call argument type, callargs_t: %lu, type: %d", w, w->type);
+
+		free(w);
+		w = wnext;
+	}
+}
+
+expr_t *expr_construct_function_call(const char *fcnt_name, callargs_t *callargs)
+{
+	callargs_t *w = callargs;
+	int n = 0;
+	while (w != NULL) {
+		++n;
+		w = w->next;
+	}
+	expr_t *self = expr_construct(ENODE_FUNCTION_CALL, n);
+	self->var.name = (char *)fcnt_name;
+	int i;
+	w = callargs;
+	for (i = 0; i < n; ++i) {
+
+		assert(w != NULL);
+
+		self->args[i] = w->e; /*  FIXME - at the moment, ignores CARG_ARRAY case */
+		w = w->next;
+	}
+
+	assert(w == NULL);
+
+	return self;
+}
+
+
+
+/*-----------------------------------------------------------------------------
+ *  Evaluation part
+ *-----------------------------------------------------------------------------*/
+
+
 
 int expr_eval(const expr_t *self, numptr *pval)
 {
@@ -353,6 +460,7 @@ int expr_eval(const expr_t *self, numptr *pval)
 		return ERROR_NONE;
 	}
 	out_dbg("Evaluating expression, type: %d, #args: %d\n", self->type, self->nb_args);
+
 	numptr *value_args = NULL;
 	if (self->nb_args >= 1)
 		value_args = malloc(sizeof(numptr) * (unsigned)self->nb_args);
@@ -363,6 +471,13 @@ int expr_eval(const expr_t *self, numptr *pval)
 	for (i = 0; i < self->nb_args; ++i) {
 		if ((r = expr_eval(self->args[i], &value_args[i])) != ERROR_NONE)
 			break;
+
+			/*  Can happen with a void function, defined as is:
+			 *    define void f(...)
+			 *  */
+		if (num_is_not_initialized(value_args[i]))
+			value_args[i] = num_construct();
+
 	}
 	if (r == ERROR_NONE) {
 		r = (table_eval[self->type])(self, (const numptr *)value_args, pval);
@@ -454,7 +569,7 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 		expr_t *exprval = expr_construct_number(valcopy);
 		expr_t *etmp;
 		if (self->args[0] == NULL) {
-			etmp = expr_construct_op1(self->var.builtin, exprval);
+			etmp = expr_construct_op1_builtin_id(self->var.builtin, exprval);
 		} else {
 			expr_t *earg0 = expr_construct_number(num_construct_from_num(value_args[0]));
 			etmp = expr_construct_op2_builtin_id(self->var.builtin, exprval, earg0);
@@ -485,6 +600,8 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval)
 {
 	assert(self->type == ENODE_BUILTIN_OP);
+	assert(num_is_not_initialized(*pval));
+
 	numptr numone;
 	int r;
 	switch (self->builtin) {
@@ -552,6 +669,77 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 		default:
 			assert(0);
 	}
+}
+
+static int eval_function_call(const expr_t *self, const numptr *value_args, numptr *pval)
+{
+	assert(self->type == ENODE_FUNCTION_CALL);
+	assert(num_is_not_initialized(*pval));
+
+	function_t *f;
+	if ((f = vars_get_function(self->var.name)) == NULL)
+		return ERROR_FUNCTION_NOT_DEFINED;
+
+	int n = 0;
+	defargs_t *darg = f->defargs;
+	while (darg != NULL) {
+		darg = darg->next;
+		++n;
+	}
+	if (self->nb_args != n)
+		return ERROR_PARAMETER_NUMBER_MISMATCH;
+
+	vars_keeper_t *keeper;
+	if (n >= 1)
+		keeper = (vars_keeper_t *)malloc(sizeof(vars_keeper_t) * n);
+	else
+		keeper = NULL;
+
+	vars_value_t nv;
+	darg = f->defargs;
+	int i;
+	for (i = 0; i < n; ++i) {
+
+		assert(darg != NULL);
+
+		if (darg->type == DARG_VALUE) {
+			nv.type = TYPE_NUM;
+			nv.num = num_construct_from_num(value_args[i]);
+			vars_send_to_keeper(&keeper[i], darg->name, &nv);
+		} else
+			assert(0);	/* FIXME - to be implemented... */
+		darg = darg->next;
+	}
+
+	assert(darg == NULL);
+
+	int r = program_execute(f->program, pval);
+	if (r == ERROR_NONE) {
+		if (!num_is_not_initialized(*pval) && f->is_void) {
+			num_destruct(pval);
+			*pval = num_undefvalue();
+		} else if (num_is_not_initialized(*pval) && !f->is_void) {
+			*pval = num_construct();
+		}
+	}
+
+	darg = f->defargs;
+	for (i = 0; i < n; ++i) {
+
+		assert(darg != NULL);
+
+		if (darg->type == DARG_VALUE) {
+			vars_recall_from_keeper(darg->name, &keeper[i]);
+		} else
+			assert(0);	/* FIXME - to be implemented... */
+		darg = darg->next;
+	}
+	assert(darg == NULL);
+
+	if (keeper != NULL)
+		free(keeper);
+
+	return r;
 }
 
 int expr_get_count_ref() { return expr_count_ref; }

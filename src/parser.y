@@ -60,16 +60,21 @@ void activate_bison_debug();
 	expr_t *enode;
 	char *str;
 	program_t *prog;
+	defargs_t *defargs;
+	callargs_t *callargs;
 };
 
 %token <num> INTEGER
-%type <enode> expression expression_no_assignment expression_assignment expression_or_empty
+%type <enode> expression expression_no_assignment expression_assignment expression_or_empty function_call
 %token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
 %type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_assignment
-%type <prog> loop_while loop_for
+%type <prog> loop_while loop_for return
+%type <defargs> defargs_list_or_empty defargs_list defarg
+%type <callargs> callarg callargs_list callargs_list_or_empty
 
 %token QUIT VARS LIBSWITCH LIBLIST
 %token WHILE FOR
+%token DEFINE VOID RETURN
 
 %token NEWLINE
 
@@ -88,6 +93,8 @@ void activate_bison_debug();
 %destructor { expr_destruct($$); out_dbg("parser.y: freed one enode\n"); } <enode>
 %destructor { free($$); out_dbg("parser.y: freed one str\n"); } <str>
 %destructor { program_destruct($$); out_dbg("parser.y: freed one program\n"); } <prog>
+%destructor { defargs_destruct($$); out_dbg("parser.y: freed one DEF argument chain\n"); } <defargs>
+%destructor { callargs_destruct($$); out_dbg("parser.y: freed one CALL argument chain\n"); } <callargs>
 
 %start input
 
@@ -102,7 +109,8 @@ input:
 
 program:
 	instruction_list {
-		program_execute($1);
+		numptr num = num_undefvalue();
+		program_execute($1, &num);
 		program_destruct($1);
 	}
 ;
@@ -129,9 +137,10 @@ instruction:
 instruction_non_empty:
 	instruction_assignment
 	| expression_no_assignment { $$ = program_construct_expr($1, FALSE); }
-	| STRING { $$ = program_construct_string($1); }
+	| STRING { $$ = program_construct_str($1); }
 	| loop_while
 	| loop_for
+	| return
 	| instruction_block { $$ = $1; }
 ;
 
@@ -166,17 +175,18 @@ expression_no_assignment:
 	| IDENTIFIER PLUSPLUS_MINMIN { $$ = expr_construct_setvar($1, NULL, $2, TRUE, NULL); free($2); }
 	| PLUSPLUS_MINMIN IDENTIFIER '[' expression ']' { $$ = expr_construct_setvar($2, $4, $1, FALSE, NULL); free($1); }
 	| IDENTIFIER '[' expression ']' PLUSPLUS_MINMIN { $$ = expr_construct_setvar($1, $3, $5, TRUE, NULL); free($5); }
+	| function_call
 	| expression '+' expression { $$ = expr_construct_op2_str("+", $1, $3); }
 	| expression '-' expression { $$ = expr_construct_op2_str("-", $1, $3); }
 	| expression '*' expression { $$ = expr_construct_op2_str("*", $1, $3); }
 	| expression '/' expression { $$ = expr_construct_op2_str("/", $1, $3); }
 	| expression '^' expression { $$ = expr_construct_op2_str("^", $1, $3); }
 	| expression '%' expression { $$ = expr_construct_op2_str("%", $1, $3); }
-	| '-' expression %prec NEG { $$ = expr_construct_op1(FN_NEG, $2); }
+	| '-' expression %prec NEG { $$ = expr_construct_op1_str("-", $2); }
 	| expression COMPARISON expression { $$ = expr_construct_op2_str($2, $1, $3); free($2); }
 	| expression LOGIC_AND expression { $$ = expr_construct_op2_str("&&", $1, $3); }
 	| expression LOGIC_OR expression { $$ = expr_construct_op2_str("||", $1, $3); }
-	| LOGIC_NOT expression { $$ = expr_construct_op1(FN_NOT, $2); }
+	| LOGIC_NOT expression { $$ = expr_construct_op1_str("!", $2); }
 	| '(' expression ')' { $$ = $2; }
 ;
 
@@ -198,7 +208,7 @@ loop_while:
 ;
 
 expression_or_empty:
-	%empty	{ $$ = NULL; }
+	%empty { $$ = NULL; }
 	| expression
 ;
 
@@ -214,8 +224,62 @@ loop_for:
 	}
 ;
 
+return:
+	  RETURN expression { $$ = program_construct_return($2); }
+	;
+
+defarg:
+	IDENTIFIER { $$ = defargs_construct(DARG_VALUE, $1); }
+	| IDENTIFIER '[' ']' { $$ = defargs_construct(DARG_ARRAYVALUE, $1); }
+	| '*' IDENTIFIER { $$ = defargs_construct(DARG_REF, $2); }
+	| '*' IDENTIFIER '[' ']' { $$ = defargs_construct(DARG_ARRAYREF, $2); }
+;
+
+defargs_list:
+	defarg
+	| defargs_list ',' defarg { $$ = defargs_chain($1, $3); }
+;
+
+defargs_list_or_empty:
+	%empty { $$ = NULL; }
+	| defargs_list
+;
+
+function_definition:
+	DEFINE IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty {
+		int r;
+		if ((r = vars_function_construct($2, $4, $7, FALSE)) != ERROR_NONE)
+			outln_error_code(r);
+	}
+	| DEFINE VOID IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty {
+		int r;
+		if ((r = vars_function_construct($3, $5, $8, TRUE)) != ERROR_NONE)
+			outln_error_code(r);
+	}
+;
+
+callarg:
+	expression { $$ = callargs_construct(CARG_EXPR, $1, NULL); }
+	| IDENTIFIER '[' ']' { $$ = callargs_construct(CARG_ARRAY, NULL, $1); }
+;
+
+callargs_list:
+	callarg
+	| callargs_list ',' callarg { $$ = callargs_chain($1, $3); }
+;
+
+callargs_list_or_empty:
+	%empty { $$ = NULL; }
+	| callargs_list
+;
+
+function_call:
+	IDENTIFIER '(' callargs_list_or_empty ')' { $$ = expr_construct_function_call($1, $3); }
+;
+
 statement:
-	QUIT { YYABORT; }
+	function_definition
+	| QUIT { YYABORT; }
 	| VARS {
 		vars_display_all();
 	}

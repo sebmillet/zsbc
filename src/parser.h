@@ -57,11 +57,14 @@ extern int yydebug;
     LIBLIST = 267,
     WHILE = 268,
     FOR = 269,
-    NEWLINE = 270,
-    LOGIC_OR = 271,
-    LOGIC_AND = 272,
-    LOGIC_NOT = 273,
-    NEG = 274
+    DEFINE = 270,
+    VOID = 271,
+    RETURN = 272,
+    NEWLINE = 273,
+    LOGIC_OR = 274,
+    LOGIC_AND = 275,
+    LOGIC_NOT = 276,
+    NEG = 277
   };
 #endif
 /* Tokens.  */
@@ -77,11 +80,14 @@ extern int yydebug;
 #define LIBLIST 267
 #define WHILE 268
 #define FOR 269
-#define NEWLINE 270
-#define LOGIC_OR 271
-#define LOGIC_AND 272
-#define LOGIC_NOT 273
-#define NEG 274
+#define DEFINE 270
+#define VOID 271
+#define RETURN 272
+#define NEWLINE 273
+#define LOGIC_OR 274
+#define LOGIC_AND 275
+#define LOGIC_NOT 276
+#define NEG 277
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -94,8 +100,10 @@ union YYSTYPE
 	expr_t *enode;
 	char *str;
 	program_t *prog;
+	defargs_t *defargs;
+	callargs_t *callargs;
 
-#line 99 "parser.h" /* yacc.c:1909  */
+#line 107 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -124,6 +132,6 @@ int yyparse (void);
 
 void activate_bison_debug();
 
-#line 128 "parser.h" /* yacc.c:1909  */
+#line 136 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */

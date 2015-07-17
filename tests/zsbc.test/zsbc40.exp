@@ -1,0 +1,48 @@
+# tests/zsbc.test/zsbc40.exp
+
+set timeout 3
+spawn "$ZSBC" -V
+send_user "***   Functions\n"
+
+set test "Function (1)"
+send "define f(x) return x+1\n101\nf(2)\nx\n202\n"
+expect {
+	-re "101\[^0-9\]+3\[^0-9\]+0\[^0-9\]+202\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function (2)"
+send "define f(x,y,z) return 100*x+10*y+z\n121\nf(8,7,6)\nx\ny\nz\n212\n"
+expect {
+	-re "121\[^0-9\]+876\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+212\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function (3)"
+send "x=97\ndefine f(x) return x+1\n131\nf(2)\nx\n232\n"
+expect {
+	-re "131\[^0-9\]+3\[^0-9\]+97\[^0-9\]+232\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function (4)"
+send "x=96;y=95;z=94\ndefine f(x,y,z) return 100*x+10*y+z\n141\nf(8,7,6)\nx\ny\nz\n242\n"
+expect {
+	-re "141\[^0-9\]+876\[^0-9\]+96\[^0-9\]+95\[^0-9\]+94\[^0-9\]+242\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function (5)"
+send "x=96;y=95;z=94\ndefine f(x,y,z) return 100*x+10*y+z\n151\nf(56/7,1+1+1+1+1+1+1,3^(1+3-2))\nx\ny\nz\n252\n"
+expect {
+	-re "151\[^0-9\]+879\[^0-9\]+96\[^0-9\]+95\[^0-9\]+94\[^0-9\]+252\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

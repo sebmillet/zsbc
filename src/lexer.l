@@ -29,6 +29,7 @@
 #include "common.h"
 #include "numwrap.h"
 #include "expr.h"
+#include "vars.h"
 #include "program.h"
 #include "parser.h"
 
@@ -79,6 +80,7 @@ string			\"[^\"]*\"
 	return PLUSPLUS_MINMIN;
 }
 ";"			return ';';
+","			return ',';
 "["			return '[';
 "]"			return ']';
 "{"			return '{';
@@ -104,6 +106,9 @@ liblist			return LIBLIST;
 (?i:vars)		return VARS;
 while			return WHILE;
 for				return FOR;
+define			return DEFINE;
+void			return VOID;
+return			return RETURN;
 
 {identifier}	{
 	s_alloc_and_copy(&yylval.str, yytext);

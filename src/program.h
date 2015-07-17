@@ -35,11 +35,12 @@ typedef struct program_loop_t {
 } program_loop_t;
 
 program_t *program_construct_expr(expr_t *e, int is_assignment);
-program_t *program_construct_string(const char *s);
+program_t *program_construct_str(const char *s);
 program_t *program_construct_loop(program_loop_t *loop);
+program_t *program_construct_return(expr_t *e);
 void program_destruct(program_t *p);
 
-int program_execute(program_t *p);
+int program_execute(program_t *p, numptr *pval);
 program_t *program_chain(program_t *base, program_t *append);
 
 #endif	/* PROGRAM_H */

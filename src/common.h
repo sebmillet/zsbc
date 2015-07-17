@@ -43,9 +43,11 @@
 #define out_dbg(...) ;
 #endif
 
-#define ERROR_NONE			0
-#define ERROR_DIV0			1
-#define ERROR_NEGATIVE_EXP	2
+#define ERROR_NONE						0
+#define ERROR_DIV0						1
+#define ERROR_NEGATIVE_EXP				2
+#define ERROR_FUNCTION_NOT_DEFINED		3
+#define ERROR_PARAMETER_NUMBER_MISMATCH	4
 void outln_error_code(int e);
 
 #define L_ENFORCE	(-1)
@@ -58,6 +60,7 @@ void outln_error_code(int e);
 int out(int level, const char *fmt, ...);
 int outln(int level, const char *fmt, ...);
 int outln_error(const char *fmt, ...);
+int outln_warning(const char *fmt, ...);
 void fatalln(const char *file, int line, const char *fmt, ...);
 #define FATAL_ERROR(s, ...) \
 	fatalln(__FILE__, __LINE__, s, __VA_ARGS__)
