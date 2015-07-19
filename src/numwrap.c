@@ -129,6 +129,14 @@ int num_get_current_lib_number()
 	return libcurrent->reg_number;
 }
 
+	/*
+	 * Change current "numlib" (number library)
+	 * Number libraries are referred to by their id, as recorded in
+	 * libinfo_t.id
+	 *
+	 * Returns 1 in case of success (library is found that corresponds to the provided id),
+	 * otherwise returns 0
+	 * */
 int num_libswitch(const char *id)
 {
 	lib_t *l = libhead;

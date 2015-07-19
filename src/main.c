@@ -37,6 +37,10 @@
 
 static int out_level = L_NORMAL;
 
+char **arg_input_files = NULL;
+int arg_nb_allocated_input_files = 0;
+int arg_nb_input_files = 0;
+
 const char *table_errors[] = {
 	"No error",							/* ERROR_NONE */
 	"Division by 0",					/* ERROR_DIV0 */
@@ -139,11 +143,13 @@ void outln_error_code(int e)
 	if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
 		outln_error("%s", table_errors[e]);
 	} else {
+
 			/* Should an unknown error immediately stop the program execution?
 			 * Not sure of it.
 			 * I leave it ACTIVE for the moment.
 			*/
 		assert(e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors)));
+
 		outln_error("Unknown error code %d", e);
 	}
 }
@@ -175,6 +181,7 @@ void output_count_ref_report(const char *name, int count_ref)
 		"%s  %s count (should be 0): %i", (count_ref != 0 ? "** ERROR **" : "OK         "), name, count_ref);
 }
 
+	/* Needed by the bc library */
 void rt_warn(const char *fmt, ...)
 {
 	va_list args;
@@ -184,6 +191,7 @@ void rt_warn(const char *fmt, ...)
 	va_end(args);
 }
 
+	/* Needed by the bc library */
 void rt_error(const char *fmt, ...)
 {
 	va_list args;
@@ -212,7 +220,7 @@ void out_of_memory()
 
 void opt_check(int n, const char *opt)
 {
-	static int defined_options[3] = {0, 0};
+	static int defined_options[4] = {0, 0, 0, 0};
 
 	assert(n < sizeof(defined_options) / sizeof(*defined_options));
 
@@ -221,6 +229,20 @@ void opt_check(int n, const char *opt)
 		exit(-2);
 	} else
 		defined_options[n] = 1;
+}
+
+void register_file_arg(const char *arg_to_add)
+{
+	if (++arg_nb_input_files > arg_nb_allocated_input_files) {
+		if (arg_input_files == NULL) {
+			arg_nb_allocated_input_files = 4;
+			arg_input_files = (char **)malloc(sizeof(char *) * arg_nb_allocated_input_files);
+		} else {
+			arg_nb_allocated_input_files *= 2;
+			arg_input_files = (char **)realloc(arg_input_files, sizeof(char *) * arg_nb_allocated_input_files);
+		}
+	}
+	arg_input_files[arg_nb_input_files - 1] = (char *)arg_to_add;
 }
 
 int main(int argc, char *argv[])
@@ -234,8 +256,11 @@ int main(int argc, char *argv[])
 	int optset_quiet = 0;
 	int optset_debug = 0;
 
+	char *missing_option_value = NULL;
+	char *numlib_to_start_with = NULL;
+
 	int a = 1;
-	while (a >= 1 && a < argc) {
+	while (a < argc) {
 		if (!strcmp(argv[a], "-help") || !strcmp(argv[a], "-h")) {
 			usage();
 		} else if (!strcmp(argv[a], "-version") || !strcmp(argv[a], "-v")) {
@@ -253,6 +278,14 @@ int main(int argc, char *argv[])
 			opt_check(2, argv[a]);
 			optset_debug = 1;
 			out_level = L_DEBUG;
+		} else if (!strcmp(argv[a], "-lib") || !strcmp(argv[a], "-numlib")) {
+			opt_check(3, argv[a]);
+			if (++a >= argc) {
+				missing_option_value = argv[a - 1] + 1;
+				a = -1;
+				break;
+			}
+			numlib_to_start_with = argv[a];
 		} else if (argv[a][0] == '-') {
 			if (strcmp(argv[a], "--")) {
 				fprintf(stderr, "%s: invalid option -- '%s'\n", PACKAGE_NAME, argv[a]);
@@ -263,10 +296,13 @@ int main(int argc, char *argv[])
 				break;
 			}
 		} else {
-			break;
+			register_file_arg(argv[a]);
 		}
-		if (a >= 1)
-			++a;
+		++a;
+	}
+	while (a >= 1 && a < argc) {
+		register_file_arg(argv[a]);
+		++a;
 	}
 
 	if (optset_verbose && optset_quiet)
@@ -274,15 +310,30 @@ int main(int argc, char *argv[])
 	if (optset_debug)
 		out_level = L_DEBUG;
 
+	if (missing_option_value != NULL) {
+		fprintf(stderr, "%s: option '%s' requires one argument\n", PACKAGE_NAME, missing_option_value);
+	}
 	if (a < 0)
 		usage();
+
+	num_init();
+	if (numlib_to_start_with != NULL) {
+		int r;
+		if ((r = num_libswitch(numlib_to_start_with)) == 0) {
+			fprintf(stderr, "%s: library '%s' unknown, quitting\n", PACKAGE_NAME, numlib_to_start_with);
+			exit(-2);
+		}
+	}
 
 	if (out_level >= L_NORMAL)
 		version();
 
-	num_init();
-
 	out_dbg("DEBUG mode activated\n");
+
+	int i;
+	for (i = 0; i < arg_nb_input_files; ++i) {
+		out_dbg("Input file #%d: %s\n", i + 1, arg_input_files[i]);
+	}
 
 	yyparse();
 
