@@ -453,6 +453,7 @@ int main(int argc, char *argv[])
 	out_dbg("DEBUG mode activated\n");
 
 	if (optset_liblist) {
+		num_init(FALSE);
 		lib_list();
 		exit(0);
 	}
