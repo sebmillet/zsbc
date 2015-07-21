@@ -86,17 +86,25 @@ static int (*Lnot)(numptr *pr, const numptr a);
  *-----------------------------------------------------------------------------*/
 
 
-void num_init()
+	/*
+	 * * WARNING *
+	 *
+	 * If launched with switch_to_first_registered_library set to FALSE, you
+	 * *MUST* call num_libswitch() later otherwise the initialization will be
+	 * partial and any call to a num_ function will crash the program.
+	 * */
+void num_init(int switch_to_first_registered_library)
 {
 
 	gmp_register();
 	libbc_register();
 
-		/* By default, activate the first registered library */
-	lib_t *l = libhead;
-	while (l->next != NULL)
-		l = l->next;
-	libswitch(l, FALSE);
+	if (switch_to_first_registered_library) {
+		lib_t *l = libhead;
+		while (l->next != NULL)
+			l = l->next;
+		libswitch(l, FALSE);
+	}
 }
 
 void num_terminate()

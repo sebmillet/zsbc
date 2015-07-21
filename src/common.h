@@ -43,6 +43,8 @@
 #define out_dbg(...) ;
 #endif
 
+#define ENV_ARGS	"ZSBC_ENV_ARGS"
+
 #define ERROR_NONE						0
 #define ERROR_DIV0						1
 #define ERROR_NEGATIVE_EXP				2
@@ -68,6 +70,8 @@ void fatalln(const char *file, int line, const char *fmt, ...);
 char *s_strncpy(char *dest, const char *src, size_t n);
 char *s_strncat(char *dest, const char *src, size_t n);
 char *s_alloc_and_copy(char **dst, const char *src);
+
+void lib_list();
 
 #endif /* COMMON_H */
 

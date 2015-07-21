@@ -293,15 +293,7 @@ statement:
 		outln(L_ENFORCE, "%s", num_identify_yourself());
 	}
 	| LIBLIST {
-		char *w = NULL;
-		libinfo_t li;
-		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "ID", "DESCRIPTION", "LIBNAME", "VERSION", "NUMSET");
-		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "------------", "------------------------------",
-				"----------", "----------", "----------");
-		do {
-			num_lib_enumerate(&w, &li);
-			outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", li.id, li.description, li.libname, li.version, li.number_set);
-		} while (w != NULL);
+		lib_list();
 	}
 ;
 

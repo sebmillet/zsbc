@@ -19,7 +19,7 @@
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #else
-/* Defines some PACKAGE* constants in case config.h is not available */
+	/* Defines some PACKAGE* constants in case config.h is not available */
 #include "../extracfg.h"
 #endif
 
@@ -37,6 +37,7 @@
 
 static int out_level = L_NORMAL;
 
+	/* To manage input files specified in command line arguments */
 char **arg_input_files = NULL;
 int arg_nb_allocated_input_files = 0;
 int arg_nb_input_files = 0;
@@ -49,6 +50,11 @@ const char *table_errors[] = {
 	"Parameter number mismatch"			/* ERROR_PARAMETER_NUMBER_MISMATCH */
 };
 
+	/*
+	 * Safe string copy -> takes into account the size of the target
+	 * buffer (as in strncpy) but also ensures the target string has
+	 * a terminating '\0' character even if copied string if longer.
+	 * */
 char *s_strncpy(char *dest, const char *src, size_t n)
 {
 	char *r = strncpy(dest, src, n);
@@ -56,6 +62,9 @@ char *s_strncpy(char *dest, const char *src, size_t n)
 	return r;
 }
 
+	/*
+	 * Same comment as s_strncpy above: safe version of strncat
+	 * */
 char *s_strncat(char *dest, const char *src, size_t n)
 {
 	char *r = strncat(dest, src, n);
@@ -64,7 +73,8 @@ char *s_strncat(char *dest, const char *src, size_t n)
 }
 
 	/*
-	 * Returns a copied (allocated) string.
+	 * Returns a copied, allocated string. Uses s_strncpy for the string
+	 * copy (see comment above).
 	 * dst can be null, in which case the new string is to be retrieved
 	 * by the function return value.
 	 */
@@ -78,6 +88,9 @@ char *s_alloc_and_copy(char **dst, const char *src)
 	return target;
 }
 
+	/*
+	 * Output a formatted string. "ln" means, a new line gets printed in the end.
+	 * */
 int outln(int level, const char *fmt, ...)
 {
 	if (level <= out_level || level == L_ENFORCE) {
@@ -144,9 +157,10 @@ void outln_error_code(int e)
 		outln_error("%s", table_errors[e]);
 	} else {
 
-			/* Should an unknown error immediately stop the program execution?
+			/*
+			 * Should an unknown error immediately stop the program execution?
 			 * Not sure of it.
-			 * I leave it ACTIVE for the moment.
+			 * I leave it active for the moment.
 			*/
 		assert(e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors)));
 
@@ -161,7 +175,12 @@ void usage()
 	fprintf(stderr, "  -V  -verbose  verbose output\n");
 	fprintf(stderr, "  -q  -quiet    don't print initial banner\n");
 	fprintf(stderr, "  -v  -version  print version information and exit\n");
+	fprintf(stderr, "      -numlib   (also -lib) defines number library to start with\n");
+	fprintf(stderr, "      -liblist  lists number libraries available and exit\n");
 	fprintf(stderr, "  --            end of parameters, next options are file names\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "  %s will also read environment variable %s to parse options from,\n", PACKAGE_NAME, ENV_ARGS);
+	fprintf(stderr, "  using same format as command-line options.\n");
 	exit(-1);
 }
 
@@ -202,6 +221,15 @@ void rt_error(const char *fmt, ...)
 	exit(1);
 }
 
+	/* Needed by the bc library */
+void out_of_memory()
+{
+	rt_error("%s", "Out of memory");
+}
+
+	/*
+	 * Needed by FATAL_ERROR marco
+	 * */
 void fatalln(const char *file, int line, const char *fmt, ...)
 {
 	va_list args;
@@ -213,22 +241,33 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 	exit(1);
 }
 
-void out_of_memory()
-{
-	rt_error("%s", "Out of memory");
-}
-
+	/*
+	 * Used to track multiple assignment of the same option.
+	 * If called with n set to -1, will reset the "knowledge" of
+	 * already assigned options (used to allow re-assignment of
+	 * options between ENV_ARGS and command-line arguments). In
+	 * that case (if called with -1), make sure opt is set to NULL.
+	 * */
 void opt_check(int n, const char *opt)
 {
 	static int defined_options[4] = {0, 0, 0, 0};
 
+	if (n == -1) {
+		assert(opt == NULL);
+		int i;
+		for (i = 0; i < sizeof(defined_options) / sizeof(*defined_options); ++i) {
+			defined_options[i] = FALSE;
+		}
+		return;
+	}
+
 	assert(n < sizeof(defined_options) / sizeof(*defined_options));
 
 	if (defined_options[n]) {
-		fprintf(stderr, "Option %s already set", opt);
+		fprintf(stderr, "Option %s already set\n", opt);
 		exit(-2);
 	} else
-		defined_options[n] = 1;
+		defined_options[n] = TRUE;
 }
 
 void register_file_arg(const char *arg_to_add)
@@ -245,19 +284,10 @@ void register_file_arg(const char *arg_to_add)
 	arg_input_files[arg_nb_input_files - 1] = (char *)arg_to_add;
 }
 
-int main(int argc, char *argv[])
+void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quiet, int *optset_debug,
+		int *opt_liblist, char **numlib_to_start_with)
 {
-
-#ifdef BISON_DEBUG
-	activate_bison_debug();
-#endif
-
-	int optset_verbose = 0;
-	int optset_quiet = 0;
-	int optset_debug = 0;
-
 	char *missing_option_value = NULL;
-	char *numlib_to_start_with = NULL;
 
 	int a = 1;
 	while (a < argc) {
@@ -268,16 +298,18 @@ int main(int argc, char *argv[])
 			exit(0);
 		} else if (!strcmp(argv[a], "-verbose") || !strcmp(argv[a], "-V")) {
 			opt_check(0, argv[a]);
-			optset_verbose = 1;
+			*optset_verbose = TRUE;
 			out_level = L_VERBOSE;
 		} else if (!strcmp(argv[a], "-quiet") || !strcmp(argv[a], "-q")) {
 			opt_check(1, argv[a]);
-			optset_quiet = 1;
+			*optset_quiet = TRUE;
 			out_level = L_QUIET;
 		} else if (!strcmp(argv[a], "-debug") || !strcmp(argv[a], "-d")) {
 			opt_check(2, argv[a]);
-			optset_debug = 1;
+			*optset_debug = TRUE;
 			out_level = L_DEBUG;
+		} else if (!strcmp(argv[a], "-liblist")) {
+			*opt_liblist = TRUE;
 		} else if (!strcmp(argv[a], "-lib") || !strcmp(argv[a], "-numlib")) {
 			opt_check(3, argv[a]);
 			if (++a >= argc) {
@@ -285,7 +317,7 @@ int main(int argc, char *argv[])
 				a = -1;
 				break;
 			}
-			numlib_to_start_with = argv[a];
+			*numlib_to_start_with = argv[a];
 		} else if (argv[a][0] == '-') {
 			if (strcmp(argv[a], "--")) {
 				fprintf(stderr, "%s: invalid option -- '%s'\n", PACKAGE_NAME, argv[a]);
@@ -305,18 +337,127 @@ int main(int argc, char *argv[])
 		++a;
 	}
 
-	if (optset_verbose && optset_quiet)
-		out_level = L_NORMAL;
-	if (optset_debug)
-		out_level = L_DEBUG;
-
 	if (missing_option_value != NULL) {
 		fprintf(stderr, "%s: option '%s' requires one argument\n", PACKAGE_NAME, missing_option_value);
 	}
 	if (a < 0)
 		usage();
 
-	num_init();
+		/*  Reset memorization of options already set between calls to parse_options */
+	opt_check(-1, NULL);
+}
+
+	/*
+	 * Acquire ENV_ARGS environment variable and cut it into an array
+	 * of strings, the delimiter being space or tab character.
+	 * */
+void cut_env_options(int *env_argc, char ***env_argv, const char **env_orig)
+{
+	*env_argc = 0;
+	*env_argv = NULL;
+	*env_orig = getenv(ENV_ARGS);
+	if (*env_orig == NULL)
+		return;
+
+		/*
+		 * According to getenv manual, the returned string should not be modified
+		 * and we need to modify it...
+		 * */
+	char *env = s_alloc_and_copy(NULL, *env_orig);
+
+	*env_argc = 1;
+	int env_argc_allocated = 2;
+	*env_argv = (char **)malloc(sizeof(char *) * env_argc_allocated);
+
+		/* Useless. Done in case argv[0] is ever used */
+	(*env_argv)[0] = ENV_ARGS;
+
+	char *p = env;
+	char *start_p;
+	while (*p != '\0') {
+		while (*p == ' ' || *p == '\t')
+			++p;
+		start_p = p;
+		while (*p != ' ' && *p != '\t' && *p != '\0')
+			++p;
+
+		int reached_end_of_string = FALSE;
+		if (*p == '\0')
+			reached_end_of_string = TRUE;
+		*p = '\0';
+
+		if (strlen(start_p) >= 1) {
+			++(*env_argc);
+			if (*env_argc > env_argc_allocated) {
+				env_argc_allocated *= 2;
+				*env_argv = (char **)realloc(*env_argv, sizeof(char *) * env_argc_allocated);
+			}
+			if (!strcmp(start_p, "--")) {
+					/*
+					 * FIXME
+					 * Casual output
+					 * */
+				fprintf(stderr, "Hey, you! Yes, you! What the hell are you doing with %s environment variable?!!\n", ENV_ARGS);
+				--(*env_argc);
+			} else {
+				(*env_argv)[*env_argc - 1] = start_p;
+			}
+		}
+
+		if (!reached_end_of_string)
+			++p;
+	}
+}
+
+int main(int argc, char *argv[])
+{
+
+#ifdef BISON_DEBUG
+	activate_bison_debug();
+#endif
+
+	int optset_verbose = FALSE;
+	int optset_quiet = FALSE;
+	int optset_debug = FALSE;
+	int optset_liblist = FALSE;
+	char *numlib_to_start_with = NULL;
+
+	int env_argc;
+	char **env_argv;
+	const char *env;
+	cut_env_options(&env_argc, &env_argv, &env);
+	parse_options(env_argc, env_argv, &optset_verbose, &optset_quiet, &optset_debug, &optset_liblist, &numlib_to_start_with);
+	optset_verbose = FALSE;
+	optset_quiet = FALSE;
+	optset_debug = FALSE;
+	parse_options(argc, argv, &optset_verbose, &optset_quiet, &optset_debug, &optset_liblist, &numlib_to_start_with);
+
+	if (optset_verbose && optset_quiet)
+		out_level = L_NORMAL;
+	if (optset_debug)
+		out_level = L_DEBUG;
+
+	if (env_argc >= 1) {
+		out_dbg("Environment variable '%s' found\n\tValue: '%s'\n\tResult of value parsing;\n", ENV_ARGS, env);
+		int i;
+		for (i = 0; i < env_argc; ++i) {
+			out_dbg("\t\tenv_argv[%d] = '%s'\n", i, env_argv[i]);
+		}
+	} else {
+		out_dbg("No environment variable '%s'\n", ENV_ARGS);
+	}
+
+	if (out_level >= L_NORMAL)
+		version();
+
+	out_dbg("DEBUG mode activated\n");
+
+	if (optset_liblist) {
+		lib_list();
+		exit(0);
+	}
+
+	num_init(numlib_to_start_with == NULL);
 	if (numlib_to_start_with != NULL) {
 		int r;
 		if ((r = num_libswitch(numlib_to_start_with)) == 0) {
@@ -324,11 +465,6 @@ int main(int argc, char *argv[])
 			exit(-2);
 		}
 	}
-
-	if (out_level >= L_NORMAL)
-		version();
-
-	out_dbg("DEBUG mode activated\n");
 
 	int i;
 	for (i = 0; i < arg_nb_input_files; ++i) {
@@ -345,5 +481,18 @@ int main(int argc, char *argv[])
 	output_count_ref_report("expr_t *", e);
 
 	return (n == 0 && e == 0 ? 0 : abs(n) + abs(e));
+}
+
+void lib_list()
+{
+	char *w = NULL;
+	libinfo_t li;
+	outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "ID", "DESCRIPTION", "LIBNAME", "VERSION", "NUMSET");
+	outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "------------", "------------------------------",
+			"----------", "----------", "----------");
+	do {
+		num_lib_enumerate(&w, &li);
+		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", li.id, li.description, li.libname, li.version, li.number_set);
+	} while (w != NULL);
 }
 

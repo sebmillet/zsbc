@@ -2051,21 +2051,13 @@ yyreduce:
   case 76:
 #line 295 "parser.y" /* yacc.c:1646  */
     {
-		char *w = NULL;
-		libinfo_t li;
-		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "ID", "DESCRIPTION", "LIBNAME", "VERSION", "NUMSET");
-		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "------------", "------------------------------",
-				"----------", "----------", "----------");
-		do {
-			num_lib_enumerate(&w, &li);
-			outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", li.id, li.description, li.libname, li.version, li.number_set);
-		} while (w != NULL);
+		lib_list();
 	}
-#line 2065 "parser.c" /* yacc.c:1646  */
+#line 2057 "parser.c" /* yacc.c:1646  */
     break;
 
 
-#line 2069 "parser.c" /* yacc.c:1646  */
+#line 2061 "parser.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2300,7 +2292,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 308 "parser.y" /* yacc.c:1906  */
+#line 300 "parser.y" /* yacc.c:1906  */
 
 
 void activate_bison_debug()

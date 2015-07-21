@@ -32,7 +32,7 @@ typedef struct libinfo_t {
 	const char *number_set;
 } libinfo_t;
 
-void num_init();
+void num_init(int switch_to_first_registered_library);
 void num_terminate();
 
 int num_get_current_lib_number();
