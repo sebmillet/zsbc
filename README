@@ -2,7 +2,7 @@
    zsbc, a portable integer calculator using gmp
    =============================================
 
-Date: 2015-06-03 23:12 +0200
+Date: 2015-07-23 23:49 +0200
 
 Contents:
 
@@ -18,8 +18,19 @@ I.    WHAT IS ZSBC?
 It is a calculator supporting simple arithmetic along with big integers, as
 provided by the GNU MP library.
 It is similar to bc and one goal of this program is to be compatible with bc
-scripts, so long as they keep scale set to 0.
-zsbc stands for "Zero Scale bc": no real number management, only integers.
+scripts.
+zsbc stands for "Zero Scale bc": the focus is not on real number management
+but on integers.
+
+Because the author of these lines wanted bc tests to be applicable to zsbc,
+zsbc got compiled with bc number library.
+By default zsbc starts with gmp integers (mpz_t) but if provided with the
+command-line argument -lib, or if during execution you enter the statement
+	lib "bc"
+then bc number library will be used (instead of gmp' mpz_t) and decimal
+numbers will be managed as per bc standard = among other things, taking into
+account the value of the "scale" variable, that defines the number of decimals
+to keep after the comma.
 
 
 
@@ -28,6 +39,7 @@ II.   WHY ZSBC?
 To have fun.
 To do some tests and checks around cryptography.
 To deal with big integers in particular, you have bc, PARI/GP, python, ...
+And now you have zsbc!
 
 
 
