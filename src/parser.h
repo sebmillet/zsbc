@@ -94,7 +94,7 @@ extern int yydebug;
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 57 "parser.y" /* yacc.c:1909  */
+#line 56 "parser.y" /* yacc.c:1909  */
 
 	numptr num;
 	expr_t *enode;
@@ -131,8 +131,7 @@ int yyparse (void);
 #line 49 "parser.y" /* yacc.c:1909  */
 
 void activate_bison_debug();
-void lib_list();
 
-#line 137 "parser.h" /* yacc.c:1909  */
+#line 136 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */

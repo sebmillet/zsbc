@@ -345,14 +345,13 @@ void vars_recall_from_keeper(const char *name, const vars_keeper_t *keeper)
 
 	vars_t *w = find_var(name, keeper->value.type);
 
-	assert(w != NULL);
-
 	if (keeper->has_value) {
-		out_dbg("\tkeeper has a value, replacing variable value with keeper's\n");
+		assert(w != NULL);
+		out_dbg("\tKeeper has a value => replacing variable value with keeper's\n");
 		vars_value_destruct(&w->value);
 		vars_value_copy(&w->value, &keeper->value);
-	} else  {
-		out_dbg("\tUndefined keeper value, destructing variable\n");
+	} else if (w != NULL)  {
+		out_dbg("\tUndefined keeper value => destructing variable\n");
 
 			/*  FIXME
 			 *  Needs proper destruction function
@@ -360,6 +359,8 @@ void vars_recall_from_keeper(const char *name, const vars_keeper_t *keeper)
 		free(w->name);
 		w->name = NULL;
 
+	} else {
+		out_dbg("\tUndefined keeper value and variable not found => nothing to do\n");
 	}
 }
 

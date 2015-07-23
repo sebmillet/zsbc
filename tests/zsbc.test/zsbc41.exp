@@ -1,0 +1,34 @@
+# tests/zsbc.test/zsbc41.exp
+
+set timeout 3
+spawn "$ZSBC" -V "$TESTDIR/zsbc41f.b"
+send_user "***   Functions defined from files invoked in command-line arguments\n"
+
+set test "Function pow2"
+send "101\npow2(10)\n909\n"
+expect {
+	-re "101\[^0-9\]+1024\[^0-9\]+909\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function powmod"
+send "121\npowmod(51,39, 97)\n919\n"
+expect {
+	-re "121\[^0-9\]+67\[^0-9\]+919\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check return statement"
+send "131\ncheckreturn()\n929\n"
+expect {
+	-re "131\[^0-9\]+1\[^0-9\]+929\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

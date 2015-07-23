@@ -48,7 +48,6 @@ void loc_reset();
 
 %code provides {
 void activate_bison_debug();
-void lib_list();
 }
 
 %defines

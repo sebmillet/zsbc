@@ -35,14 +35,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+int yywrap();
+
 static int out_level = L_NORMAL;
 
 	/* To manage input files specified in command line arguments */
-char **arg_input_files = NULL;
-int arg_nb_allocated_input_files = 0;
-int arg_nb_input_files = 0;
+static char **argf_list = NULL;
+static int argf_nb_alloc = 0;
+static int argf_nb = 0;
+static int argf_cur;
+static char *argf_curname;
+static FILE *argf_curfile;
+static void argf_register_arg(const char *arg_to_add);
 
-const char *table_errors[] = {
+static const char *table_errors[] = {
 	"No error",							/* ERROR_NONE */
 	"Division by 0",					/* ERROR_DIV0 */
 	"Negative exponent not authorized",	/* ERROR_NEGATIVE_EXP */
@@ -168,7 +174,7 @@ void outln_error_code(int e)
 	}
 }
 
-void usage()
+static void usage()
 {
 	fprintf(stderr, "Usage: %s [options] [file ...]\n", PACKAGE_NAME);
 	fprintf(stderr, "  -h  -help     print this usage and exit\n");
@@ -184,7 +190,7 @@ void usage()
 	exit(-1);
 }
 
-void version()
+static void version()
 {
 #if defined(DEBUG) || defined(BISON_DEBUG) || defined(FLEX_DEBUG)
 	printf("%sd\n", PACKAGE_STRING);
@@ -194,7 +200,7 @@ void version()
 	printf("Copyright (c) 2015 Sébastien Millet\n");
 }
 
-void output_count_ref_report(const char *name, int count_ref)
+static void output_count_ref_report(const char *name, int count_ref)
 {
 	outln(count_ref != 0 ? L_ERROR : L_VERBOSE,
 		"%s  %s count (should be 0): %i", (count_ref != 0 ? "** ERROR **" : "OK         "), name, count_ref);
@@ -248,7 +254,7 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 	 * options between ENV_ARGS and command-line arguments). In
 	 * that case (if called with -1), make sure opt is set to NULL.
 	 * */
-void opt_check(int n, const char *opt)
+static void opt_check(int n, const char *opt)
 {
 	static int defined_options[4] = {0, 0, 0, 0};
 
@@ -270,21 +276,7 @@ void opt_check(int n, const char *opt)
 		defined_options[n] = TRUE;
 }
 
-void register_file_arg(const char *arg_to_add)
-{
-	if (++arg_nb_input_files > arg_nb_allocated_input_files) {
-		if (arg_input_files == NULL) {
-			arg_nb_allocated_input_files = 4;
-			arg_input_files = (char **)malloc(sizeof(char *) * arg_nb_allocated_input_files);
-		} else {
-			arg_nb_allocated_input_files *= 2;
-			arg_input_files = (char **)realloc(arg_input_files, sizeof(char *) * arg_nb_allocated_input_files);
-		}
-	}
-	arg_input_files[arg_nb_input_files - 1] = (char *)arg_to_add;
-}
-
-void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quiet, int *optset_debug,
+static void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quiet, int *optset_debug,
 		int *opt_liblist, char **numlib_to_start_with)
 {
 	char *missing_option_value = NULL;
@@ -328,12 +320,12 @@ void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quie
 				break;
 			}
 		} else {
-			register_file_arg(argv[a]);
+			argf_register_arg(argv[a]);
 		}
 		++a;
 	}
 	while (a >= 1 && a < argc) {
-		register_file_arg(argv[a]);
+		argf_register_arg(argv[a]);
 		++a;
 	}
 
@@ -351,7 +343,7 @@ void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quie
 	 * Acquire ENV_ARGS environment variable and cut it into an array
 	 * of strings, the delimiter being space or tab character.
 	 * */
-void cut_env_options(int *env_argc, char ***env_argv, const char **env_orig)
+static void cut_env_options(int *env_argc, char ***env_argv, const char **env_orig)
 {
 	*env_argc = 0;
 	*env_argv = NULL;
@@ -392,16 +384,7 @@ void cut_env_options(int *env_argc, char ***env_argv, const char **env_orig)
 				env_argc_allocated *= 2;
 				*env_argv = (char **)realloc(*env_argv, sizeof(char *) * env_argc_allocated);
 			}
-			if (!strcmp(start_p, "--")) {
-					/*
-					 * FIXME
-					 * Casual output
-					 * */
-				fprintf(stderr, "Hey, you! Yes, you! What the hell are you doing with %s environment variable?!!\n", ENV_ARGS);
-				--(*env_argc);
-			} else {
-				(*env_argv)[*env_argc - 1] = start_p;
-			}
+			(*env_argv)[*env_argc - 1] = start_p;
 		}
 
 		if (!reached_end_of_string)
@@ -468,9 +451,18 @@ int main(int argc, char *argv[])
 	}
 
 	int i;
-	for (i = 0; i < arg_nb_input_files; ++i) {
-		out_dbg("Input file #%d: %s\n", i + 1, arg_input_files[i]);
+	for (i = 0; i < argf_nb; ++i) {
+		out_dbg("Input file #%d: %s\n", i + 1, argf_list[i]);
 	}
+
+		/*
+		 * Have to call yywrap() one first time for proper initialization
+		 * of yyin.
+		 * The -1 below is important, see goto_next_input_file() (called
+		 * by yywrap()) to see why.
+		 * */
+	argf_cur = -1;
+	yywrap();
 
 	yyparse();
 
@@ -495,5 +487,62 @@ void lib_list()
 		num_lib_enumerate(&w, &li);
 		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", li.id, li.description, li.libname, li.version, li.number_set);
 	} while (w != NULL);
+}
+
+	/* Adds one input file to read when program starts */
+static void argf_register_arg(const char *arg_to_add)
+{
+	if (++argf_nb > argf_nb_alloc) {
+		if (argf_list == NULL) {
+			argf_nb_alloc = 4;
+			argf_list = (char **)malloc(sizeof(char *) * argf_nb_alloc);
+		} else {
+			argf_nb_alloc *= 2;
+			argf_list = (char **)realloc(argf_list, sizeof(char *) * argf_nb_alloc);
+		}
+	}
+	argf_list[argf_nb - 1] = (char *)arg_to_add;
+}
+
+char *argf_get_curname()
+{
+	return argf_curname;
+}
+
+	/*
+	 * Returns the FILE* of the next file to read. Files to read come in the order
+	 * they were provided in the arguments.
+	 * Once the end of the list is reached, returns stdin.
+	 * Then returns NULL to say it is over.
+	 * */
+FILE *argf_get_next()
+{
+
+	if (argf_cur >= 0 && argf_cur < argf_nb && argf_curfile != NULL) {
+		fclose(argf_curfile);
+		out_dbg("argf_get_next(): closed file %s\n", argf_get_curname());
+	}
+
+	++argf_cur;
+
+	if (argf_cur < argf_nb) {
+		argf_curname = argf_list[argf_cur];
+		out_dbg("argf_get_next() is now on file: %s\n", argf_curname);
+		if ((argf_curfile = fopen(argf_curname, "r")) == NULL) {
+			outln_error("File '%s' is unavailable", argf_curname);
+			exit(-99);
+		} else {
+			out_dbg("argf_get_next(): opened file %s, it is the next yyin-to-be\n", argf_curname);
+		}
+	} else if (argf_cur == argf_nb) {
+		argf_curname = "";
+		argf_curfile = stdin;
+		out_dbg("argf_get_next(): stdin is the next yyin-to-be\n");
+	} else {
+		argf_curname = NULL;
+		argf_curfile = NULL;
+		out_dbg("argf_get_next(): NULL is the next yyin-to-be\n");
+	}
+	return argf_curfile;
 }
 

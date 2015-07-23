@@ -41,7 +41,7 @@ expect {
 
 set test "10K elements arrays (1)"
 send -- "for(i=0;i<=10000;++i)test\[i\]=i+1\nt=0;u=0\nfor(i=0;i<=10000;++i){t+=test\[i\];u+=(-1)^i*test\[i\]}\n606\nt\nu\nfor(i=0;i<=3;)2^test\[++i\]\n707\n"
-sleep 2
+sleep 3
 expect {
 	-re "606\[^0-9\]+50015001\[^0-9\]+5001\[^0-9\]+4\[^0-9\]+8\[^0-9\]+16\[^0-9\]+32\[^0-9\]+707\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }

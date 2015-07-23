@@ -40,7 +40,12 @@
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
 
+	/* Defined in this file */
 void yyerror(char *s, ...);
+
+	/* the 2 below are defined in main.c */
+FILE *argf_get_next();
+char *argf_get_curname();
 
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
@@ -51,7 +56,6 @@ void yyerror(char *s, ...);
 %option 8bit
 %option warn
 %option yylineno
-%option noyywrap
 %option nounput
 
 number			([A-Z0-9]|\\\n)+(\.([A-Z0-9]|\\\n)*)?
@@ -64,7 +68,7 @@ string			\"[^\"]*\"
 
 [ \t]+		{ }
 
-"="|"+="|"-="|"*="|"/="|"^="|"%="	{
+"="|"+="|"-="|"*="|"/="|"^="|"%=" {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return OP_AND_ASSIGN;
 }
@@ -76,7 +80,7 @@ string			\"[^\"]*\"
 ")"			return ')';
 "^"			return '^';
 "%"			return '%';
-"++"|"--"	{
+"++"|"--" {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return PLUSPLUS_MINMIN;
 }
@@ -89,18 +93,20 @@ string			\"[^\"]*\"
 "||"		return LOGIC_OR;
 "&&"		return LOGIC_AND;
 "!"			return LOGIC_NOT;
-"<"|"<="|">"|">="|"=="|"!="	{
+"<"|"<="|">"|">="|"=="|"!=" {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return COMPARISON;
 }
 
-{number}	{
+{number} {
 	cleanup_inputnumber(yytext);
 	yylval.num = num_construct_from_str(yytext, 10);
 	return INTEGER;
 }
 
+	/* The sequence below (left commented) is for insensitive matching */
 	/* (?i:quit)		return QUIT;	*/
+
 quit			return QUIT;
 libswitch|lib	return LIBSWITCH;
 liblist			return LIBLIST;
@@ -111,12 +117,12 @@ define			return DEFINE;
 void			return VOID;
 return			return RETURN;
 
-{identifier}	{
+{identifier} {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return IDENTIFIER;
 }
 
-{string}	{
+{string} {
 	unsigned int len = strlen(yytext);
 	assert(yytext[len - 1] == '"');
 	yytext[len - 1] = '\0';
@@ -126,7 +132,16 @@ return			return RETURN;
 
 "\n"		{ yycolumn = 1; return NEWLINE; }
 \\\n
-.			{ yyerror("illegal character: %s", yytext); }
+. {
+		/* The code below is taken from bc source, with some minor variations */
+	char c = yytext[0];
+	if (c < ' ')
+		yyerror("illegal character: ^%c", '@' + c);
+	else if (c > '~')
+		yyerror("illegal character: \\%03o", (int)c);
+	else
+		yyerror("illegal character: %c", c);
+}
 
 %%
 
@@ -166,11 +181,32 @@ void yyerror(char *s, ...)
 
 	out_dbg("yyerror() invocation\n");
 
+	if (strlen(argf_get_curname()) >= 1)
+		fprintf(stderr, "%s: ", argf_get_curname());
 	if(yylloc.first_line) {
 		fprintf(stderr, "%d.%d-%d.%d: ", yylloc.first_line, yylloc.first_column,
 		yylloc.last_line, yylloc.last_column);
 	}
 	vfprintf(stderr, s, ap);
 	fprintf(stderr, "\n");
+}
+
+int yywrap()
+{
+	FILE *next = argf_get_next();
+	out_dbg("Call to yywrap. File given by argf_get_next(): %lu\n", next);
+	out_dbg("\tyyin: %s\n", next == stdin ? "is being assigned to stdin" :
+			(next == NULL ? "yyin won't be assigned, lexer terminating" : "yyin is being assigned to an input file (not stdin)"));
+
+	if (next == NULL) {
+		out_dbg("\tyywrap returns 1 (non zero means TERMINATE)\n");
+		return 1;
+	} else {
+		out_dbg("\tyywrap returns 0 (zero means CONTINUE)\n");
+		yyin = next;
+		return 0;
+	}
+
+	loc_reset();
 }
 

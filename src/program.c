@@ -117,6 +117,7 @@ int program_execute(program_t *p, numptr *pval)
 		out_dbg("Executing one instruction, type: %d, address: %lu\n", p->type, p);
 		numptr num;
 		program_loop_t *loop;
+		program_t *pnext = p->next;
 		int b;
 		int print_result;
 		switch (p->type) {
@@ -131,10 +132,12 @@ int program_execute(program_t *p, numptr *pval)
 					num_print(num, 10);
 					outln(L_ENFORCE, "");
 				}
-				if (p->type == TINSTR_EXPR_RETURN)
+				if (p->type == TINSTR_EXPR_RETURN) {
 					*pval = num;
-				else
+					pnext = NULL;
+				} else {
 					num_destruct(&num);
+				}
 				break;
 			case TINSTR_STR:
 				out(L_ENFORCE, "%s", p->str);
@@ -188,7 +191,7 @@ int program_execute(program_t *p, numptr *pval)
 				assert(0);
 		}
 		out_dbg("Execution done, going to next instruction\n");
-		p = p->next;
+		p = pnext;
 	}
 	return r;
 }

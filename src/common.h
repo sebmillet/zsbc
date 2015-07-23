@@ -71,5 +71,7 @@ char *s_strncpy(char *dest, const char *src, size_t n);
 char *s_strncat(char *dest, const char *src, size_t n);
 char *s_alloc_and_copy(char **dst, const char *src);
 
+void lib_list();
+
 #endif /* COMMON_H */
 

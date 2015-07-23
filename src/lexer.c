@@ -360,9 +360,6 @@ void yyfree (void *  );
 
 /* Begin user sect3 */
 
-#define yywrap() 1
-#define YY_SKIP_YYWRAP
-
 typedef unsigned char YY_CHAR;
 
 FILE *yyin = (FILE *) 0, *yyout = (FILE *) 0;
@@ -588,7 +585,12 @@ char *yytext;
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
 
+	/* Defined in this file */
 void yyerror(char *s, ...);
+
+	/* the 2 below are defined in main.c */
+FILE *argf_get_next();
+char *argf_get_curname();
 
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
@@ -596,7 +598,7 @@ void yyerror(char *s, ...);
 
 /*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
 /*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
-#line 600 "lexer.c"
+#line 602 "lexer.c"
 
 #define INITIAL 0
 
@@ -808,10 +810,10 @@ YY_DECL
 		}
 
 	{
-#line 63 "lexer.l"
+#line 67 "lexer.l"
 
 
-#line 815 "lexer.c"
+#line 817 "lexer.c"
 
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
@@ -880,12 +882,12 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 65 "lexer.l"
+#line 69 "lexer.l"
 { }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 67 "lexer.l"
+#line 71 "lexer.l"
 {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return OP_AND_ASSIGN;
@@ -893,47 +895,47 @@ YY_RULE_SETUP
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 71 "lexer.l"
+#line 75 "lexer.l"
 return '+';
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 72 "lexer.l"
+#line 76 "lexer.l"
 return '-';
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 73 "lexer.l"
+#line 77 "lexer.l"
 return '*';
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 74 "lexer.l"
+#line 78 "lexer.l"
 return '/';
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 75 "lexer.l"
+#line 79 "lexer.l"
 return '(';
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 76 "lexer.l"
+#line 80 "lexer.l"
 return ')';
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 77 "lexer.l"
+#line 81 "lexer.l"
 return '^';
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 78 "lexer.l"
+#line 82 "lexer.l"
 return '%';
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 79 "lexer.l"
+#line 83 "lexer.l"
 {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return PLUSPLUS_MINMIN;
@@ -941,52 +943,52 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 83 "lexer.l"
+#line 87 "lexer.l"
 return ';';
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 84 "lexer.l"
+#line 88 "lexer.l"
 return ',';
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 85 "lexer.l"
+#line 89 "lexer.l"
 return '[';
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 86 "lexer.l"
+#line 90 "lexer.l"
 return ']';
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 87 "lexer.l"
+#line 91 "lexer.l"
 return '{';
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 88 "lexer.l"
+#line 92 "lexer.l"
 return '}';
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 89 "lexer.l"
+#line 93 "lexer.l"
 return LOGIC_OR;
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 90 "lexer.l"
+#line 94 "lexer.l"
 return LOGIC_AND;
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 91 "lexer.l"
+#line 95 "lexer.l"
 return LOGIC_NOT;
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 92 "lexer.l"
+#line 96 "lexer.l"
 {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return COMPARISON;
@@ -995,62 +997,63 @@ YY_RULE_SETUP
 case 22:
 /* rule 22 can match eol */
 YY_RULE_SETUP
-#line 97 "lexer.l"
+#line 101 "lexer.l"
 {
 	cleanup_inputnumber(yytext);
 	yylval.num = num_construct_from_str(yytext, 10);
 	return INTEGER;
 }
 	YY_BREAK
+/* The sequence below (left commented) is for insensitive matching */
 /* (?i:quit)		return QUIT;	*/
 case 23:
 YY_RULE_SETUP
-#line 104 "lexer.l"
+#line 110 "lexer.l"
 return QUIT;
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 105 "lexer.l"
+#line 111 "lexer.l"
 return LIBSWITCH;
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 106 "lexer.l"
+#line 112 "lexer.l"
 return LIBLIST;
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 107 "lexer.l"
+#line 113 "lexer.l"
 return VARS;
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 108 "lexer.l"
+#line 114 "lexer.l"
 return WHILE;
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 109 "lexer.l"
+#line 115 "lexer.l"
 return FOR;
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 110 "lexer.l"
+#line 116 "lexer.l"
 return DEFINE;
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 111 "lexer.l"
+#line 117 "lexer.l"
 return VOID;
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 112 "lexer.l"
+#line 118 "lexer.l"
 return RETURN;
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 114 "lexer.l"
+#line 120 "lexer.l"
 {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return IDENTIFIER;
@@ -1059,7 +1062,7 @@ YY_RULE_SETUP
 case 33:
 /* rule 33 can match eol */
 YY_RULE_SETUP
-#line 119 "lexer.l"
+#line 125 "lexer.l"
 {
 	unsigned int len = strlen(yytext);
 	assert(yytext[len - 1] == '"');
@@ -1071,26 +1074,35 @@ YY_RULE_SETUP
 case 34:
 /* rule 34 can match eol */
 YY_RULE_SETUP
-#line 127 "lexer.l"
+#line 133 "lexer.l"
 { yycolumn = 1; return NEWLINE; }
 	YY_BREAK
 case 35:
 /* rule 35 can match eol */
 YY_RULE_SETUP
-#line 128 "lexer.l"
+#line 134 "lexer.l"
 
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 129 "lexer.l"
-{ yyerror("illegal character: %s", yytext); }
+#line 135 "lexer.l"
+{
+		/* The code below is taken from bc source, with some minor variations */
+	char c = yytext[0];
+	if (c < ' ')
+		yyerror("illegal character: ^%c", '@' + c);
+	else if (c > '~')
+		yyerror("illegal character: \\%03o", (int)c);
+	else
+		yyerror("illegal character: %c", c);
+}
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 131 "lexer.l"
+#line 146 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1094 "lexer.c"
+#line 1106 "lexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2056,7 +2068,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 130 "lexer.l"
+#line 145 "lexer.l"
 
 
 
@@ -2096,12 +2108,33 @@ void yyerror(char *s, ...)
 
 	out_dbg("yyerror() invocation\n");
 
+	if (strlen(argf_get_curname()) >= 1)
+		fprintf(stderr, "%s: ", argf_get_curname());
 	if(yylloc.first_line) {
 		fprintf(stderr, "%d.%d-%d.%d: ", yylloc.first_line, yylloc.first_column,
 		yylloc.last_line, yylloc.last_column);
 	}
 	vfprintf(stderr, s, ap);
 	fprintf(stderr, "\n");
+}
+
+int yywrap()
+{
+	FILE *next = argf_get_next();
+	out_dbg("Call to yywrap. File given by argf_get_next(): %lu\n", next);
+	out_dbg("\tyyin: %s\n", next == stdin ? "is being assigned to stdin" :
+			(next == NULL ? "yyin won't be assigned, lexer terminating" : "yyin is being assigned to an input file (not stdin)"));
+
+	if (next == NULL) {
+		out_dbg("\tyywrap returns 1 (non zero means TERMINATE)\n");
+		return 1;
+	} else {
+		out_dbg("\tyywrap returns 0 (zero means CONTINUE)\n");
+		yyin = next;
+		return 0;
+	}
+
+	loc_reset();
 }
 
 
