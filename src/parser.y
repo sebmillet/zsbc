@@ -37,9 +37,7 @@
 #include "program.h"
 
 extern int yylex();
-
 void yyerror(char *s, ...);
-
 void loc_reset();
 
 #ifdef BISON_DEBUG
@@ -50,6 +48,7 @@ void loc_reset();
 
 %code provides {
 void activate_bison_debug();
+void lib_list();
 }
 
 %defines

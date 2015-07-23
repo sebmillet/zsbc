@@ -103,12 +103,6 @@ static void destruct_setvar(expr_t *self);
 static void destruct_builtin_op(expr_t *self);
 static void destruct_function_call(expr_t *self);
 
-static void copy_number(expr_t *dst, const expr_t *src);
-static void copy_getvar(expr_t *dst, const expr_t *src);
-static void copy_setvar(expr_t *dst, const expr_t *src);
-static void copy_builtin_op(expr_t *dst, const expr_t *src);
-static void copy_function_call(expr_t *dst, const expr_t *src);
-
 static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval);
@@ -122,15 +116,6 @@ static void (*table_destruct[])(expr_t *self) = {
 	destruct_setvar,		/* ENODE_SETVAR_POSTFIX */
 	destruct_builtin_op,	/* ENODE_BUILTIN_OP */
 	destruct_function_call	/* ENODE_FUNCTION_CALL */
-};
-
-static void (*table_copy[])(expr_t *dst, const expr_t *src) = {
-	copy_number,			/* ENODE_NUMBER */
-	copy_getvar,			/* ENODE_GETVAR */
-	copy_setvar,			/* ENODE_SETVAR */
-	copy_setvar,			/* ENODE_SETVAR_POSTFIX */
-	copy_builtin_op,		/* ENODE_BUILTIN_OP */
-	copy_function_call		/* ENODE_FUNCTION_CALL */
 };
 
 static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr *pval) = {
@@ -212,50 +197,6 @@ static expr_t *expr_construct(enode_t type, int nb_args)
 	++expr_count_ref;
 	out_dbg("expr_t construct, address: %lu, type: %s, #args: %d\n", self, ENODE_TYPES[type], nb_args);
 	return self;
-}
-
-static expr_t *expr_copy(const expr_t *src)
-{
-	if (src == NULL)
-		return NULL;
-
-	expr_t *copy = expr_construct(src->type, src->nb_args);
-
-	(table_copy[copy->type])(copy, src);
-
-	int i;
-	for (i = 0; i < copy->nb_args; ++i)
-		copy->args[i] = expr_copy(src->args[i]);
-	return copy;
-}
-
-static void copy_number(expr_t *dst, const expr_t *src)
-{
-	dst->num = num_construct_from_num(src->num);
-}
-
-static void copy_getvar(expr_t *dst, const expr_t *src)
-{
-	s_alloc_and_copy(&dst->var.name, src->var.name);
-	dst->var.index = expr_copy(src->var.index);
-	dst->var.builtin = src->var.builtin;
-}
-
-static void copy_setvar(expr_t *dst, const expr_t *src)
-{
-	s_alloc_and_copy(&dst->var.name, src->var.name);
-	dst->var.index = expr_copy(src->var.index);
-	dst->var.builtin = src->var.builtin;
-}
-
-static void copy_builtin_op(expr_t *dst, const expr_t *src)
-{
-	dst->builtin = src->builtin;
-}
-
-static void copy_function_call(expr_t *dst, const expr_t *src)
-{
-	s_alloc_and_copy(&dst->var.name, src->var.name);
 }
 
 expr_t *expr_construct_number(numptr num)

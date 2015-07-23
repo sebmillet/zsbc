@@ -23,15 +23,16 @@
 
 %{
 
-#include <string.h>
-#include <stdarg.h>
-
 #include "common.h"
 #include "numwrap.h"
 #include "expr.h"
 #include "vars.h"
 #include "program.h"
 #include "parser.h"
+
+#include <string.h>
+#include <stdarg.h>
+#include <unistd.h>
 
 #define YY_NO_INPUT
 #define YY_NO_UNISTD_H
@@ -99,11 +100,11 @@ string			\"[^\"]*\"
 	return INTEGER;
 }
 
-(?i:quit)		return QUIT;	/* FIXME - either case sensitive or insensitive but should be consistent for all tokens */
-(?i:exit)		return QUIT;
-libswitch		return LIBSWITCH;
+	/* (?i:quit)		return QUIT;	*/
+quit			return QUIT;
+libswitch|lib	return LIBSWITCH;
 liblist			return LIBLIST;
-(?i:vars)		return VARS;
+vars			return VARS;
 while			return WHILE;
 for				return FOR;
 define			return DEFINE;
@@ -129,6 +130,10 @@ return			return RETURN;
 
 %%
 
+	/*
+	 * Remove escaped newlines from string = newline characters that
+	 * follow a \ character.
+	 * */
 void cleanup_inputnumber(char *s)
 {
 	char *src = s;
