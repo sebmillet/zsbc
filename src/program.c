@@ -23,7 +23,16 @@
 
 int instr_count_ref = 0;
 
-typedef enum {TINSTR_EXPR_EXPR, TINSTR_EXPR_ASSIGN_EXPR, TINSTR_EXPR_RETURN, TINSTR_STR, TINSTR_LOOP} instr_t;
+typedef enum {
+	TINSTR_EXPR_EXPR,
+	TINSTR_EXPR_ASSIGN_EXPR,
+	TINSTR_EXPR_RETURN,
+	TINSTR_STR,
+	TINSTR_LOOP,
+	TINSTR_BREAK,
+	TINSTR_CONTINUE,
+	TINSTR_IFSEQ
+} instr_t;
 
 struct program_t {
 	instr_t type;
@@ -32,6 +41,7 @@ struct program_t {
 		expr_t *expr;			/* TINSTR_EXPR* */
 		char *str;				/* TINSTR_STR */
 		program_loop_t loop;	/* TINSTR_LOOP */
+		program_ifseq_t ifseq;	/* TINSTR_IFSEQ */
 	};
 
 	program_t *next;
@@ -77,6 +87,29 @@ program_t *program_construct_loop(program_loop_t *loop)
 	return p;
 }
 
+program_t *program_construct_break()
+{
+	program_t *p = program_construct(TINSTR_BREAK);
+	out_dbg("Construct of one program of type break, address = %lu\n", p);
+	return p;
+}
+
+program_t *program_construct_continue()
+{
+	program_t *p = program_construct(TINSTR_CONTINUE);
+	out_dbg("Construct of one program of type continue, address = %lu\n", p);
+	return p;
+}
+
+program_t *program_construct_ifseq(program_ifseq_t *ifseq)
+{
+	program_t *p = program_construct(TINSTR_IFSEQ);
+	p->ifseq = *ifseq;
+	out_dbg("Construct of one program of type if, expression: %lu, program_if: %lu, program_else: %lu, address = %lu\n",
+		ifseq->expr, ifseq->pif, ifseq->pelse, p);
+	return p;
+}
+
 void program_destruct(program_t *p)
 {
 	out_dbg("Entering program_destruct for %lu\n", p);
@@ -99,8 +132,16 @@ void program_destruct(program_t *p)
 				expr_destruct(p->loop.testafter);
 				expr_destruct(p->loop.exprafter);
 				break;
+			case TINSTR_BREAK:
+			case TINSTR_CONTINUE:
+				break;
+			case TINSTR_IFSEQ:
+				expr_destruct(p->ifseq.expr);
+				program_destruct(p->ifseq.pif);
+				program_destruct(p->ifseq.pelse);
+				break;
 			default:
-				assert(0);
+				FATAL_ERROR("Unknown program type: %d, program address: %lu", p->type, p);
 		}
 		out_dbg("Done destructing one program instruction, going to next instruction\n");
 		pnext = p->next;
@@ -116,7 +157,9 @@ int program_execute(program_t *p, numptr *pval)
 	while (p != NULL && r == ERROR_NONE) {
 		out_dbg("Executing one instruction, type: %d, address: %lu\n", p->type, p);
 		numptr num;
+		numptr in_val;
 		program_loop_t *loop;
+		program_ifseq_t *ifseq;
 		program_t *pnext = p->next;
 		int b;
 		int print_result;
@@ -165,7 +208,12 @@ int program_execute(program_t *p, numptr *pval)
 					}
 
 						/* The content of the loop being executed, for every loops realms */
-					if ((r = program_execute(loop->core, pval)) != ERROR_NONE)
+					r = program_execute(loop->core, &in_val);
+					if (r == ERROR_BREAK)
+						break;
+					if (r == ERROR_CONTINUE)
+						continue;
+					if (r != ERROR_NONE)
 						break;
 
 						/* Test part of a do ... while() */
@@ -187,8 +235,34 @@ int program_execute(program_t *p, numptr *pval)
 
 				}
 				break;
+			case TINSTR_BREAK:
+				pnext = NULL;
+				r = ERROR_BREAK;
+				break;
+			case TINSTR_CONTINUE:
+				pnext = NULL;
+				r = ERROR_CONTINUE;
+				break;
+			case TINSTR_IFSEQ:
+				ifseq = &p->ifseq;
+
+					/* PART 1 - TEST */
+
+				num = num_undefvalue();
+				if ((r = expr_eval(ifseq->expr, &num)) != ERROR_NONE)
+					break;
+				b = num_is_zero(num);
+				num_destruct(&num);
+
+					/* PART 2 - IF or ELSE execution*/
+				if (!b)
+					r = program_execute(ifseq->pif, &in_val);
+				else
+					r = program_execute(ifseq->pelse, &in_val);
+
+				break;
 			default:
-				assert(0);
+				FATAL_ERROR("Unknown program type: %d, program address: %lu", p->type, p);
 		}
 		out_dbg("Execution done, going to next instruction\n");
 		p = pnext;

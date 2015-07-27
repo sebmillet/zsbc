@@ -49,11 +49,13 @@ static FILE *argf_curfile;
 static void argf_register_arg(const char *arg_to_add);
 
 static const char *table_errors[] = {
-	"No error",							/* ERROR_NONE */
+	NULL,								/* ERROR_NONE */
 	"Division by 0",					/* ERROR_DIV0 */
 	"Negative exponent not authorized",	/* ERROR_NEGATIVE_EXP */
 	"Function not defined",				/* ERROR_FUNCTION_NOT_DEFINED */
-	"Parameter number mismatch"			/* ERROR_PARAMETER_NUMBER_MISMATCH */
+	"Parameter number mismatch",		/* ERROR_PARAMETER_NUMBER_MISMATCH */
+	NULL,								/* ERROR_BREAK */
+	NULL								/* ERROR_CONTINUE */
 };
 
 	/*
@@ -160,7 +162,12 @@ int outln_warning(const char *fmt, ...)
 void outln_error_code(int e)
 {
 	if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
-		outln_error("%s", table_errors[e]);
+		const char *msg = table_errors[e];
+		if (msg == NULL) {
+			FATAL_ERROR("Error code %d has no defined error message!", e);
+		} else {
+			outln_error("%s", msg);
+		}
 	} else {
 
 			/*
@@ -394,6 +401,9 @@ static void cut_env_options(int *env_argc, char ***env_argv, const char **env_or
 
 int main(int argc, char *argv[])
 {
+
+	if (ERROR_LAST + 1 != sizeof(table_errors) / sizeof(*table_errors))
+		FATAL_ERROR("%s", "table_errors has initialization inconsistent with ERROR_ constants");
 
 #ifdef BISON_DEBUG
 	activate_bison_debug();

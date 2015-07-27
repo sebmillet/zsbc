@@ -34,10 +34,19 @@ typedef struct program_loop_t {
 	expr_t *exprafter;
 } program_loop_t;
 
+typedef struct program_ifseq_t {
+	expr_t *expr;
+	program_t *pif;
+	program_t *pelse;
+} program_ifseq_t;
+
 program_t *program_construct_expr(expr_t *e, int is_assignment);
 program_t *program_construct_str(const char *s);
 program_t *program_construct_loop(program_loop_t *loop);
 program_t *program_construct_return(expr_t *e);
+program_t *program_construct_continue();
+program_t *program_construct_break();
+program_t *program_construct_ifseq(program_ifseq_t *ifseq);
 void program_destruct(program_t *p);
 
 int program_execute(program_t *p, numptr *pval);

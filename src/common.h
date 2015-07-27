@@ -45,11 +45,18 @@
 
 #define ENV_ARGS	"ZSBC_ENV_ARGS"
 
+	/*
+	 * The constants below, in this order, are used to define corresponding error
+	 * messages in the array of strings table_errors (main.c)
+	 *  */
 #define ERROR_NONE						0
 #define ERROR_DIV0						1
 #define ERROR_NEGATIVE_EXP				2
 #define ERROR_FUNCTION_NOT_DEFINED		3
 #define ERROR_PARAMETER_NUMBER_MISMATCH	4
+#define ERROR_BREAK						5	/* Not an error */
+#define ERROR_CONTINUE					6	/* Not an error */
+#define ERROR_LAST						6
 void outln_error_code(int e);
 
 #define L_ENFORCE	(-1)

@@ -25,7 +25,9 @@ but on integers.
 Because the author of these lines wanted bc tests to be applicable to zsbc,
 zsbc got compiled with bc number library.
 By default zsbc starts with gmp integers (mpz_t) but if provided with the
-command-line argument -lib, or if during execution you enter the statement
+command-line argument
+	-lib bc
+or if during execution you enter the statement
 	lib "bc"
 then bc number library will be used (instead of gmp' mpz_t) and decimal
 numbers will be managed as per bc standard = among other things, taking into
@@ -37,8 +39,9 @@ to keep after the comma.
 II.   WHY ZSBC?
 
 To have fun.
+To learn bison/flex programming.
 To do some tests and checks around cryptography.
-To deal with big integers in particular, you have bc, PARI/GP, python, ...
+To deal with big integers, you have bc, PARI/GP, python, ...
 And now you have zsbc!
 
 
@@ -118,4 +121,6 @@ Dynamic linking was not tested.
 
 Enter top source directory and run
     mingw32-make.exe -f makefile.mingw
+
+You're done!
 

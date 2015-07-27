@@ -66,12 +66,12 @@ void activate_bison_debug();
 %type <enode> expression expression_no_assignment expression_assignment expression_or_empty function_call
 %token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
 %type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_assignment
-%type <prog> loop_while loop_for return
+%type <prog> loop_while loop_for ifseq else_or_empty
 %type <defargs> defargs_list_or_empty defargs_list defarg
 %type <callargs> callarg callargs_list callargs_list_or_empty
 
 %token QUIT VARS LIBSWITCH LIBLIST
-%token WHILE FOR
+%token WHILE FOR BREAK CONTINUE IF ELSE
 %token DEFINE VOID RETURN
 
 %token NEWLINE
@@ -138,7 +138,10 @@ instruction_non_empty:
 	| STRING { $$ = program_construct_str($1); }
 	| loop_while
 	| loop_for
-	| return
+	| ifseq
+	| RETURN expression { $$ = program_construct_return($2); }
+	| BREAK { $$ = program_construct_break(); }
+	| CONTINUE { $$ = program_construct_continue(); }
 	| instruction_block { $$ = $1; }
 ;
 
@@ -222,9 +225,20 @@ loop_for:
 	}
 ;
 
-return:
-	  RETURN expression { $$ = program_construct_return($2); }
-	;
+ifseq:
+	IF '(' expression ')' newlines_or_empty instruction_non_empty else_or_empty {
+		program_ifseq_t ifseq;
+		ifseq.expr = $3;
+		ifseq.pif = $6;
+		ifseq.pelse = $7;
+		$$ = program_construct_ifseq(&ifseq);
+	}
+;
+
+else_or_empty:
+	%empty { $$ = NULL; }
+	| ELSE newlines_or_empty instruction_non_empty { $$ = $3; }
+;
 
 defarg:
 	IDENTIFIER { $$ = defargs_construct(DARG_VALUE, $1); }

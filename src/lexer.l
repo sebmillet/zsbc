@@ -116,6 +116,10 @@ for				return FOR;
 define			return DEFINE;
 void			return VOID;
 return			return RETURN;
+break			return BREAK;
+continue		return CONTINUE;
+if				return IF;
+else			return ELSE;
 
 {identifier} {
 	s_alloc_and_copy(&yylval.str, yytext);
