@@ -56,7 +56,8 @@
 #define ERROR_PARAMETER_NUMBER_MISMATCH	4
 #define ERROR_BREAK						5	/* Not an error */
 #define ERROR_CONTINUE					6	/* Not an error */
-#define ERROR_LAST						6
+#define ERROR_RETURN					7	/* Not an error */
+#define ERROR_LAST						7
 void outln_error_code(int e);
 
 #define L_ENFORCE	(-1)

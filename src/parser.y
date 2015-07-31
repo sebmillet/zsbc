@@ -107,8 +107,7 @@ input:
 
 program:
 	instruction_list {
-		numptr num = num_undefvalue();
-		program_execute($1, &num);
+		program_execute($1, NULL);
 		program_destruct($1);
 	}
 ;
@@ -237,7 +236,7 @@ ifseq:
 
 else_or_empty:
 	%empty { $$ = NULL; }
-	| ELSE newlines_or_empty instruction_non_empty { $$ = $3; }
+	| newlines_or_empty ELSE newlines_or_empty instruction_non_empty { $$ = $4; }
 ;
 
 defarg:

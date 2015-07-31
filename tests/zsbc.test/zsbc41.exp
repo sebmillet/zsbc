@@ -5,16 +5,16 @@ spawn "$ZSBC" -V "$TESTDIR/zsbc41f.b"
 send_user "***   Functions defined from files invoked in command-line arguments\n"
 
 set test "Function pow2"
-send "101\npow2(10)\n909\n"
+send "101\npow2(10)\npow2(10+1)\npow2(5+5+1+1)\n909\n"
 expect {
-	-re "101\[^0-9\]+1024\[^0-9\]+909\[^0-9\]+" { pass "$test" }
+	-re "101\[^0-9\]+1024\[^0-9\]+2048\[^0-9\]+4096\[^0-9\]+909\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Function powmod"
-send "121\npowmod(51,39, 97)\n919\n"
+send "121\npowmod(51,39, 97)\na=52;b=40;c=101;powmod(a,b,c);powmod(a+2,b+1,c+1)\n919\n"
 expect {
-	-re "121\[^0-9\]+67\[^0-9\]+919\[^0-9\]+" { pass "$test" }
+	-re "121\[^0-9\]+67\[^0-9\]+95\[^0-9\]+48\[^0-9\]+919\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 
@@ -22,6 +22,20 @@ set test "Check return statement"
 send "131\ncheckreturn()\n929\n"
 expect {
 	-re "131\[^0-9\]+1\[^0-9\]+929\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function call with update of value arguments"
+send "151\na=10;b=11\nmyfcnt(a,b)\na\nb\n949\n"
+expect {
+	-re "151\[^0-9\]+53\[^0-9\]+10\[^0-9\]+11\[^0-9\]+949\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Recursive function call"
+send "141\nfact(10+1)\na=10\nfact(a)\n939\n"
+expect {
+	-re "141\[^0-9\]+39916800\[^0-9\]+3628800\[^0-9\]+939\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 

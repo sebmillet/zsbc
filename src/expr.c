@@ -655,7 +655,8 @@ static int eval_function_call(const expr_t *self, const numptr *value_args, nump
 	assert(darg == NULL);
 
 	int r = program_execute(f->program, pval);
-	if (r == ERROR_NONE) {
+	if (r == ERROR_NONE || r == ERROR_RETURN) {
+		r = ERROR_NONE;
 		if (!num_is_not_initialized(*pval) && f->is_void) {
 			num_destruct(pval);
 			*pval = num_undefvalue();

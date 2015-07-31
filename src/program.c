@@ -157,7 +157,6 @@ int program_execute(program_t *p, numptr *pval)
 	while (p != NULL && r == ERROR_NONE) {
 		out_dbg("Executing one instruction, type: %d, address: %lu\n", p->type, p);
 		numptr num;
-		numptr in_val;
 		program_loop_t *loop;
 		program_ifseq_t *ifseq;
 		program_t *pnext = p->next;
@@ -176,11 +175,16 @@ int program_execute(program_t *p, numptr *pval)
 					outln(L_ENFORCE, "");
 				}
 				if (p->type == TINSTR_EXPR_RETURN) {
-					*pval = num;
+					r = ERROR_RETURN;
+					if (pval == NULL) {
+						outln_error_code(r);
+						num_destruct(&num);
+					} else {
+						*pval = num;
+					}
 					pnext = NULL;
-				} else {
+				} else
 					num_destruct(&num);
-				}
 				break;
 			case TINSTR_STR:
 				out(L_ENFORCE, "%s", p->str);
@@ -208,11 +212,15 @@ int program_execute(program_t *p, numptr *pval)
 					}
 
 						/* The content of the loop being executed, for every loops realms */
-					r = program_execute(loop->core, &in_val);
-					if (r == ERROR_BREAK)
+					r = program_execute(loop->core, pval);
+					if (r == ERROR_BREAK) {
+						r = ERROR_NONE;
 						break;
-					if (r == ERROR_CONTINUE)
+					}
+					if (r == ERROR_CONTINUE) {
+						r = ERROR_NONE;
 						continue;
+					}
 					if (r != ERROR_NONE)
 						break;
 
@@ -256,9 +264,9 @@ int program_execute(program_t *p, numptr *pval)
 
 					/* PART 2 - IF or ELSE execution*/
 				if (!b)
-					r = program_execute(ifseq->pif, &in_val);
+					r = program_execute(ifseq->pif, pval);
 				else
-					r = program_execute(ifseq->pelse, &in_val);
+					r = program_execute(ifseq->pelse, pval);
 
 				break;
 			default:

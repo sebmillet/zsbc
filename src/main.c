@@ -55,7 +55,8 @@ static const char *table_errors[] = {
 	"Function not defined",				/* ERROR_FUNCTION_NOT_DEFINED */
 	"Parameter number mismatch",		/* ERROR_PARAMETER_NUMBER_MISMATCH */
 	NULL,								/* ERROR_BREAK */
-	NULL								/* ERROR_CONTINUE */
+	NULL,								/* ERROR_CONTINUE */
+	"Illegal return statement"			/* ERROR_RETURN */
 };
 
 	/*
