@@ -25,6 +25,8 @@ AC_PROG_RANLIB
 
 # Checks for libraries.
 
+AC_CHECK_LIB(gmp, __gmpz_init, , [AC_MSG_ERROR([GNU MP not found, see https://gmplib.org/ or try to install gmp dev lib on your system (libgmp-dev for deb, gmp-devel for rpm)])])
+
 # Checks for header files.
 AC_FUNC_ALLOCA
 AC_FUNC_VPRINTF
