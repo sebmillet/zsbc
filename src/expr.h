@@ -42,7 +42,7 @@ expr_t *expr_construct_op2_str(const char *op, expr_t *e1, expr_t *e2);
 
 callargs_t *callargs_construct(callarg_type_t type, expr_t *e, const char *array_name);
 callargs_t *callargs_chain(callargs_t *base, callargs_t *append);
-void callargs_destruct(callargs_t *callargs);
+void callargs_chain_destruct(callargs_t *cargs);
 
 expr_t *expr_construct_function_call(const char *fcnt_name, callargs_t *callargs);
 

@@ -92,7 +92,7 @@ void activate_bison_debug();
 %destructor { free($$); out_dbg("parser.y: freed one str\n"); } <str>
 %destructor { program_destruct($$); out_dbg("parser.y: freed one program\n"); } <prog>
 %destructor { defargs_destruct($$); out_dbg("parser.y: freed one DEF argument chain\n"); } <defargs>
-%destructor { callargs_destruct($$); out_dbg("parser.y: freed one CALL argument chain\n"); } <callargs>
+%destructor { callargs_chain_destruct($$); out_dbg("parser.y: freed one CALL argument chain\n"); } <callargs>
 
 %start input
 

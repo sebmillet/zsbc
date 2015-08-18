@@ -1400,19 +1400,19 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 63: /* callarg  */
 #line 95 "parser.y" /* yacc.c:1257  */
-      { callargs_destruct(((*yyvaluep).callargs)); out_dbg("parser.y: freed one CALL argument chain\n"); }
+      { callargs_chain_destruct(((*yyvaluep).callargs)); out_dbg("parser.y: freed one CALL argument chain\n"); }
 #line 1405 "parser.c" /* yacc.c:1257  */
         break;
 
     case 64: /* callargs_list  */
 #line 95 "parser.y" /* yacc.c:1257  */
-      { callargs_destruct(((*yyvaluep).callargs)); out_dbg("parser.y: freed one CALL argument chain\n"); }
+      { callargs_chain_destruct(((*yyvaluep).callargs)); out_dbg("parser.y: freed one CALL argument chain\n"); }
 #line 1411 "parser.c" /* yacc.c:1257  */
         break;
 
     case 65: /* callargs_list_or_empty  */
 #line 95 "parser.y" /* yacc.c:1257  */
-      { callargs_destruct(((*yyvaluep).callargs)); out_dbg("parser.y: freed one CALL argument chain\n"); }
+      { callargs_chain_destruct(((*yyvaluep).callargs)); out_dbg("parser.y: freed one CALL argument chain\n"); }
 #line 1417 "parser.c" /* yacc.c:1257  */
         break;
 

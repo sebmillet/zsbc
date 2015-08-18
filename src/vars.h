@@ -59,8 +59,10 @@ typedef struct vars_value_t {
 } vars_value_t;
 
 typedef struct vars_keeper_t {
-	int has_value;
+	int is_used;
+	int holds_a_value;
 	vars_value_t value;
+	char *name;
 } vars_keeper_t;
 
 struct vars_t;
@@ -74,8 +76,9 @@ void vars_set_value(const char *name, const numptr new_value);
 void vars_array_set_value(const char *name, long int index, const numptr new_value);
 function_t *vars_get_function(const char *name);
 
+vars_keeper_t *vars_keeper_array_construct(int n);
 void vars_send_to_keeper(vars_keeper_t *keep, const char *name, const vars_value_t *new_value);
-void vars_recall_from_keeper(const char *name, const vars_keeper_t *keeper);
+void vars_recall_from_keeper(vars_keeper_t *keeper);
 
 defargs_t *defargs_construct(defarg_type_t type, const char *name);
 void defargs_destruct(defargs_t *arg);

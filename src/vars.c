@@ -316,36 +316,60 @@ static void vars_value_copy(vars_value_t *dst, const vars_value_t *src)
 	dst->type = src->type;
 }
 
+vars_keeper_t *vars_keeper_array_construct(int n)
+{
+	assert(n >= 0);
+
+	if (n == 0)
+		return NULL;
+
+	vars_keeper_t *keeps = (vars_keeper_t *)malloc(sizeof(vars_keeper_t) * n);
+	int i;
+	for (i = 0; i < n; ++i) {
+		keeps[i].is_used = FALSE;
+	}
+	return keeps;
+}
+
 void vars_send_to_keeper(vars_keeper_t *keeper, const char *name, const vars_value_t *new_value)
 {
 
 	assert(keeper != NULL);
+	assert(!keeper->is_used);
 
 	out_dbg("Sending %s to keeper, keep address = %lu\n", name, keeper);
+
+	keeper->name = s_alloc_and_copy(NULL, name);
+	keeper->is_used = TRUE;
 
 	vars_t *w;
 	if ((w = find_var(name, new_value->type)) == NULL) {
 		out_dbg("\tVariable %s not found\n", name);
-		keeper->has_value = FALSE;
+		keeper->holds_a_value = FALSE;
 		vars_t_construct_with_value(name, new_value);
 	} else {
 		out_dbg("\tVariable %s found\n", name);
-		keeper->has_value = TRUE;
+		keeper->holds_a_value = TRUE;
 		vars_value_copy(&keeper->value, &w->value);
 		vars_value_copy(&w->value, new_value);
 	}
 }
 
-void vars_recall_from_keeper(const char *name, const vars_keeper_t *keeper)
+void vars_recall_from_keeper(vars_keeper_t *keeper)
 {
 
 	assert(keeper != NULL);
 
-	out_dbg("Recalling %s from keeper, keep address = %lu\n", name, keeper);
+	if (!keeper->is_used) {
+		out_dbg("Recall requested from unused keeper, keep address = %lu\n", keeper);
+		return;
+	}
 
-	vars_t *w = find_var(name, keeper->value.type);
+	out_dbg("Recalling %s from keeper, keep address = %lu\n", keeper->name, keeper);
 
-	if (keeper->has_value) {
+	vars_t *w = find_var(keeper->name, keeper->value.type);
+
+	if (keeper->holds_a_value) {
 		assert(w != NULL);
 		out_dbg("\tKeeper has a value => replacing variable value with keeper's\n");
 		vars_value_destruct(&w->value);
@@ -362,6 +386,8 @@ void vars_recall_from_keeper(const char *name, const vars_keeper_t *keeper)
 	} else {
 		out_dbg("\tUndefined keeper value and variable not found => nothing to do\n");
 	}
+	free(keeper->name);
+	keeper->is_used = FALSE;
 }
 
 
@@ -377,6 +403,7 @@ defargs_t *defargs_construct(defarg_type_t type, const char *name)
 	defargs_t *defarg = (defargs_t *)malloc(sizeof(defargs_t));
 	defarg->type = type;
 	defarg->name = (char *)name;
+	defarg->next = NULL;
 	return defarg;
 }
 

@@ -74,10 +74,13 @@ typedef struct accessvar_t {
 
 typedef struct callargs_t {
 	callarg_type_t type;
-	union {
+
+/* I prefer NOT to have a union here although it'd be possible... */
+/*    union {*/
 		expr_t *e;
 		char *array_name;
-	};
+/*    };*/
+
 	struct callargs_t *next;
 } callargs_t;
 
@@ -89,10 +92,13 @@ struct expr_t {
 		builtin_id builtin;
 	};
 	int nb_args;
-	expr_t* *args;
+	callargs_t *cargs;
 };
 
 static int expr_count_ref = 0;
+
+static void callarg_destruct(callargs_t *carg);
+static void callarg_set_to_expr(callargs_t *carg, expr_t *e);
 
 static expr_t *expr_construct_op2_builtin_id(builtin_id id, expr_t *e1, expr_t *e2);
 static expr_t *expr_construct_op1_builtin_id(builtin_id builtin, expr_t *e1);
@@ -166,12 +172,12 @@ void expr_destruct(expr_t *self)
 	out_dbg("expr_t destruct,  address: %lu, type: %s, #args: %d\n", self, ENODE_TYPES[self->type], self->nb_args);
 	int i;
 	for (i = 0; i < self->nb_args; ++i) {
-		out_dbg("\t%lu -> call args[%d] destruct, address: %lu\n", self, i, self->args[i]);
-		expr_destruct(self->args[i]);
+		out_dbg("\t%lu -> call args[%d] destruct, address: %lu\n", self, i, self->cargs[i]);
+		callarg_destruct(&self->cargs[i]);
 	}
-	if (self->args != NULL) {
-		free(self->args);
-		self->args = NULL;
+	if (self->cargs != NULL) {
+		free(self->cargs);
+		self->cargs = NULL;
 	}
 
 	(table_destruct[self->type])(self);
@@ -188,12 +194,14 @@ static expr_t *expr_construct(enode_t type, int nb_args)
 	self->type = type;
 	self->nb_args = nb_args;
 	if (nb_args >= 1)
-		self->args = (expr_t **)malloc(sizeof(expr_t *) * nb_args);
+		self->cargs = (callargs_t *)malloc(sizeof(callargs_t) * nb_args);
 	else
-		self->args = NULL;
+		self->cargs = NULL;
 	int i;
-	for (i = 0; i < nb_args; ++i)
-		self->args[i] = NULL;
+	for (i = 0; i < nb_args; ++i) {
+		self->cargs[i].e = NULL;
+		self->cargs[i].array_name = NULL;	/* Necessary because e and array_name are not in a union (but they could be) */
+	}
 	++expr_count_ref;
 	out_dbg("expr_t construct, address: %lu, type: %s, #args: %d\n", self, ENODE_TYPES[type], nb_args);
 	return self;
@@ -220,7 +228,7 @@ static expr_t *expr_construct_op1_builtin_id(builtin_id builtin, expr_t *e1)
 {
 	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 1);
 	self->builtin = builtin;
-	self->args[0] = e1;
+	callarg_set_to_expr(&self->cargs[0], e1);
 	return self;
 }
 
@@ -237,11 +245,11 @@ expr_t *expr_construct_op1_str(const char *op, expr_t *e1)
 	return expr_construct_op1_builtin_id(id, e1);
 }
 
-builtin_id str2builtin_id(const char *op)
+static builtin_id str2builtin_id(const char *op)
 {
 	builtin_id id = FN_UNDEF;
 	if (!strcmp(op, ""))
-		id = FN_NOOP;
+		id = FN_NOOP;	/* Corresponds to a simple assignment ex. a=0 */
 	else if (!strcmp(op, "+"))
 		id = FN_ADD;
 	else if (!strcmp(op, "-"))
@@ -281,8 +289,8 @@ static expr_t *expr_construct_op2_builtin_id(builtin_id id, expr_t *e1, expr_t *
 {
 	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 2);
 	self->builtin = id;
-	self->args[0] = e1;
-	self->args[1] = e2;
+	callarg_set_to_expr(&self->cargs[0], e1);
+	callarg_set_to_expr(&self->cargs[1], e2);
 	return self;
 }
 
@@ -297,6 +305,27 @@ expr_t *expr_construct_op2_str(const char *op, expr_t *e1, expr_t *e2)
 
 expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op, int is_postfix, expr_t *e1)
 {
+
+/*
+ * IMPORTANT
+ *
+ *   In certain circumstances e1 can be NULL.
+ *   It occurs for assignment operators that do not need
+ *   a right-hand side expression. It is the decrement
+ *   and increment operators, examples:
+ *     ++a
+ *     b[2+1]--
+ *
+ *   Even in that case the callarg_t object is of type CARG_EXPR (but e is NULL)
+ *
+ * */
+
+		/*
+		 * In case it is a simple assignment, as in
+		 *   a=0
+		 * the rewritten_op will be an empty string,
+		 * recognized by str2builtin_id as FN_NOOP
+		 * */
 	char rewritten_op[10];
 	s_strncpy(rewritten_op, op, sizeof(rewritten_op));
 	if (rewritten_op[strlen(rewritten_op) - 1] == '=')
@@ -310,21 +339,27 @@ expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op
 	self->var.name = (char *)varname;
 	self->var.index = index;
 	self->var.builtin = id;
-	self->args[0] = e1;
+	callarg_set_to_expr(&self->cargs[0], e1);
 	return self;
 }
 
 callargs_t *callargs_construct(callarg_type_t type, expr_t *e, const char *array_name)
 {
-	callargs_t *callarg = (callargs_t *)malloc(sizeof(callargs_t));
-	callarg->type = type;
-	if (callarg->type == CARG_EXPR) {
-		callarg->e = e;
-	} else if (callarg->type == CARG_ARRAY) {
-		callarg->array_name = (char *)array_name;
+	callargs_t *carg = (callargs_t *)malloc(sizeof(callargs_t));
+	carg->type = type;
+	if (carg->type == CARG_EXPR) {
+		assert(array_name == NULL);	/* Linked to e and array_name not in a union... */
+		carg->e = e;
+		carg->array_name = NULL;
+	} else if (carg->type == CARG_ARRAY) {
+		assert(e == NULL);
+		assert(array_name != NULL);
+		carg->e = NULL;
+		carg->array_name = (char *)array_name;	/* Linked to e and array_name not in a union... */
 	} else
-		FATAL_ERROR("Unknown call argument type: %d", callarg->type);
-	return callarg;
+		FATAL_ERROR("Unknown call argument type: %d", carg->type);
+	carg->next = NULL;
+	return carg;
 }
 
 callargs_t *callargs_chain(callargs_t *base, callargs_t *append)
@@ -342,23 +377,34 @@ callargs_t *callargs_chain(callargs_t *base, callargs_t *append)
 	return base;
 }
 
-void callargs_destruct(callargs_t *callargs)
+static void callarg_destruct(callargs_t *carg)
 {
-	callargs_t *w = callargs;
+	if (carg->type == CARG_EXPR) {
+		assert(carg->array_name == NULL);	/* Linked to e and array_name not in a union... */
+		expr_destruct(carg->e);
+	} else if (carg->type == CARG_ARRAY) {
+		assert(carg->e == NULL);
+		assert(carg->array_name != NULL);	/* Linked to e and array_name not in a union... */
+		free(carg->array_name);
+	} else
+		FATAL_ERROR("Unknown call argument type: %d", carg->type);
+}
+
+void callargs_chain_destruct(callargs_t *cargs)
+{
+	callargs_t *w = cargs;
 	callargs_t *wnext;
 	while (w != NULL) {
 		wnext = w->next;
-
-		if (w->type == CARG_EXPR)
-			expr_destruct(w->e);
-		else if (w->type == CARG_ARRAY)
-			FATAL_ERROR("%s", "Not done...");
-		else
-			FATAL_ERROR("Unknown call argument type, callargs_t: %lu, type: %d", w, w->type);
-
-		free(w);
+		callarg_destruct(w);
 		w = wnext;
 	}
+}
+
+static void callarg_set_to_expr(callargs_t *carg, expr_t *e)
+{
+	carg->type = CARG_EXPR;
+	carg->e = e;
 }
 
 expr_t *expr_construct_function_call(const char *fcnt_name, callargs_t *callargs)
@@ -377,7 +423,7 @@ expr_t *expr_construct_function_call(const char *fcnt_name, callargs_t *callargs
 
 		assert(w != NULL);
 
-		self->args[i] = w->e; /*  FIXME - at the moment, ignores CARG_ARRAY case */
+		self->cargs[i] = *w;
 		w = w->next;
 	}
 
@@ -407,18 +453,38 @@ int expr_eval(const expr_t *self, numptr *pval)
 		value_args = malloc(sizeof(numptr) * (unsigned)self->nb_args);
 	int i;
 	int r = ERROR_NONE;
-	for (i = 0; i < self->nb_args; ++i)
-		value_args[i] = num_undefvalue();
 	for (i = 0; i < self->nb_args; ++i) {
-		if ((r = expr_eval(self->args[i], &value_args[i])) != ERROR_NONE)
-			break;
+		callargs_t *ca = &self->cargs[i];
+		if (ca->type == CARG_EXPR) {
+			value_args[i] = num_undefvalue();
+			if ((r = expr_eval(ca->e, &value_args[i])) != ERROR_NONE)
+				break;
 
-			/*  Can happen with a void function, defined as is:
-			 *    define void f(...)
-			 *  */
-		if (num_is_not_initialized(value_args[i]))
-			value_args[i] = num_construct();
+				/*
+				 *  Can happen with a void function, defined as is:
+				 *    define void f(...)
+				 *
+				 *  */
+			if (num_is_not_initialized(value_args[i]))
+				value_args[i] = num_construct();
 
+		} else if (ca->type == CARG_ARRAY) {
+			if (self->type != ENODE_FUNCTION_CALL) {
+
+					/*
+					 * Explanation:
+					 *   Only a function call can have CARG_ARRAY arguments.
+					 *   So any CARG_ARRAY out of a function call is necessarilly
+					 *   an error.
+					 *
+					 * */
+				r = ERROR_ARGTYPE_MISMATCH;
+				break;
+
+			}
+			value_args[i] = NULL;
+		} else
+			FATAL_ERROR("Unknown call argument type: %d", ca->type);
 	}
 	if (r == ERROR_NONE) {
 		r = (table_eval[self->type])(self, (const numptr *)value_args, pval);
@@ -502,16 +568,39 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 		return r;
 
 	if (self->var.builtin == FN_NOOP)
+
+			/*
+			 * Simple assignment case, examples:
+			 *   a=2^3
+			 *   b[3*4]=18-1
+			 *
+			 * */
 		presult = &value_args[0];
+
 	else {
 		getvar(self->var.name, has_index, idxval, &val);
 		val_is_to_be_destructed = TRUE;
 		numptr valcopy = num_construct_from_num(val);
 		expr_t *exprval = expr_construct_number(valcopy);
 		expr_t *etmp;
-		if (self->args[0] == NULL) {
+		if (self->cargs[0].e == NULL) {
+
+				/*
+				 * Assignment without an expression, examples:
+				 *   a++
+				 *   --b[3*4]
+				 *
+				 * */
 			etmp = expr_construct_op1_builtin_id(self->var.builtin, exprval);
+
 		} else {
+
+				/*
+				 * Assignment with expression, examples:
+				 *   a+=2^3
+				 *   b[3*4]/=2
+				 *
+				 * */
 			expr_t *earg0 = expr_construct_number(num_construct_from_num(value_args[0]));
 			etmp = expr_construct_op2_builtin_id(self->var.builtin, exprval, earg0);
 		}
@@ -630,11 +719,9 @@ static int eval_function_call(const expr_t *self, const numptr *value_args, nump
 	if (self->nb_args != n)
 		return ERROR_PARAMETER_NUMBER_MISMATCH;
 
-	vars_keeper_t *keeper;
-	if (n >= 1)
-		keeper = (vars_keeper_t *)malloc(sizeof(vars_keeper_t) * n);
-	else
-		keeper = NULL;
+	vars_keeper_t *keeper = vars_keeper_array_construct(n);
+
+	int r = ERROR_NONE;
 
 	vars_value_t nv;
 	darg = f->defargs;
@@ -644,6 +731,10 @@ static int eval_function_call(const expr_t *self, const numptr *value_args, nump
 		assert(darg != NULL);
 
 		if (darg->type == DARG_VALUE) {
+			if (self->cargs[i].type != CARG_EXPR) {
+				r = ERROR_ARGTYPE_MISMATCH;
+				break;
+			}
 			nv.type = TYPE_NUM;
 			nv.num = num_construct_from_num(value_args[i]);
 			vars_send_to_keeper(&keeper[i], darg->name, &nv);
@@ -652,16 +743,16 @@ static int eval_function_call(const expr_t *self, const numptr *value_args, nump
 		darg = darg->next;
 	}
 
-	assert(darg == NULL);
-
-	int r = program_execute(f->program, pval);
-	if (r == ERROR_NONE || r == ERROR_RETURN) {
-		r = ERROR_NONE;
-		if (!num_is_not_initialized(*pval) && f->is_void) {
-			num_destruct(pval);
-			*pval = num_undefvalue();
-		} else if (num_is_not_initialized(*pval) && !f->is_void) {
-			*pval = num_construct();
+	if (r == ERROR_NONE) {
+		r = program_execute(f->program, pval);
+		if (r == ERROR_NONE || r == ERROR_RETURN) {
+			r = ERROR_NONE;
+			if (!num_is_not_initialized(*pval) && f->is_void) {
+				num_destruct(pval);
+				*pval = num_undefvalue();
+			} else if (num_is_not_initialized(*pval) && !f->is_void) {
+				*pval = num_construct();
+			}
 		}
 	}
 
@@ -670,10 +761,11 @@ static int eval_function_call(const expr_t *self, const numptr *value_args, nump
 
 		assert(darg != NULL);
 
-		if (darg->type == DARG_VALUE) {
-			vars_recall_from_keeper(darg->name, &keeper[i]);
-		} else
-			assert(0);	/* FIXME - to be implemented... */
+/*        if (darg->type == DARG_VALUE) {*/
+		vars_recall_from_keeper(&keeper[i]);	/* Just recall from keep */
+/*        } else*/
+/*            assert(0);	|+ FIXME - to be implemented... +|*/
+
 		darg = darg->next;
 	}
 	assert(darg == NULL);

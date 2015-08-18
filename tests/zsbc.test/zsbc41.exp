@@ -18,6 +18,20 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Function powmod with bad argument type (1)"
+send "314\n\npowmod(a\[\],39, 97)\n\n315\n\n\n"
+expect {
+	-re "314.*Parameter type mismatch.*315" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function powmod with bad argument type (2)"
+send "316\n\npowmod(1,2,ba\[\])\n\n317\n\n\n"
+expect {
+	-re "316.*Parameter type mismatch.*317" { pass "$test" }
+	default { fail "$test" }
+}
+
 set test "Check return statement"
 send "131\ncheckreturn()\n929\n"
 expect {
@@ -36,6 +50,41 @@ set test "Recursive function call"
 send "141\nfact(10+1)\na=10\nfact(a)\n939\n"
 expect {
 	-re "141\[^0-9\]+39916800\[^0-9\]+3628800\[^0-9\]+939\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Calling with wrong number of arguments (1)"
+send "4550\ncheckreturn(0)\n4551\n"
+expect {
+	-re "4550\[^0-9\]+Parameter number mismatch\[^0-9\]+4551" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Calling with wrong number of arguments (2)"
+send "4552\nfact()\n4553\n"
+expect {
+	-re "4552\[^0-9\]+Parameter number mismatch\[^0-9\]+4553" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Calling with wrong number of arguments (3)"
+send "4554\nfact(1, 1)\n4555\n"
+expect {
+	-re "4554\[^0-9\]+Parameter number mismatch\[^0-9\]+4555" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Calling with wrong number of arguments (4)"
+send "4556\npowmod(1, 2)\n4557\n"
+expect {
+	-re "4556\[^0-9\]+Parameter number mismatch\[^0-9\]+4557" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Calling with wrong number of arguments (5)"
+send "4558\npowmod(1, 2, a[], ba[])\n4559\n"
+expect {
+	-re "4558\[^0-9\]+Parameter number mismatch\[^0-9\]+4559" { pass "$test" }
 	default { fail "$test" }
 }
 

@@ -56,7 +56,8 @@ static const char *table_errors[] = {
 	"Parameter number mismatch",		/* ERROR_PARAMETER_NUMBER_MISMATCH */
 	NULL,								/* ERROR_BREAK */
 	NULL,								/* ERROR_CONTINUE */
-	"Illegal return statement"			/* ERROR_RETURN */
+	"Illegal return statement",			/* ERROR_RETURN */
+	"Parameter type mismatch"			/* ERROR_ARGTYPE_MISMATCH */
 };
 
 	/*
