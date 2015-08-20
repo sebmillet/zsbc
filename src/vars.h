@@ -26,7 +26,7 @@
 struct context_t;
 typedef struct context_t context_t;
 
-enum {TYPE_NUM, TYPE_ARRAY, TYPE_FUNCTION};
+enum {TYPE_NUM, TYPE_ARRAY, TYPE_FCNT};
 
 typedef enum {DARG_VALUE, DARG_ARRAYVALUE, DARG_REF, DARG_ARRAYREF} defarg_type_t;
 struct defargs_t {
@@ -56,13 +56,14 @@ typedef struct vars_value_t {
 		array_t *array;
 		function_t fcnt;
 	};
+	numptr *num_ref;
+	array_t **array_ref;
 } vars_value_t;
 
 typedef struct vars_keeper_t {
 	int is_used;
 	int holds_a_value;
 	vars_value_t value;
-	char *name;
 } vars_keeper_t;
 
 struct vars_t;
@@ -72,13 +73,17 @@ void vars_display_all();
 
 const numptr *vars_get_value(const char *name);
 const numptr *vars_array_get_value(const char *name, long int index);
-void vars_set_value(const char *name, const numptr new_value);
-void vars_array_set_value(const char *name, long int index, const numptr new_value);
+void vars_set_value(const char *name, const numptr new_value, const numptr **ppvarnum);
+void vars_array_set_value(const char *name, long int index, const numptr new_value, const numptr **ppvarnum);
 function_t *vars_get_function(const char *name);
 
 vars_keeper_t *vars_keeper_array_construct(int n);
 void vars_send_to_keeper(vars_keeper_t *keep, const char *name, const vars_value_t *new_value);
-void vars_recall_from_keeper(vars_keeper_t *keeper);
+void vars_recall_from_keeper(const char *name, vars_keeper_t *keeper);
+
+array_t *vars_array_copy(const char *name);
+
+array_t **vars_array_get_ref(const char *name);
 
 defargs_t *defargs_construct(defarg_type_t type, const char *name);
 void defargs_destruct(defargs_t *arg);

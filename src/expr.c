@@ -113,7 +113,7 @@ static int eval_number(const expr_t *self, const numptr *value_args, numptr *pva
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval);
-static int eval_function_call(const expr_t *self, const numptr *value_args, numptr *pval);
+static int eval_function_call(const expr_t *self, numptr *pval);
 
 static void (*table_destruct[])(expr_t *self) = {
 	destruct_number,		/* ENODE_NUMBER */
@@ -130,7 +130,7 @@ static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr 
 	eval_setvar,			/* ENODE_SETVAR */
 	eval_setvar,			/* ENODE_SETVAR_POSTFIX */
 	eval_builtin_op,		/* ENODE_BUILTIN_OP */
-	eval_function_call		/* ENODE_FUNCTION_CALL */
+	NULL					/* ENODE_FUNCTION_CALL -> managed separately from table_eval[] */
 };
 
 
@@ -316,7 +316,7 @@ expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op
  *     ++a
  *     b[2+1]--
  *
- *   Even in that case the callarg_t object is of type CARG_EXPR (but e is NULL)
+ *   Even in that case the callarg_t object is of type CARG_EXPR (but e1 is NULL)
  *
  * */
 
@@ -324,7 +324,7 @@ expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op
 		 * In case it is a simple assignment, as in
 		 *   a=0
 		 * the rewritten_op will be an empty string,
-		 * recognized by str2builtin_id as FN_NOOP
+		 * recognized by str2builtin_id as FN_NOOP.
 		 * */
 	char rewritten_op[10];
 	s_strncpy(rewritten_op, op, sizeof(rewritten_op));
@@ -440,13 +440,39 @@ expr_t *expr_construct_function_call(const char *fcnt_name, callargs_t *callargs
 
 
 
+static int myeval(const expr_t *e, numptr *pval)
+{
+	*pval = num_undefvalue();
+	int r;
+	if ((r = expr_eval(e, pval)) != ERROR_NONE)
+		return r;
+
+		/* 
+		 * Can happen with a void function, defined as is:
+		 *   define void f(...)
+		 *
+		 * FIXME
+		 *   Would be cleaner to ask expr_t if it is supposed to return
+		 *   a value or not. An uninitialized *pval could mean an internal
+		 *   bug...
+		 *
+		 * */
+	if (num_is_not_initialized(*pval))
+		*pval = num_construct();
+
+	return ERROR_NONE;
+}
+
 int expr_eval(const expr_t *self, numptr *pval)
 {
 	if (self == NULL) {
 		*pval = num_undefvalue();
 		return ERROR_NONE;
 	}
-	out_dbg("Evaluating expression, type: %d, #args: %d\n", self->type, self->nb_args);
+	out_dbg("Evaluating expression, type: %s, #args: %d\n", ENODE_TYPES[self->type], self->nb_args);
+
+	if (self->type == ENODE_FUNCTION_CALL)
+		return eval_function_call(self, pval);
 
 	numptr *value_args = NULL;
 	if (self->nb_args >= 1)
@@ -456,33 +482,11 @@ int expr_eval(const expr_t *self, numptr *pval)
 	for (i = 0; i < self->nb_args; ++i) {
 		callargs_t *ca = &self->cargs[i];
 		if (ca->type == CARG_EXPR) {
-			value_args[i] = num_undefvalue();
-			if ((r = expr_eval(ca->e, &value_args[i])) != ERROR_NONE)
+			if ((r = myeval(ca->e, &value_args[i])) != ERROR_NONE)
 				break;
-
-				/*
-				 *  Can happen with a void function, defined as is:
-				 *    define void f(...)
-				 *
-				 *  */
-			if (num_is_not_initialized(value_args[i]))
-				value_args[i] = num_construct();
-
 		} else if (ca->type == CARG_ARRAY) {
-			if (self->type != ENODE_FUNCTION_CALL) {
-
-					/*
-					 * Explanation:
-					 *   Only a function call can have CARG_ARRAY arguments.
-					 *   So any CARG_ARRAY out of a function call is necessarilly
-					 *   an error.
-					 *
-					 * */
-				r = ERROR_ARGTYPE_MISMATCH;
-				break;
-
-			}
-			value_args[i] = NULL;
+			r = ERROR_ARGTYPE_MISMATCH;
+			break;
 		} else
 			FATAL_ERROR("Unknown call argument type: %d", ca->type);
 	}
@@ -518,19 +522,40 @@ static int getindex(expr_t *index, long int *pidxval)
 	return ERROR_NONE;
 }
 
-static void getvar(const char *varname, int has_index, long int idxval, numptr *pval)
+static void getvar_core(const char *varname, int has_index, long int idxval, const numptr **ppval)
 {
-	const numptr *pnum;
 	if (has_index) {
-		pnum = vars_array_get_value(varname, idxval);
+		*ppval = vars_array_get_value(varname, idxval);
 	} else {
-		pnum = vars_get_value(varname);
+		*ppval = vars_get_value(varname);
 	}
 
-	if (pnum == NULL)
-		*pval = num_construct();
-	else
-		*pval = num_construct_from_num(*pnum);
+}
+
+/*static void getvar(const char *varname, int has_index, long int idxval, numptr *pval)*/
+/*{*/
+/*    const numptr *pnum;*/
+/*    getvar_core(varname, has_index, idxval, &pnum);*/
+
+/*}*/
+
+static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create_if_missing)
+{
+	long int idxval;
+	int r;
+	if ((r = getindex(self->var.index, &idxval)) != ERROR_NONE)
+		return r;
+	getvar_core(self->var.name, self->var.index != NULL, idxval, ppval);
+
+	if (!*ppval && create_if_missing) {
+		if (self->var.index != NULL) {
+			vars_array_set_value(self->var.name, idxval, num_construct(), ppval);
+		} else {
+			vars_set_value(self->var.name, num_construct(), ppval);
+		}
+	}
+
+	return ERROR_NONE;
 }
 
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
@@ -538,17 +563,20 @@ static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pva
 	assert(self->type == ENODE_GETVAR && self->nb_args == 0 && value_args == NULL);
 	assert(num_is_not_initialized(*pval));
 
-	int has_index = self->var.index != NULL;
-
-	long int idxval;
 	int r;
-	if ((r = getindex(self->var.index, &idxval)) != ERROR_NONE)
+	const numptr *pnum;
+	if ((r = eval_getvar_core(self, &pnum, FALSE)) != ERROR_NONE)
 		return r;
-	getvar(self->var.name, has_index, idxval, pval);
+
+	if (pnum == NULL)
+		*pval = num_construct();
+	else
+		*pval = num_construct_from_num(*pnum);
+
 	return ERROR_NONE;
 }
 
-static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval)
+static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr *pval, const numptr **ppvarnum)
 {
 	int is_postfix = (self->type == ENODE_SETVAR_POSTFIX);
 	assert((self->type == ENODE_SETVAR || self->type == ENODE_SETVAR_POSTFIX) && self->nb_args == 1 && value_args != NULL);
@@ -578,7 +606,13 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 		presult = &value_args[0];
 
 	else {
-		getvar(self->var.name, has_index, idxval, &val);
+		const numptr *pnum;
+		getvar_core(self->var.name, has_index, idxval, &pnum);
+		if (pnum == NULL)
+			val = num_construct();
+		else
+			val = num_construct_from_num(*pnum);
+
 		val_is_to_be_destructed = TRUE;
 		numptr valcopy = num_construct_from_num(val);
 		expr_t *exprval = expr_construct_number(valcopy);
@@ -612,9 +646,9 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 
 	if (r == ERROR_NONE) {
 		if (has_index) {
-			vars_array_set_value(self->var.name, idxval, *presult);
+			vars_array_set_value(self->var.name, idxval, num_construct_from_num(*presult), ppvarnum);
 		} else {
-			vars_set_value(self->var.name, *presult);
+			vars_set_value(self->var.name, num_construct_from_num(*presult), ppvarnum);
 		}
 		*pval = num_construct_from_num(is_postfix ? val : *presult);
 	}
@@ -625,6 +659,12 @@ static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pva
 		num_destruct(&val);
 
 	return r;
+}
+
+static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval)
+{
+	const numptr *pvarnum;
+	return eval_setvar_core(self, value_args, pval, &pvarnum);
 }
 
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval)
@@ -701,7 +741,33 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 	}
 }
 
-static int eval_function_call(const expr_t *self, const numptr *value_args, numptr *pval)
+static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum)
+{
+	int r;
+	if (self->type == ENODE_GETVAR) {
+
+		assert(self->nb_args == 0);
+
+		if ((r = eval_getvar_core(self, ppvarnum, TRUE)) != ERROR_NONE)
+			return r;
+
+		return ERROR_NONE;
+	} else if (self->type == ENODE_SETVAR || self->type == ENODE_SETVAR_POSTFIX) {
+
+		assert(self->nb_args == 1 && self->cargs[0].type == CARG_EXPR);
+
+		numptr arg1;
+		if ((r = myeval(self->cargs[0].e, &arg1)) != ERROR_NONE)
+			return r;
+		numptr val = num_undefvalue();
+		if ((r = eval_setvar_core(self, &arg1, &val, ppvarnum)) != ERROR_NONE)
+			return r;
+		return ERROR_NONE;
+	} else
+		return ERROR_ARGTYPE_MISMATCH;
+}
+
+static int eval_function_call(const expr_t *self, numptr *pval)
 {
 	assert(self->type == ENODE_FUNCTION_CALL);
 	assert(num_is_not_initialized(*pval));
@@ -730,16 +796,50 @@ static int eval_function_call(const expr_t *self, const numptr *value_args, nump
 
 		assert(darg != NULL);
 
+		nv.num_ref = NULL;
+		nv.array_ref = NULL;
+
 		if (darg->type == DARG_VALUE) {
 			if (self->cargs[i].type != CARG_EXPR) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
 			}
 			nv.type = TYPE_NUM;
-			nv.num = num_construct_from_num(value_args[i]);
-			vars_send_to_keeper(&keeper[i], darg->name, &nv);
+			r = myeval(self->cargs[i].e, &nv.num);
+		} else if (darg->type == DARG_ARRAYVALUE) {
+			if (self->cargs[i].type != CARG_ARRAY) {
+				r = ERROR_ARGTYPE_MISMATCH;
+				break;
+			}
+			nv.type = TYPE_ARRAY;
+			nv.array = vars_array_copy(darg->name);
+		} else if (darg->type == DARG_REF) {
+			if (self->cargs[i].type != CARG_EXPR || self->cargs[i].e == NULL) {
+				r = ERROR_ARGTYPE_MISMATCH;
+				break;
+			}
+			expr_t *e = self->cargs[i].e;
+			const numptr *plvnum;
+			if ((r = expr_eval_left_value(e, &plvnum)) != ERROR_NONE) {
+				break;
+			}
+			nv.type = TYPE_NUM;
+			nv.num_ref = (numptr *)plvnum;
+
+			out_dbg("Argument #%d has num_ref value %lu\n", i, plvnum);
+
+		} else if (darg->type == DARG_ARRAYREF) {
+			if (self->cargs[i].type != CARG_ARRAY) {
+				r = ERROR_ARGTYPE_MISMATCH;
+				break;
+			}
+			nv.type = TYPE_ARRAY;
+			nv.array_ref = vars_array_get_ref(darg->name);
 		} else
-			assert(0);	/* FIXME - to be implemented... */
+			FATAL_ERROR("Unknown definition argument type: %d for darg #%lu", darg->type, darg);
+
+		vars_send_to_keeper(&keeper[i], darg->name, &nv);
+
 		darg = darg->next;
 	}
 
@@ -762,7 +862,7 @@ static int eval_function_call(const expr_t *self, const numptr *value_args, nump
 		assert(darg != NULL);
 
 /*        if (darg->type == DARG_VALUE) {*/
-		vars_recall_from_keeper(&keeper[i]);	/* Just recall from keep */
+		vars_recall_from_keeper(darg->name, &keeper[i]);	/* Just recall from keep */
 /*        } else*/
 /*            assert(0);	|+ FIXME - to be implemented... +|*/
 
