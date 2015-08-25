@@ -138,6 +138,7 @@ instruction_non_empty:
 	| loop_while
 	| loop_for
 	| ifseq
+	| RETURN { $$ = program_construct_return(NULL); }
 	| RETURN expression { $$ = program_construct_return($2); }
 	| BREAK { $$ = program_construct_break(); }
 	| CONTINUE { $$ = program_construct_continue(); }

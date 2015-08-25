@@ -639,9 +639,11 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 			etmp = expr_construct_op2_builtin_id(self->var.builtin, exprval, earg0);
 		}
 		r = expr_eval(etmp, &res);
-		res_is_to_be_destructed = TRUE;
+		if (r == ERROR_NONE) {
+			res_is_to_be_destructed = TRUE;
+			presult = &res;
+		}
 		expr_destruct(etmp);
-		presult = &res;
 	}
 
 	if (r == ERROR_NONE) {
@@ -762,6 +764,8 @@ static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum)
 		numptr val = num_undefvalue();
 		if ((r = eval_setvar_core(self, &arg1, &val, ppvarnum)) != ERROR_NONE)
 			return r;
+		num_destruct(&arg1);
+		num_destruct(&val);
 		return ERROR_NONE;
 	} else
 		return ERROR_ARGTYPE_MISMATCH;
@@ -799,26 +803,32 @@ static int eval_function_call(const expr_t *self, numptr *pval)
 		nv.num_ref = NULL;
 		nv.array_ref = NULL;
 
+			/* Optional, used to make the code a bit lighter */
+		callargs_t *ca = &self->cargs[i];
+
 		if (darg->type == DARG_VALUE) {
-			if (self->cargs[i].type != CARG_EXPR) {
+			out_dbg("Argument %d (#%s) is var byval\n", i, darg->name);
+			if (ca->type != CARG_EXPR) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
 			}
 			nv.type = TYPE_NUM;
-			r = myeval(self->cargs[i].e, &nv.num);
+			r = myeval(ca->e, &nv.num);
 		} else if (darg->type == DARG_ARRAYVALUE) {
-			if (self->cargs[i].type != CARG_ARRAY) {
+			out_dbg("Argument %d (#%s) is array byval\n", i, darg->name);
+			if (ca->type != CARG_ARRAY) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
 			}
 			nv.type = TYPE_ARRAY;
-			nv.array = vars_array_copy(darg->name);
+			nv.array = vars_array_copy(ca->array_name);
 		} else if (darg->type == DARG_REF) {
-			if (self->cargs[i].type != CARG_EXPR || self->cargs[i].e == NULL) {
+			out_dbg("Argument %d (#%s) is var byref\n", i, darg->name);
+			if (ca->type != CARG_EXPR || ca->e == NULL) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
 			}
-			expr_t *e = self->cargs[i].e;
+			expr_t *e = ca->e;
 			const numptr *plvnum;
 			if ((r = expr_eval_left_value(e, &plvnum)) != ERROR_NONE) {
 				break;
@@ -829,12 +839,13 @@ static int eval_function_call(const expr_t *self, numptr *pval)
 			out_dbg("Argument #%d has num_ref value %lu\n", i, plvnum);
 
 		} else if (darg->type == DARG_ARRAYREF) {
-			if (self->cargs[i].type != CARG_ARRAY) {
+			out_dbg("Argument %d (#%s) is array byref\n", i, darg->name);
+			if (ca->type != CARG_ARRAY) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
 			}
 			nv.type = TYPE_ARRAY;
-			nv.array_ref = vars_array_get_ref(darg->name);
+			nv.array_ref = vars_array_get_ref(ca->array_name);
 		} else
 			FATAL_ERROR("Unknown definition argument type: %d for darg #%lu", darg->type, darg);
 

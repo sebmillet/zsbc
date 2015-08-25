@@ -180,7 +180,6 @@ array_t **vars_array_get_ref(const char *name)
 {
 	vars_t *w;
 	if ((w = find_var(name, TYPE_ARRAY)) == NULL) {
-		return NULL;
 		const numptr *ppv;
 		vars_array_set_value(name, 0, num_construct(), &ppv);
 		if ((w = find_var(name, TYPE_ARRAY)) == NULL)
@@ -207,8 +206,12 @@ const numptr *vars_get_value(const char *name)
 	out_dbg("Getting value of %s\n", name);
 
 	vars_t *w = find_var(name, TYPE_NUM);
-	if (w != NULL)
+	if (w != NULL) {
+		out_dbg("\t%s is %s\n", name, w->value.num_ref ? "a reference" : "regular");
 		return (w->value.num_ref ? w->value.num_ref : &w->value.num);
+	}
+
+	out_dbg("\t%s is non-existent\n", name);
 	return NULL;
 }
 
@@ -222,16 +225,18 @@ const numptr *vars_array_get_value(const char *name, long int index)
 	vars_t *w = find_var(name, TYPE_ARRAY);
 	if (w != NULL) {
 
-		out_dbg("\tFound %s[]\n", name);
+		out_dbg("\t%s[] is %s\n", name, w->value.array_ref ? "a reference" : "regular");
 
 		array_t *a = find_index(w->value.array_ref ? *w->value.array_ref : w->value.array, index);
 		if (a != NULL) {
-
-			out_dbg("\tFound index %d\n", index);
-
+			out_dbg("\t[%d] found\n", index);
 			return &a->num;
+		} else {
+			out_dbg("\t[%d] not found\n", index);
+			return NULL;
 		}
 	}
+	out_dbg("\t%s[] is non-existent\n", name);
 	return NULL;
 }
 
@@ -245,6 +250,10 @@ static array_t *array_t_copy(const array_t *src)
 {
 	array_t *ret = NULL;
 	array_t *prec = NULL;
+
+	int n = 0;
+	const array_t *orig_src = src;
+
 	while (src != NULL) {
 		array_t *copy = (array_t *)malloc(sizeof(array_t));
 		copy->index = src->index;
@@ -256,7 +265,11 @@ static array_t *array_t_copy(const array_t *src)
 			prec->next = copy;
 		prec = copy;
 		src = src->next;
+		++n;
 	}
+
+	out_dbg("\tCopied array of %d element(s) from %lu to %lu\n", n, orig_src, ret);
+
 	return ret;
 }
 
@@ -269,7 +282,7 @@ array_t *vars_array_copy(const char *name)
 	
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
-	out_dbg("Copying array %s", name);
+	out_dbg("Copying array %s\n", name);
 
 	vars_t *w = find_var(name, TYPE_ARRAY);
 	if (w == NULL)
@@ -296,11 +309,15 @@ function_t *vars_get_function(const char *name)
 
 void vars_set_value_core(const char *name, const numptr new_value, vars_t *v, const numptr **ppvarnum)
 {
+	out_dbg("Setting value of %s\n", name);
 	if (v == NULL) {
+		out_dbg("\t%s is non-existent\n", name);
 		v = vars_t_construct(name, TYPE_NUM);
 	} else if (!v->value.num_ref) {
+		out_dbg("\t%s is a reference\n", name);
 		num_destruct(&v->value.num);
 	} else {
+		out_dbg("\t%s is regular\n", name);
 		num_destruct(v->value.num_ref);
 	}
 	if (!v->value.num_ref) {
@@ -327,13 +344,24 @@ static void vars_array_set_value_core(const char *name, long int index, const nu
 		v = vars_t_construct(name, TYPE_ARRAY);
 	}
 	array_t *a = find_index(v->value.array_ref ? *v->value.array_ref : v->value.array, index);
+
+	out_dbg("Setting value of %s[%d]\n", name, index);
+	out_dbg("\t%s is %s\n", name, v->value.array_ref ? "a reference" : "regular");
+
 	if (a == NULL) {
+		out_dbg("\t[%d] not found\n", index);
 		a = (array_t *)malloc(sizeof(array_t));
 		a->index = index;
 		a->num = num_undefvalue();
-		a->next = v->value.array;
-		v->value.array = a;
+		if (v->value.array_ref) {
+			a->next = (*v->value.array_ref)->next;
+			(*v->value.array_ref)->next = a;
+		} else {
+			a->next = v->value.array;
+			v->value.array = a;
+		}
 	} else {
+		out_dbg("\t[%d] found\n", index);
 		num_destruct(&a->num);
 	}
 
@@ -368,18 +396,19 @@ void vars_display_all()
 
 static void vars_value_soft_copy(vars_value_t *dst, const vars_value_t *src)
 {
-	if (src->type == TYPE_NUM)
-		dst->num = src->num;
-	else if (src->type == TYPE_ARRAY)
-		dst->array = src->array;
-	else if (src->type == TYPE_FCNT)
-		dst->fcnt = src->fcnt;
-	else
-		FATAL_ERROR("Unknown symbol type: %d for vars_value_t: %lu", src->type, src);
-
 	dst->type = src->type;
 	dst->num_ref = src->num_ref;
 	dst->array_ref = src->array_ref;
+	if (src->type == TYPE_NUM) {
+		if (!src->num_ref)
+			dst->num = src->num;
+	} else if (src->type == TYPE_ARRAY) {
+		if (!src->array_ref)
+			dst->array = src->array;
+	} else if (src->type == TYPE_FCNT)
+		dst->fcnt = src->fcnt;
+	else
+		FATAL_ERROR("Unknown symbol type: %d for vars_value_t: %lu", src->type, src);
 }
 
 vars_keeper_t *vars_keeper_array_construct(int n)
@@ -406,6 +435,7 @@ void vars_send_to_keeper(vars_keeper_t *keeper, const char *name, const vars_val
 	out_dbg("Sending %s to keeper, keep address = %lu\n", name, keeper);
 
 	keeper->is_used = TRUE;
+	keeper->ktype = new_value->type;
 
 	vars_t *w;
 	if ((w = find_var(name, new_value->type)) == NULL) {
@@ -433,15 +463,20 @@ void vars_recall_from_keeper(const char *name, vars_keeper_t *keeper)
 		return;
 	}
 
-	out_dbg("Recalling %s from keeper, keep address = %lu\n", name, keeper);
+	out_dbg("Recalling %s from keeper, keep address = %lu, type = %d\n", name, keeper, keeper->value.type);
 
-	vars_t *w = find_var(name, keeper->value.type);
+	vars_t *w = find_var(name, keeper->ktype);
 
 	if (keeper->holds_a_value) {
 		assert(w != NULL);
 		out_dbg("\tKeeper has a value => replacing variable value with keeper's\n");
-		vars_value_destruct(&w->value);
-		vars_value_soft_copy(&w->value, &keeper->value);
+		if (!w->value.num_ref && !w->value.array_ref) {
+			vars_value_destruct(&w->value);
+			vars_value_soft_copy(&w->value, &keeper->value);
+		} else {
+			w->value.num_ref = keeper->value.num_ref;
+			w->value.array_ref = keeper->value.array_ref;
+		}
 	} else if (w != NULL)  {
 		out_dbg("\tUndefined keeper value => destructing variable\n");
 

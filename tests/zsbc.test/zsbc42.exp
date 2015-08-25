@@ -1,0 +1,172 @@
+# tests/zsbc.test/zsbc42.exp
+
+set timeout 3
+spawn "$ZSBC" -V "$TESTDIR/zsbc42f.b"
+send_user "***   Functions defined from files invoked in command-line arguments with byref arguments\n"
+
+set test "Function fc(*a)"
+send "121\nfc(who)\nwho\nfc(who)\nwho\nfc(who*=2)\nwho\n212\n"
+expect {
+	-re "121\[^0-9\]+-1\[^0-9\]+1\[^0-9\]+-1\[^0-9\]+2\[^0-9\]+-1\[^0-9\]+5\[^0-9\]+212" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function fc(*a) (2)"
+send "131\nfc(a)\na\nfc(a)\na\nfc(a=150)\na\n232\n"
+expect {
+	-re "131\[^0-9\]+-1\[^0-9\]+1\[^0-9\]+-1\[^0-9\]+2\[^0-9\]+-1\[^0-9\]+151\[^0-9\]+232" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function ccf(*foo)"
+send "141\nccf(niet)\nniet\nccf(niet)\nniet\nccf(++niet)\nniet\n242\n"
+expect {
+	-re "141\[^0-9\]+1\[^0-9\]+2\[^0-9\]+4\[^0-9\]+242" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function ccf(*foo) (2)"
+send "151\nccf(foo)\nfoo\nccf(foo)\nfoo\nccf(foo--)\nfoo\n252\n"
+expect {
+	-re "151\[^0-9\]+1\[^0-9\]+2\[^0-9\]+2\[^0-9\]+252" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function fz(*hal)"
+send "161\nhal=12;fz(hal)\nhal\nfz(hal)\nhal\nfz(hal=100)\nhal\n262\n"
+expect {
+	-re "161\[^0-9\]+-23\[^0-9\]+24\[^0-9\]+-47\[^0-9\]+48\[^0-9\]+-199\[^0-9\]+200\[^0-9\]+262" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function fz, array element byref"
+send "171\nola\[10\]=12;fz(ola\[10\])\nola\[10\]\nfz(ola\[10\])\nola\[10\]\nfz(ola\[10\])\nola\[10\]\n272\n"
+expect {
+	-re "171\[^0-9\]+-23\[^0-9\]+24\[^0-9\]+-47\[^0-9\]+48\[^0-9\]+-95\[^0-9\]+96\[^0-9\]+272" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function fz, array element byref (2)"
+send "181\nola\[10\]=12;fz(ola\[10\]--)\nola\[10\]\nfz(--ola\[10\])\nola\[10\]\nfz(++ola\[10\])\nola\[10\]\nfz(ola\[10\]++)\nola\[10\]\n282\n"
+expect {
+	-re "181\[^0-9\]+-21\[^0-9\]+22\[^0-9\]+-41\[^0-9\]+42\[^0-9\]+-85\[^0-9\]+86\[^0-9\]+-173\[^0-9\]+174\[^0-9\]+282" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function f2(alpha\[\])"
+send "232\nf2(nl\[\])\nalpha\[1\]\nnl\[1\]\n313\n"
+expect {
+	-re "232\[^0-9\]+0\[^0-9\]+10\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+313\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function f2(alpha\[\]) (2)"
+send "242\nnl\[0\]=7\nnl\[1\]=8\nf2(nl\[\])\nalpha\[1\]\nnl\[0\]\nnl\[1\]\n323\n"
+expect {
+	-re "242\[^0-9\]+7\[^0-9\]+10\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+7\[^0-9\]+8\[^0-9\]+323\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function f2(alpha\[\]) (3)"
+send "252\nf2(alpha\[\])\nalpha\[0\]\nalpha\[1\]\nalpha\[2\]\n343\n"
+expect {
+	-re "252\[^0-9\]+0\[^0-9\]+10\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+343\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function f2(alpha\[\]) (4)"
+send "262\nalpha\[0\]=7\nalpha\[1\]=8\nf2(alpha\[\])\nalpha\[0\]\nalpha\[1\]\nalpha\[2\]\n353\n"
+expect {
+	-re "262\[^0-9\]+7\[^0-9\]+10\[^0-9\]+0\[^0-9\]+0\[^0-9\]+7\[^0-9\]+8\[^0-9\]+0\[^0-9\]+353\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+
+
+
+
+
+set test "Function fr(*beta\[\])"
+send "239\nfr(pl\[\])\nbeta\[1\]\npl\[1\]\n319\n"
+expect {
+	-re "239\[^0-9\]+0\[^0-9\]+20\[^0-9\]+0\[^0-9\]+9\[^0-9\]+0\[^0-9\]+20\[^0-9\]+319\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function fr(*beta\[\]) (2)"
+send "249\npl\[0\]=7\npl\[1\]=8\nfr(pl\[\])\nbeta\[1\]\npl\[0\]\npl\[1\]\n329\n"
+expect {
+	-re "249\[^0-9\]+7\[^0-9\]+20\[^0-9\]+0\[^0-9\]+9\[^0-9\]+0\[^0-9\]+7\[^0-9\]+20\[^0-9\]+329\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function fr(*beta\[\]) (3)"
+send "259\nfr(beta\[\])\nbeta\[0\]\nbeta\[1\]\nbeta\[2\]\n349\n"
+expect {
+	-re "259\[^0-9\]+0\[^0-9\]+20\[^0-9\]+0\[^0-9\]+9\[^0-9\]+0\[^0-9\]+20\[^0-9\]+0\[^0-9\]+349\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function fr(*beta\[\]) (4)"
+send "269\nbeta\[0\]=7\nbeta\[1\]=8\nfr(beta\[\])\nbeta\[0\]\nbeta\[1\]\nbeta\[2\]\n359\n"
+expect {
+	-re "269\[^0-9\]+7\[^0-9\]+20\[^0-9\]+0\[^0-9\]+9\[^0-9\]+7\[^0-9\]+20\[^0-9\]+0\[^0-9\]+359\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function factbyref(*x)"
+send "268\nfactbyref(z)\n267\nfactbyref(x)\nz\nx\n358\n"
+expect {
+	-re "268\[^0-9\]+0\[^0-9\]+267\[^0-9\]+0\[^0-9\]+0\[^0-9\]+0\[^0-9\]+358\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function factbyref(*x) (2)"
+send "358\nfactbyref(x)\nx\n458\n"
+expect {
+	-re "358\[^0-9\]+0\[^0-9\]+0\[^0-9\]+458\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function factbyref(*x) (3)"
+send "357\nz=6;factbyref(z)\nfactbyref(y=10)\nomega=3\nfactbyref(omega+=2)\nz\ny\nomega\n457\n"
+expect {
+	-re "357\[^0-9\]+720\[^0-9\]+3628800\[^0-9\]+120\[^0-9\]+1\[^0-9\]+1\[^0-9\]+1\[^0-9\]+457\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function factbyref(*x) (4)"
+send "557\nfactbyref(zeta\[5\])\nfactbyref(teta\[5\]=6)\nteta\[5\]\nlambda\[2\]=3\nfactbyref(lambda\[2\]+=1)\n558\n"
+expect {
+	-re "557\[^0-9\]+0\[^0-9\]+720\[^0-9\]+1\[^0-9\]+24\[^0-9\]+558\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function factbyref(*x) (5)"
+send "559\ngamma\[1\]=10;factbyref(gamma\[3\])\nfactbyref(gamma\[3\]+=4)\ngamma\[1\]\ngamma\[3\]\n560\n"
+expect {
+	-re "559\[^0-9\]+0\[^0-9\]+24\[^0-9\]+10\[^0-9\]+1\[^0-9\]+560\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function factbyref(*x) (6)"
+send "561\nfactbyref(aab--)\naab\nfactbyref(++abb)\nabb\nx=5\nfactbyref(x--)\nx=6\nfactbyref(++x)\nj=11\nfactbyref(j--)\nj=12\nfactbyref(++j)\n562\n"
+expect {
+	-re "561\[^0-9\]+-1\[^0-9\]+-1\[^0-9\]+1\[^0-9\]+1\[^0-9\]+24\[^0-9\]+5040\[^0-9\]+3628800\[^0-9\]+6227020800\[^0-9\]+562\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function factbyref(*x) (7)"
+send "563\nfactbyref(hu\[4\]--)\nfactbyref(hu\[5\]++)\nhu\[5\]=9\nfactbyref(--hu\[5\])\nhu\[5\]=6\nfactbyref(hu\[5\]++)\n564\n"
+expect {
+	-re "563\[^0-9\]+-1\[^0-9\]+1\[^0-9\]+40320\[^0-9\]+5040\[^0-9\]+564\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

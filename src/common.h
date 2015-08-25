@@ -38,7 +38,7 @@
 
 #ifdef DEBUG
 #define out_dbg(...) \
-	out(L_DEBUG, __VA_ARGS__)
+	out_dbg_core(__FILE__, __LINE__, __VA_ARGS__)
 #else
 #define out_dbg(...) ;
 #endif
@@ -75,6 +75,7 @@ int outln_warning(const char *fmt, ...);
 void fatalln(const char *file, int line, const char *fmt, ...);
 #define FATAL_ERROR(s, ...) \
 	fatalln(__FILE__, __LINE__, s, __VA_ARGS__)
+int out_dbg_core(const char *filename, int line, const char *fmt, ...);
 
 char *s_strncpy(char *dest, const char *src, size_t n);
 char *s_strncat(char *dest, const char *src, size_t n);

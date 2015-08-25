@@ -39,6 +39,9 @@ int yywrap();
 
 static int out_level = L_NORMAL;
 
+	/* When debug activated, name of files to display the debug of (NULL: display all) */
+const char *debug_filenames = NULL;
+
 	/* To manage input files specified in command line arguments */
 static char **argf_list = NULL;
 static int argf_nb_alloc = 0;
@@ -128,15 +131,28 @@ int out(int level, const char *fmt, ...)
 		va_start(args, fmt);
 		int r;
 		if (level == L_ERROR || level == L_WARNING) {
-			r = vprintf(fmt, args);
-		} else {
 			r = vfprintf(stderr, fmt, args);
+		} else {
+			r = vprintf(fmt, args);
 		}
 		va_end(args);
 		return r;
 	} else {
 		return -1;
 	}
+}
+
+int out_dbg_core(const char *filename, int line, const char *fmt, ...)
+{
+	if (out_level >= L_DEBUG && (debug_filenames == NULL || strstr(debug_filenames, filename))) {
+		out(L_DEBUG, "%s:%d\t", filename, line);
+		va_list args;
+		va_start(args, fmt);
+		int r = vprintf(fmt, args);
+		va_end(args);
+		return r;
+	} else
+		return -1;
 }
 
 int outln_error(const char *fmt, ...)
@@ -265,7 +281,7 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 	 * */
 static void opt_check(int n, const char *opt)
 {
-	static int defined_options[4] = {0, 0, 0, 0};
+	static int defined_options[5] = {0, 0, 0, 0, 0};
 
 	if (n == -1) {
 		assert(opt == NULL);
@@ -286,7 +302,7 @@ static void opt_check(int n, const char *opt)
 }
 
 static void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quiet, int *optset_debug,
-		int *opt_liblist, char **numlib_to_start_with)
+		int *opt_liblist, const char **nlib_tostartwith, const char **dbg_fname)
 {
 	char *missing_option_value = NULL;
 
@@ -309,6 +325,16 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 			opt_check(2, argv[a]);
 			*optset_debug = TRUE;
 			out_level = L_DEBUG;
+		} else if (!strcmp(argv[a], "-debugfile") || !strcmp(argv[a], "-D")) {
+			opt_check(4, argv[a]);
+			*optset_debug = TRUE;
+			out_level = L_DEBUG;
+			if (++a >= argc) {
+				missing_option_value = argv[a - 1] + 1;
+				a = -1;
+				break;
+			}
+			*dbg_fname = argv[a];
 		} else if (!strcmp(argv[a], "-liblist")) {
 			*opt_liblist = TRUE;
 		} else if (!strcmp(argv[a], "-lib") || !strcmp(argv[a], "-numlib")) {
@@ -318,7 +344,7 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 				a = -1;
 				break;
 			}
-			*numlib_to_start_with = argv[a];
+			*nlib_tostartwith = argv[a];
 		} else if (argv[a][0] == '-') {
 			if (strcmp(argv[a], "--")) {
 				fprintf(stderr, "%s: invalid option -- '%s'\n", PACKAGE_NAME, argv[a]);
@@ -415,17 +441,17 @@ int main(int argc, char *argv[])
 	int optset_quiet = FALSE;
 	int optset_debug = FALSE;
 	int optset_liblist = FALSE;
-	char *numlib_to_start_with = NULL;
+	const char *numlib_to_start_with = NULL;
 
 	int env_argc;
 	char **env_argv;
 	const char *env;
 	cut_env_options(&env_argc, &env_argv, &env);
-	parse_options(env_argc, env_argv, &optset_verbose, &optset_quiet, &optset_debug, &optset_liblist, &numlib_to_start_with);
+	parse_options(env_argc, env_argv, &optset_verbose, &optset_quiet, &optset_debug, &optset_liblist, &numlib_to_start_with, &debug_filenames);
 	optset_verbose = FALSE;
 	optset_quiet = FALSE;
 	optset_debug = FALSE;
-	parse_options(argc, argv, &optset_verbose, &optset_quiet, &optset_debug, &optset_liblist, &numlib_to_start_with);
+	parse_options(argc, argv, &optset_verbose, &optset_quiet, &optset_debug, &optset_liblist, &numlib_to_start_with, &debug_filenames);
 
 	if (optset_verbose && optset_quiet)
 		out_level = L_NORMAL;
