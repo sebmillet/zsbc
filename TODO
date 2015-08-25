@@ -1,0 +1,12 @@
+TODO file of zsbc
+=================
+
+As of August 2015:
+
+- Prints a warning if a non void function does not return a value or if a void
+  function returns a value.
+
+- Manages break/continue/return statements consistently with where they are
+  called from (now: can be invoked anywhere, including, outside of a loop or
+  function body)
+
