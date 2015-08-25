@@ -1,7 +1,7 @@
 # tests/zsbc.test/zsbc30.exp
 
 set timeout 3
-spawn "$ZSBC" -V
+spawn "$ZSBC" -SCM
 send_user "***   Arrays\n"
 
 set test "Array"

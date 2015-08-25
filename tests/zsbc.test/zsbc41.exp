@@ -1,7 +1,7 @@
 # tests/zsbc.test/zsbc41.exp
 
 set timeout 3
-spawn "$ZSBC" -V "$TESTDIR/zsbc41f.b"
+spawn "$ZSBC" -SCM "$TESTDIR/zsbc41f.b"
 send_user "***   Functions defined from files invoked in command-line arguments\n"
 
 set test "Function pow2"

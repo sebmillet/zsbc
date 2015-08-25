@@ -1,7 +1,7 @@
 # tests/zsbc.test/zsbc40.exp
 
 set timeout 3
-spawn "$ZSBC" -V
+spawn "$ZSBC" -SCM
 send_user "***   Functions\n"
 
 set test "Function (1)"

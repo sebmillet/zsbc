@@ -3,7 +3,7 @@
 set timeout 3
 send_user "***   Assignment operators\n"
 
-spawn "$ZSBC" -V
+spawn "$ZSBC" -SCM
 
 set test "Addition"
 send "434\na=5;a+=2;b+=3\na;b\n121\n"

@@ -14,7 +14,7 @@ expect {
 	-re "\[0-9.\]+"  { pass "$test" }
 }
 
-spawn "$ZSBC" -V
+spawn "$ZSBC" -SCM
 set test "Get GMP Library version"
 expect {
 	-nocase "gmp library" { pass "$test" }

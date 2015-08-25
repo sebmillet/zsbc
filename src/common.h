@@ -83,5 +83,7 @@ char *s_alloc_and_copy(char **dst, const char *src);
 
 void lib_list();
 
+#define UNUSED(x) (void)(x)
+
 #endif /* COMMON_H */
 

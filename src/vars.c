@@ -248,11 +248,16 @@ const numptr *vars_array_get_value(const char *name, long int index)
 	 */
 static array_t *array_t_copy(const array_t *src)
 {
+	const array_t *orig_src = src;
+#if !DEBUG
+UNUSED(orig_src);
+#endif
+
 	array_t *ret = NULL;
 	array_t *prec = NULL;
 
 	int n = 0;
-	const array_t *orig_src = src;
+
 
 	while (src != NULL) {
 		array_t *copy = (array_t *)malloc(sizeof(array_t));
