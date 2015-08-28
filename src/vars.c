@@ -124,6 +124,7 @@ static vars_t *vars_t_construct(const char *name, int type)
 		v->value.array = NULL;
 	} else if (type == TYPE_FCNT) {
 		v->value.fcnt.defargs = NULL;
+		v->value.fcnt.autolist = NULL;
 		v->value.fcnt.program = NULL;
 	} else
 		FATAL_ERROR("Unknown symbol type: %d", type);
@@ -572,8 +573,9 @@ int vars_function_construct(const char*name, defargs_t *defargs, program_t *prog
 	f->value.fcnt.is_void = is_void;
 	f->value.fcnt.defargs = defargs;
 	f->value.fcnt.program = program;
+	program_gather_defargs(&f->value.fcnt.autolist, &f->value.fcnt.program);
 
-	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, program: %lu\n", f, f->name, f->value.fcnt.defargs, f->value.fcnt.program);
+	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->value.fcnt.defargs, f->value.fcnt.autolist, f->value.fcnt.program);
 
 	return ERROR_NONE;
 }
@@ -586,6 +588,10 @@ static void function_destruct(function_t f)
 	if (f.defargs != NULL) {
 		defargs_destruct(f.defargs);
 		f.defargs = NULL;
+	}
+	if (f.autolist != NULL) {
+		defargs_destruct(f.autolist);
+		f.autolist = NULL;
 	}
 	if (f.program != NULL) {
 		program_destruct(f.program);

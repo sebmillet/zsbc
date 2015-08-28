@@ -28,14 +28,6 @@ typedef struct context_t context_t;
 
 enum {TYPE_NUM, TYPE_ARRAY, TYPE_FCNT};
 
-typedef enum {DARG_VALUE, DARG_ARRAYVALUE, DARG_REF, DARG_ARRAYREF} defarg_type_t;
-struct defargs_t {
-	defarg_type_t type;
-	char *name;
-	struct defargs_t *next;
-};
-typedef struct defargs_t defargs_t;
-
 context_t *context_construct(int lib_reg_number);
 void context_destruct(context_t *c);
 void context_switch(context_t *c);
@@ -46,6 +38,7 @@ typedef struct array_t array_t;
 typedef struct function_t {
 	int is_void;
 	defargs_t *defargs;
+	defargs_t *autolist;
 	program_t *program;
 } function_t;
 
@@ -88,7 +81,6 @@ array_t **vars_array_get_ref(const char *name);
 
 defargs_t *defargs_construct(defarg_type_t type, const char *name);
 void defargs_destruct(defargs_t *arg);
-defargs_t *defargs_chain(defargs_t *base, defargs_t *append);
 
 int vars_function_construct(const char*name, defargs_t *args, program_t *program, int is_void);
 

@@ -85,5 +85,14 @@ void lib_list();
 
 #define UNUSED(x) (void)(x)
 
+typedef enum {DARG_VALUE, DARG_ARRAYVALUE, DARG_REF, DARG_ARRAYREF} defarg_type_t;
+struct defargs_t {
+	defarg_type_t type;
+	char *name;
+	struct defargs_t *next;
+};
+typedef struct defargs_t defargs_t;
+defargs_t *defargs_chain(defargs_t *base, defargs_t *append);
+
 #endif /* COMMON_H */
 

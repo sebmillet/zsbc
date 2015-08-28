@@ -120,6 +120,7 @@ break			return BREAK;
 continue		return CONTINUE;
 if				return IF;
 else			return ELSE;
+auto			return AUTOLIST;
 
 {identifier} {
 	s_alloc_and_copy(&yylval.str, yytext);

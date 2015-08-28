@@ -67,12 +67,12 @@ void activate_bison_debug();
 %token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
 %type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_assignment
 %type <prog> loop_while loop_for ifseq else_or_empty
-%type <defargs> defargs_list_or_empty defargs_list defarg
+%type <defargs> defargs_list_or_empty defargs_list defarg defargsbyval_list defargbyval
 %type <callargs> callarg callargs_list callargs_list_or_empty
 
 %token QUIT VARS LIBSWITCH LIBLIST
 %token WHILE FOR BREAK CONTINUE IF ELSE
-%token DEFINE VOID RETURN
+%token DEFINE VOID RETURN AUTOLIST
 
 %token NEWLINE
 
@@ -142,6 +142,7 @@ instruction_non_empty:
 	| RETURN expression { $$ = program_construct_return($2); }
 	| BREAK { $$ = program_construct_break(); }
 	| CONTINUE { $$ = program_construct_continue(); }
+	| AUTOLIST defargsbyval_list { $$ = program_construct_autolist($2); }
 	| instruction_block { $$ = $1; }
 ;
 
@@ -240,11 +241,20 @@ else_or_empty:
 	| newlines_or_empty ELSE newlines_or_empty instruction_non_empty { $$ = $4; }
 ;
 
-defarg:
+defargbyval:
 	IDENTIFIER { $$ = defargs_construct(DARG_VALUE, $1); }
 	| IDENTIFIER '[' ']' { $$ = defargs_construct(DARG_ARRAYVALUE, $1); }
+;
+
+defarg:
+	defargbyval
 	| '*' IDENTIFIER { $$ = defargs_construct(DARG_REF, $2); }
 	| '*' IDENTIFIER '[' ']' { $$ = defargs_construct(DARG_ARRAYREF, $2); }
+;
+
+defargsbyval_list:
+	defargbyval
+	| defargsbyval_list ',' defargbyval { $$ = defargs_chain($1, $3); }
 ;
 
 defargs_list:

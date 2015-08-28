@@ -47,6 +47,9 @@ program_t *program_construct_return(expr_t *e);
 program_t *program_construct_continue();
 program_t *program_construct_break();
 program_t *program_construct_ifseq(program_ifseq_t *ifseq);
+program_t *program_construct_autolist(defargs_t *defargs);
+void program_gather_defargs(defargs_t **pdefargs, program_t **pprogram);
+
 void program_destruct(program_t *p);
 
 int program_execute(program_t *p, numptr *pval);

@@ -771,6 +771,16 @@ static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum)
 		return ERROR_ARGTYPE_MISMATCH;
 }
 
+static int count_defargs(defargs_t *darg)
+{
+	int n = 0;
+	while (darg != NULL) {
+		darg = darg->next;
+		++n;
+	}
+	return n;
+}
+
 static int eval_function_call(const expr_t *self, numptr *pval)
 {
 	assert(self->type == ENODE_FUNCTION_CALL);
@@ -780,42 +790,43 @@ static int eval_function_call(const expr_t *self, numptr *pval)
 	if ((f = vars_get_function(self->var.name)) == NULL)
 		return ERROR_FUNCTION_NOT_DEFINED;
 
-	int n = 0;
-	defargs_t *darg = f->defargs;
-	while (darg != NULL) {
-		darg = darg->next;
-		++n;
-	}
-	if (self->nb_args != n)
+	int nbargs = count_defargs(f->defargs);
+	int nbauto = count_defargs(f->autolist);
+	if (self->nb_args != nbargs)
 		return ERROR_PARAMETER_NUMBER_MISMATCH;
 
-	vars_keeper_t *keeper = vars_keeper_array_construct(n);
+	vars_keeper_t *keeper = vars_keeper_array_construct(nbargs + nbauto);
 
 	int r = ERROR_NONE;
 
-	vars_value_t nv;
-	darg = f->defargs;
-	int i;
-	for (i = 0; i < n; ++i) {
+	defargs_t *darg = f->defargs;
+	int ii;
 
+	/*-----------------------------------------------------------------------------
+	 *  Step 1: walk through function arguments
+	 *-----------------------------------------------------------------------------*/
+
+	for (ii = 0; ii < nbargs; ++ii) {
 		assert(darg != NULL);
 
+		vars_value_t nv;
 		nv.num_ref = NULL;
 		nv.array_ref = NULL;
 
 			/* Optional, used to make the code a bit lighter */
-		callargs_t *ca = &self->cargs[i];
+		callargs_t *ca = &self->cargs[ii];
 
 		if (darg->type == DARG_VALUE) {
-			out_dbg("Argument %d (#%s) is var byval\n", i, darg->name);
+			out_dbg("Argument %d (#%s) is var byval\n", ii, darg->name);
 			if (ca->type != CARG_EXPR) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
 			}
 			nv.type = TYPE_NUM;
-			r = myeval(ca->e, &nv.num);
+			if ((r = myeval(ca->e, &nv.num)) != ERROR_NONE)
+				break;
 		} else if (darg->type == DARG_ARRAYVALUE) {
-			out_dbg("Argument %d (#%s) is array byval\n", i, darg->name);
+			out_dbg("Argument %d (#%s) is array byval\n", ii, darg->name);
 			if (ca->type != CARG_ARRAY) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
@@ -823,23 +834,19 @@ static int eval_function_call(const expr_t *self, numptr *pval)
 			nv.type = TYPE_ARRAY;
 			nv.array = vars_array_copy(ca->array_name);
 		} else if (darg->type == DARG_REF) {
-			out_dbg("Argument %d (#%s) is var byref\n", i, darg->name);
+			out_dbg("Argument %d (#%s) is var byref\n", ii, darg->name);
 			if (ca->type != CARG_EXPR || ca->e == NULL) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
 			}
 			expr_t *e = ca->e;
 			const numptr *plvnum;
-			if ((r = expr_eval_left_value(e, &plvnum)) != ERROR_NONE) {
+			if ((r = expr_eval_left_value(e, &plvnum)) != ERROR_NONE)
 				break;
-			}
 			nv.type = TYPE_NUM;
 			nv.num_ref = (numptr *)plvnum;
-
-			out_dbg("Argument #%d has num_ref value %lu\n", i, plvnum);
-
 		} else if (darg->type == DARG_ARRAYREF) {
-			out_dbg("Argument %d (#%s) is array byref\n", i, darg->name);
+			out_dbg("Argument %d (#%s) is array byref\n", ii, darg->name);
 			if (ca->type != CARG_ARRAY) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
@@ -849,12 +856,47 @@ static int eval_function_call(const expr_t *self, numptr *pval)
 		} else
 			FATAL_ERROR("Unknown definition argument type: %d for darg #%lu", darg->type, darg);
 
-		vars_send_to_keeper(&keeper[i], darg->name, &nv);
+		vars_send_to_keeper(&keeper[ii], darg->name, &nv);
 
 		darg = darg->next;
 	}
+	if (r == ERROR_NONE) {
+		assert(darg == NULL);
+		assert(ii == nbargs);
+
+		/*-----------------------------------------------------------------------------
+		 *  Step 2: walk through autolist
+		 *-----------------------------------------------------------------------------*/
+
+		darg = f->autolist;
+		int n = 0;
+		while (darg != NULL) {
+			++n;
+			vars_value_t nv;
+			nv.num_ref = NULL;
+			nv.array_ref = NULL;
+
+			if (darg->type == DARG_VALUE) {
+				out_dbg("Auto variable %d (#%s) is var\n", n, darg->name);
+				nv.type = TYPE_NUM;
+				nv.num = num_construct();
+			} else if (darg->type == DARG_ARRAYVALUE) {
+				out_dbg("Auto variable %d (#%s) is array\n", n, darg->name);
+				nv.type = TYPE_ARRAY;
+				nv.array = NULL;
+			} else
+				FATAL_ERROR("Unknown auto variable type: %d for darg #%lu", darg->type, darg);
+
+			vars_send_to_keeper(&keeper[ii], darg->name, &nv);
+
+			++ii;
+			darg = darg->next;
+		}
+	}
 
 	if (r == ERROR_NONE) {
+		assert(darg == NULL);
+		assert(ii == nbargs + nbauto);
 		r = program_execute(f->program, pval);
 		if (r == ERROR_NONE || r == ERROR_RETURN) {
 			r = ERROR_NONE;
@@ -868,18 +910,24 @@ static int eval_function_call(const expr_t *self, numptr *pval)
 	}
 
 	darg = f->defargs;
-	for (i = 0; i < n; ++i) {
-
+	for (ii = 0; ii < nbargs; ++ii) {
 		assert(darg != NULL);
 
-/*        if (darg->type == DARG_VALUE) {*/
-		vars_recall_from_keeper(darg->name, &keeper[i]);	/* Just recall from keep */
-/*        } else*/
-/*            assert(0);	|+ FIXME - to be implemented... +|*/
+		vars_recall_from_keeper(darg->name, &keeper[ii]);
 
 		darg = darg->next;
 	}
 	assert(darg == NULL);
+	assert(ii == nbargs);
+	darg = f->autolist;
+	while (darg != NULL) {
+
+		vars_recall_from_keeper(darg->name, &keeper[ii]);
+
+		++ii;
+		darg = darg->next;
+	}
+	assert(ii == nbargs + nbauto);
 
 	if (keeper != NULL)
 		free(keeper);

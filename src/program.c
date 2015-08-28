@@ -31,7 +31,8 @@ typedef enum {
 	TINSTR_LOOP,
 	TINSTR_BREAK,
 	TINSTR_CONTINUE,
-	TINSTR_IFSEQ
+	TINSTR_IFSEQ,
+	TINSTR_AUTOLIST
 } instr_t;
 
 struct program_t {
@@ -42,6 +43,7 @@ struct program_t {
 		char *str;				/* TINSTR_STR */
 		program_loop_t loop;	/* TINSTR_LOOP */
 		program_ifseq_t ifseq;	/* TINSTR_IFSEQ */
+		defargs_t *autolist;		/* TINSTR_DEFARGS */
 	};
 
 	program_t *next;
@@ -110,6 +112,59 @@ program_t *program_construct_ifseq(program_ifseq_t *ifseq)
 	return p;
 }
 
+program_t *program_construct_autolist(defargs_t *autolist)
+{
+	program_t *p = program_construct(TINSTR_AUTOLIST);
+	p->autolist = autolist;
+	out_dbg("Construct of one program of type autolist, autolist: %lu, address = %lu\n", autolist, p);
+	return p;
+}
+
+void program_gather_defargs(defargs_t **pautolist, program_t **base)
+{
+	*pautolist = NULL;
+	program_t *p = *base;
+	program_t *prec = NULL;
+	while (p != NULL) {
+		program_t *pnext = p->next;
+		if (p->type == TINSTR_AUTOLIST) {
+
+				/* 1- Detach the list from the program and attach it to the given autolist */
+
+			if (p->autolist) {
+				if (!*pautolist) {
+					*pautolist = p->autolist;
+				} else {
+					defargs_chain(*pautolist, p->autolist);
+				}
+				p->autolist = NULL;
+			}
+
+				/* 2- Destruct the program and update pointers chain accordingly */
+
+			if (!prec)
+				*base = pnext;
+			else {
+				prec->next = pnext;
+			}
+								/*
+								 * Important to cancel the chain here, if not done */
+			p->next = NULL;		/* the program_destruct() call below would also
+								 * destruct the whole chain.
+								 * */
+			program_destruct(p);
+
+		} else {
+			prec = p;
+		}
+
+			/* 3- Go to next program */
+
+		p = pnext;
+
+	}
+}
+
 void program_destruct(program_t *p)
 {
 	out_dbg("Entering program_destruct for %lu\n", p);
@@ -139,6 +194,9 @@ void program_destruct(program_t *p)
 				expr_destruct(p->ifseq.expr);
 				program_destruct(p->ifseq.pif);
 				program_destruct(p->ifseq.pelse);
+				break;
+			case TINSTR_AUTOLIST:
+				defargs_destruct(p->autolist);
 				break;
 			default:
 				FATAL_ERROR("Unknown program type: %d, program address: %lu", p->type, p);
