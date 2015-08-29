@@ -65,14 +65,14 @@ void activate_bison_debug();
 %token <num> INTEGER
 %type <enode> expression expression_no_assignment expression_assignment expression_or_empty function_call
 %token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
-%type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_assignment
-%type <prog> loop_while loop_for ifseq else_or_empty
+%type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_expr_assignment
+%type <prog> loop_while loop_for ifseq else_or_empty instruction_string instruction_expr_no_assignment print_elem print_list
 %type <defargs> defargs_list_or_empty defargs_list defarg defargsbyval_list defargbyval
 %type <callargs> callarg callargs_list callargs_list_or_empty
 
 %token QUIT VARS LIBSWITCH LIBLIST
 %token WHILE FOR BREAK CONTINUE IF ELSE
-%token DEFINE VOID RETURN AUTOLIST
+%token DEFINE VOID RETURN AUTOLIST PRINT
 
 %token NEWLINE
 
@@ -132,9 +132,9 @@ instruction:
 ;
 
 instruction_non_empty:
-	instruction_assignment
-	| expression_no_assignment { $$ = program_construct_expr($1, FALSE); }
-	| STRING { $$ = program_construct_str($1); }
+	instruction_expr_assignment
+	| instruction_expr_no_assignment
+	| instruction_string
 	| loop_while
 	| loop_for
 	| ifseq
@@ -142,11 +142,12 @@ instruction_non_empty:
 	| RETURN expression { $$ = program_construct_return($2); }
 	| BREAK { $$ = program_construct_break(); }
 	| CONTINUE { $$ = program_construct_continue(); }
+	| PRINT print_list { $$ = $2; }
 	| AUTOLIST defargsbyval_list { $$ = program_construct_autolist($2); }
 	| instruction_block { $$ = $1; }
 ;
 
-instruction_assignment:
+instruction_expr_assignment:
 	IDENTIFIER OP_AND_ASSIGN expression {
 		expr_t *enode = expr_construct_setvar($1, NULL, $2, FALSE, $3);
 		$$ = program_construct_expr(enode, TRUE);
@@ -157,6 +158,14 @@ instruction_assignment:
 		$$ = program_construct_expr(enode, TRUE);
 		free($5);
 	}
+;
+
+instruction_expr_no_assignment:
+	expression_no_assignment { $$ = program_construct_expr($1, FALSE); }
+;
+
+instruction_string:
+	STRING { $$ = program_construct_str($1); }
 ;
 
 expression:
@@ -190,6 +199,17 @@ expression_no_assignment:
 	| expression LOGIC_OR expression { $$ = expr_construct_op2_str("||", $1, $3); }
 	| LOGIC_NOT expression { $$ = expr_construct_op1_str("!", $2); }
 	| '(' expression ')' { $$ = $2; }
+;
+
+print_elem:
+	instruction_expr_assignment { program_notify_is_part_of_print($1); $$ = $1; }
+	| instruction_expr_no_assignment { program_notify_is_part_of_print($1); $$ = $1; }
+	| instruction_string { program_notify_is_part_of_print($1); $$ = $1; }
+;
+
+print_list:
+	print_elem
+	| print_list ',' print_elem { $$ = program_chain($1, $3); }
 ;
 
 newlines_or_empty:

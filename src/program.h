@@ -55,5 +55,7 @@ void program_destruct(program_t *p);
 int program_execute(program_t *p, numptr *pval);
 program_t *program_chain(program_t *base, program_t *append);
 
+void program_notify_is_part_of_print(program_t *program);
+
 #endif	/* PROGRAM_H */
 

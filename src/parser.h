@@ -65,11 +65,12 @@ extern int yydebug;
     VOID = 275,
     RETURN = 276,
     AUTOLIST = 277,
-    NEWLINE = 278,
-    LOGIC_OR = 279,
-    LOGIC_AND = 280,
-    LOGIC_NOT = 281,
-    NEG = 282
+    PRINT = 278,
+    NEWLINE = 279,
+    LOGIC_OR = 280,
+    LOGIC_AND = 281,
+    LOGIC_NOT = 282,
+    NEG = 283
   };
 #endif
 /* Tokens.  */
@@ -93,11 +94,12 @@ extern int yydebug;
 #define VOID 275
 #define RETURN 276
 #define AUTOLIST 277
-#define NEWLINE 278
-#define LOGIC_OR 279
-#define LOGIC_AND 280
-#define LOGIC_NOT 281
-#define NEG 282
+#define PRINT 278
+#define NEWLINE 279
+#define LOGIC_OR 280
+#define LOGIC_AND 281
+#define LOGIC_NOT 282
+#define NEG 283
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -113,7 +115,7 @@ union YYSTYPE
 	defargs_t *defargs;
 	callargs_t *callargs;
 
-#line 117 "parser.h" /* yacc.c:1909  */
+#line 119 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -142,6 +144,6 @@ int yyparse (void);
 
 void activate_bison_debug();
 
-#line 146 "parser.h" /* yacc.c:1909  */
+#line 148 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */

@@ -37,6 +37,7 @@ typedef enum {
 
 struct program_t {
 	instr_t type;
+	int is_part_of_print;		/* for TINSTR_EXPR* and TINSTR_STR */
 
 	union {
 		expr_t *expr;			/* TINSTR_EXPR* */
@@ -53,6 +54,7 @@ static program_t *program_construct(instr_t type)
 {
 	program_t *p = (program_t *)malloc(sizeof(program_t));
 	p->type = type;
+	p->is_part_of_print = FALSE;
 	p->next = NULL;
 	return p;
 }
@@ -224,13 +226,14 @@ int program_execute(program_t *p, numptr *pval)
 			case TINSTR_EXPR_EXPR:
 			case TINSTR_EXPR_ASSIGN_EXPR:
 			case TINSTR_EXPR_RETURN:
-				print_result = (p->type == TINSTR_EXPR_EXPR);
+				print_result = (p->type == TINSTR_EXPR_EXPR || (p->is_part_of_print && p->type == TINSTR_EXPR_ASSIGN_EXPR));
 				num = num_undefvalue();
 				if ((r = expr_eval(p->expr, &num)) != ERROR_NONE) {
 					outln_error_code(r);
 				} else if (print_result && !num_is_not_initialized(num)) {
 					num_print(num, 10);
-					outln(L_ENFORCE, "");
+					if (!p->is_part_of_print)
+						outln(L_ENFORCE, "");
 				}
 				if (p->type == TINSTR_EXPR_RETURN) {
 					r = ERROR_RETURN;
@@ -357,5 +360,10 @@ program_t *program_chain(program_t *base, program_t *append)
 		p->next = append;
 	}
 	return base;
+}
+
+void program_notify_is_part_of_print(program_t *program)
+{
+	program->is_part_of_print = TRUE;
 }
 
