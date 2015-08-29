@@ -1,8 +1,8 @@
-# tests/zsbc.test/zsbc21.exp
+# tests/zsbc.test/01gmp-21.exp
 
 set timeout 3
 spawn "$ZSBC" -SCM
-send_user "***   Programs - while loop\n"
+send_user "***   GMP - programs - while loop\n"
 
 set test "while (1)"
 send "r=1;while(a<128){a=a+1;r=r*2};r\n"

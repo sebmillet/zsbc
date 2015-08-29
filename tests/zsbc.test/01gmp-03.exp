@@ -1,8 +1,8 @@
-# tests/zsbc.test/zsbc03.exp
+# tests/zsbc.test/01gmp-03.exp
 
 set timeout 3
 spawn "$ZSBC" -SCM
-send_user "***   Variable tests\n"
+send_user "***   GMP - variable tests\n"
 
 set test "Variable assignment"
 send "5\na=101\n6\n"

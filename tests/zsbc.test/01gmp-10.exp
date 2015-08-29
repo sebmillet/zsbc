@@ -1,8 +1,8 @@
-# tests/zsbc.test/zsbc10.exp
+# tests/zsbc.test/01gmp-10.exp
 
 set timeout 3
 spawn "$ZSBC" -q
-send_user "***   libswitch\n"
+send_user "***   GMP - libswitch\n"
 
 set test "libswitch"
 send "a=101\nlibswitch \"bc\"\na=202\nlibswitch \"gmp\"\n303\na\nlibswitch \"bc\"\na\n404\n"

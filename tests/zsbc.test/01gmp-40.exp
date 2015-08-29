@@ -1,8 +1,8 @@
-# tests/zsbc.test/zsbc40.exp
+# tests/zsbc.test/01gmp-40.exp
 
 set timeout 3
 spawn "$ZSBC" -SCM
-send_user "***   Functions\n"
+send_user "***   GMP - functions\n"
 
 set test "Function (1)"
 send "define f(x) return x+1\n101\nf(2)\nx\n202\n"

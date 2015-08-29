@@ -1,8 +1,8 @@
-# tests/zsbc.test/zsbc04.exp
+# tests/zsbc.test/01gmp-04.exp
 
 set timeout 3
 spawn "$ZSBC" -SCM
-send_user "***   Comparison and logical operators\n"
+send_user "***   GMP - comparison and logical operators\n"
 
 set test "Testing <"
 send -- "-3<-2\n-2<-2\n-2<-3\n3<2\n2<2\n2<3\n-3<2\n3<-2\n"

@@ -1,8 +1,8 @@
-# tests/zsbc.test/zsbc42.exp
+# tests/zsbc.test/01gmp-42.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM "$TESTDIR/zsbc42f.b"
-send_user "***   Functions defined from files invoked in command-line arguments with byref arguments\n"
+spawn "$ZSBC" -SCM "$TESTDIR/01gmp-42.b"
+send_user "***   GMP - functions defined from files invoked in command-line arguments with byref arguments\n"
 
 set test "Function fc(*a)"
 send "121\nfc(who)\nwho\nfc(who)\nwho\nfc(who*=2)\nwho\n212\n"
