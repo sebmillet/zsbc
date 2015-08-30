@@ -34,11 +34,14 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 int yywrap();
 
 static int out_level = L_NORMAL;
 static int opt_SCM = FALSE;		/* SCM = Special Check Mode, used for 'make check' checks */
+
+static int is_interactive = FALSE;
 
 	/* When debug activated, name of files to display the debug of (NULL: display all) */
 const char *debug_filenames = NULL;
@@ -223,7 +226,8 @@ static void version()
 #else
 	printf("%s\n", PACKAGE_STRING);
 #endif
-	printf("Copyright (c) 2015 Sébastien Millet\n");
+	printf("Copyright 2015 Sébastien Millet.\n");
+	printf("This is free software with ABSOLUTELY NO WARRANTY.\n");
 }
 
 static void output_count_ref_report(const char *name, int count_ref)
@@ -282,7 +286,7 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 	 * */
 static void opt_check(int n, const char *opt)
 {
-	static int defined_options[6] = {0, 0, 0, 0, 0, 0};
+	static int defined_options[7] = {0, 0, 0, 0, 0, 0, 0};
 
 	if (n == -1) {
 		assert(opt == NULL);
@@ -303,7 +307,7 @@ static void opt_check(int n, const char *opt)
 }
 
 static void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quiet, int *optset_debug,
-		int *opt_liblist, const char **nlib_tostartwith, const char **dbg_fname, int *o_SCM)
+		int *opt_liblist, const char **nlib_tostartwith, const char **dbg_fname, int *o_SCM, int *isintrctv)
 {
 	char *missing_option_value = NULL;
 
@@ -322,6 +326,9 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 			opt_check(5, argv[a]);
 			*o_SCM = TRUE;
 			out_level = L_VERBOSE;
+		} else if (!strcmp(argv[a], "-interactive") || !strcmp(argv[a], "-i")) {
+			opt_check(6, argv[a]);
+			*isintrctv = TRUE;
 		} else if (!strcmp(argv[a], "-quiet") || !strcmp(argv[a], "-q")) {
 			opt_check(1, argv[a]);
 			*optset_quiet = TRUE;
@@ -442,6 +449,11 @@ int main(int argc, char *argv[])
 	activate_bison_debug();
 #endif
 
+	/* Interactive? */
+	/* Credits - the two lines below got copied from bc source (main.c) */
+	if (isatty(0) && isatty(1)) 
+		is_interactive = TRUE;
+
 	int optset_verbose = FALSE;
 	int optset_quiet = FALSE;
 	int optset_debug = FALSE;
@@ -453,12 +465,12 @@ int main(int argc, char *argv[])
 	const char *env;
 	cut_env_options(&env_argc, &env_argv, &env);
 	parse_options(env_argc, env_argv, &optset_verbose, &optset_quiet, &optset_debug,
-		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM);
+		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive);
 	optset_verbose = FALSE;
 	optset_quiet = FALSE;
 	optset_debug = FALSE;
 	parse_options(argc, argv, &optset_verbose, &optset_quiet, &optset_debug,
-		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM);
+		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive);
 
 	if (optset_verbose && optset_quiet)
 		out_level = L_NORMAL;
@@ -475,7 +487,7 @@ int main(int argc, char *argv[])
 		out_dbg("No environment variable '%s'\n", ENV_ARGS);
 	}
 
-	if (out_level >= L_NORMAL)
+	if (out_level >= L_NORMAL && is_interactive)
 		version();
 
 	out_dbg("DEBUG mode activated\n");
