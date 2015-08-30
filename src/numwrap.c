@@ -918,73 +918,74 @@ static int libbc_neg(numptr *pr, const numptr a)
 static int libbc_cmplt(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	int c = bc_compare((bc_num)a, (bc_num)b);
+	*pr = libbc_construct_from_int(c < 0);
 	return ERROR_NONE;
 }
 
 static int libbc_cmple(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	int c = bc_compare((bc_num)a, (bc_num)b);
+	*pr = libbc_construct_from_int(c <= 0);
 	return ERROR_NONE;
 }
 
 static int libbc_cmpgt(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	int c = bc_compare((bc_num)a, (bc_num)b);
+	*pr = libbc_construct_from_int(c > 0);
 	return ERROR_NONE;
 }
 
 static int libbc_cmpge(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	int c = bc_compare((bc_num)a, (bc_num)b);
+	*pr = libbc_construct_from_int(c >= 0);
 	return ERROR_NONE;
 }
 
 static int libbc_cmpeq(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	int c = bc_compare((bc_num)a, (bc_num)b);
+	*pr = libbc_construct_from_int(c == 0);
 	return ERROR_NONE;
 }
 
 static int libbc_cmpne(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	int c = bc_compare((bc_num)a, (bc_num)b);
+	*pr = libbc_construct_from_int(c != 0);
 	return ERROR_NONE;
 }
 
 static int libbc_and(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	long int logical_a = bc_num2long((bc_num)a);
+	long int logical_b = bc_num2long((bc_num)b);
+	*pr = libbc_construct_from_int(logical_a && logical_b);
 	return ERROR_NONE;
 }
 
 static int libbc_or(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    bc_multiply((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_get_scale());*/
+	long int logical_a = bc_num2long((bc_num)a);
+	long int logical_b = bc_num2long((bc_num)b);
+	*pr = libbc_construct_from_int(logical_a || logical_b);
 	return ERROR_NONE;
 }
 
 static int libbc_not(numptr *pr, const numptr a)
 {
 	*pr = num_construct();
-	/* TODO - FIXME */
-/*    int na = ((bc_num)a)->n_scale;*/
-/*    bc_sub(_zero_, (bc_num)a, (bc_num *)pr, na);*/
+	long int logical_a = bc_num2long((bc_num)a);
+	*pr = libbc_construct_from_int(!logical_a);
 	return ERROR_NONE;
 }
 
