@@ -187,9 +187,13 @@ static void vars_t_destruct(vars_t *var)
 
 static vars_t *find_var(const char *name, int type)
 {
+	const char *what = name;
+	if (!strcmp(name, "."))
+		what = VAR_LAST;
+
 	vars_t *w;
 	for (w = ctx->container.head; w != NULL; w = w->next) {
-		if (w->name != NULL && !strcmp(w->name, name) && w->value.type == type) {
+		if (w->name != NULL && !strcmp(w->name, what) && w->value.type == type) {
 			return w;
 		}
 	}

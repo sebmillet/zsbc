@@ -36,6 +36,8 @@
 #include <string.h>
 #include <unistd.h>
 
+const char *VAR_LAST = "last";
+
 int yywrap();
 
 static int out_level = L_NORMAL;

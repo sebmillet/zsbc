@@ -46,7 +46,7 @@
 #define ENV_ARGS "ZSBC_ENV_ARGS"
 
 #define ZSBC_DEFAULT_LINE_LENGTH 0
-#define VAR_LAST "last"
+const char *VAR_LAST;
 
 	/*
 	 * The constants below, in this order, are used to define corresponding error
