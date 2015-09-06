@@ -222,6 +222,7 @@ int program_execute(program_t *p, numptr *pval)
 		program_t *pnext = p->next;
 		int b;
 		int print_result;
+		char *t;
 		switch (p->type) {
 			case TINSTR_EXPR_EXPR:
 			case TINSTR_EXPR_ASSIGN_EXPR:
@@ -231,9 +232,9 @@ int program_execute(program_t *p, numptr *pval)
 				if ((r = expr_eval(p->expr, &num)) != ERROR_NONE) {
 					outln_error_code(r);
 				} else if (print_result && !num_is_not_initialized(num)) {
-					num_print(num, 10);
+					num_print(num);
 					if (!p->is_part_of_print)
-						outln(L_ENFORCE, "");
+						outstring("", TRUE);
 				}
 				if (p->type == TINSTR_EXPR_RETURN) {
 					r = ERROR_RETURN;
@@ -244,11 +245,17 @@ int program_execute(program_t *p, numptr *pval)
 						*pval = num;
 					}
 					pnext = NULL;
-				} else
-					num_destruct(&num);
+				} else {
+					if (r == ERROR_NONE) {
+						const numptr *ppvarnum;
+						vars_set_value(VAR_LAST, num, &ppvarnum);
+					}
+				}
 				break;
 			case TINSTR_STR:
-				out(L_ENFORCE, "%s", p->str);
+				t = interpret_escape_sequences_alloc(p->str);
+				outstring(t, FALSE);
+				free(t);
 				break;
 			case TINSTR_LOOP:
 				loop = &p->loop;

@@ -19,8 +19,11 @@
  * Inspired from
  *   http://www-h.eng.cam.ac.uk/help/tpl/languages/flexbison/
  *
- * And for the arithmetic operators precedence and associativity definitions,
+ * For the arithmetic operators precedence and associativity definitions,
  * it is just a rewording of bc source.
+ *
+ * The LOWER_THAN_ELSE solution was found here:
+ *   http://stackoverflow.com/questions/1737460/how-to-find-shift-reduce-conflict-in-this-yacc-file
  */
 
 
@@ -66,7 +69,7 @@ void activate_bison_debug();
 %type <enode> expression expression_no_assignment expression_assignment expression_or_empty function_call
 %token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
 %type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_expr_assignment
-%type <prog> loop_while loop_for ifseq else_or_empty instruction_string instruction_expr_no_assignment print_elem print_list
+%type <prog> loop_while loop_for ifseq instruction_string instruction_expr_no_assignment print_elem print_list
 %type <defargs> defargs_list_or_empty defargs_list defarg defargsbyval_list defargbyval
 %type <callargs> callarg callargs_list callargs_list_or_empty
 
@@ -86,6 +89,8 @@ void activate_bison_debug();
 %right '^'
 %nonassoc NEG
 %nonassoc PLUSPLUS_MINMIN
+%precedence LOWER_THAN_ELSE
+%precedence ELSE
 
 %destructor { num_destruct(&$$); out_dbg("parser.y: freed one num\n"); } <num>
 %destructor { expr_destruct($$); out_dbg("parser.y: freed one enode\n"); } <enode>
@@ -247,18 +252,20 @@ loop_for:
 ;
 
 ifseq:
-	IF '(' expression ')' newlines_or_empty instruction_non_empty else_or_empty {
+	IF '(' expression ')' newlines_or_empty instruction_non_empty %prec LOWER_THAN_ELSE {
 		program_ifseq_t ifseq;
 		ifseq.expr = $3;
 		ifseq.pif = $6;
-		ifseq.pelse = $7;
+		ifseq.pelse = NULL;
 		$$ = program_construct_ifseq(&ifseq);
 	}
-;
-
-else_or_empty:
-	%empty { $$ = NULL; }
-	| newlines_or_empty ELSE newlines_or_empty instruction_non_empty { $$ = $4; }
+	| IF '(' expression ')' newlines_or_empty instruction_non_empty ELSE newlines_or_empty instruction_non_empty {
+		program_ifseq_t ifseq;
+		ifseq.expr = $3;
+		ifseq.pif = $6;
+		ifseq.pelse = $9;
+		$$ = program_construct_ifseq(&ifseq);
+	}
 ;
 
 defargbyval:

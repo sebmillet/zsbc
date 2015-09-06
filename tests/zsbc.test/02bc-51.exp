@@ -1,0 +1,55 @@
+# tests/zsbc.test/02bc-50.exp
+
+set timeout 3
+spawn "$ZSBC" -SCM -numlib bc "$TESTDIR/libmath.b"
+send_user "***   BC - libmath functions, scale 56\n"
+
+set test "Function e()"
+send "scale=56;print \":\",e(100),\":\";0\n"
+expect {
+	-re ":26881171418161354484126255515800135873611118.7737419224151916086152\[^0-9\]+8028703490956491415887109721984571:0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function l()"
+send "print \":\",l(100),\":\";0\n"
+expect {
+	":4.60517018598809136803598290936872841520220297725754595206:0" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function s()"
+send "print \":\",s(100),\":\";0\n"
+expect {
+	":-.50636564110975879365655761045978543206503272129065732344:0" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function c()"
+send "print \":\",c(100),\":\";0\n"
+expect {
+	":.86231887228768393410193851395084253551008400853551082928:0" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function a()"
+send "print \":\",a(100),\":\";0\n"
+expect {
+	":1.56079666010823138102498157543047189353721534714317627085:0" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function j()"
+send "print \":\",j(2,50),\":\";0\n"
+expect {
+	":-.05971280079425882051120883668438203273821220380497327976:0" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

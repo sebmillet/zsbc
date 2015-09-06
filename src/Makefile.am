@@ -13,8 +13,11 @@ bin_PROGRAMS = zsbc
 
 check_PROGRAMS = zsbc
 
-zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h program.c program.h parser.y lexer.l common.h
+zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h program.c program.h parser.y lexer.l common.h bc/libmath.c
 zsbc_LDFLAGS = 
+
+# TODO: allow the user to NOT include libbc in compilation
+#zsbc_SOURCES += bc/libmath.c
 
 LIBBC = ../lib/libbc.a
 zsbc_LDADD = -lgmp $(LIBBC)
@@ -23,4 +26,7 @@ $(PROGRAMS): $(LIBBC)
 BUILT_SOURCES = parser.h
 
 MAINTAINERCLEANFILES = lexer.c parser.c parser.h
+
+bc/libmath.c: bc/libmath.b
+	bc/mkreslib.sh $<
 

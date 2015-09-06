@@ -44,8 +44,8 @@ void cleanup_inputnumber(char *s);
 void yyerror(char *s, ...);
 
 	/* the 2 below are defined in main.c */
-FILE *argf_get_next();
-char *argf_get_curname();
+FILE *input_get_next();
+const char *input_get_name();
 
 #define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno; \
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
@@ -58,15 +58,34 @@ char *argf_get_curname();
 %option yylineno
 %option nounput
 
-number			([A-Z0-9]|\\\n)+(\.([A-Z0-9]|\\\n)*)?
+number			([A-Z0-9]|\\\n)+(\.([A-Z0-9]|\\\n)*)?|\.([A-Z0-9]|\\\n)+
 /*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
 /*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
-identifier		[a-z][[:alnum:]]*
+identifier		[a-z][[:alnum:]]*|\.
 string			\"[^\"]*\"
 
 %%
 
+	/*
+	   This code is not very efficient. bc's way is much more powerful
+	   (it manages the input directly, without regex...).
+	   BUT this approach avoids opening the hood of input file stream
+	   reading code. It just relies on regex management of flex.
+	*/
+\/\*([^*]|\n|(\*[^/]))*\*\/ {
+	int i;
+	for (i = 0; yytext[i] != '\0'; ++i) {
+		if (yytext[i] == '\n')
+			++yylineno;
+	}
+/*    fprintf(stderr, "\n\n[=====\n");*/
+/*    fputs(yytext, stderr);*/
+/*    fprintf(stderr, "\n=====]\n\n");*/
+}
+
 [ \t]+		{ }
+
+\\\n		{ }
 
 "="|"+="|"-="|"*="|"/="|"^="|"%=" {
 	s_alloc_and_copy(&yylval.str, yytext);
@@ -137,7 +156,7 @@ print			return PRINT;
 }
 
 "\n"		{ yycolumn = 1; return NEWLINE; }
-\\\n
+
 . {
 		/* The code below is taken from bc source, with some minor variations */
 	char c = yytext[0];
@@ -187,8 +206,8 @@ void yyerror(char *s, ...)
 
 	out_dbg("yyerror() invocation\n");
 
-	if (strlen(argf_get_curname()) >= 1)
-		fprintf(stderr, "%s: ", argf_get_curname());
+	if (strlen(input_get_name()) >= 1)
+		fprintf(stderr, "%s: ", input_get_name());
 	if(yylloc.first_line) {
 		fprintf(stderr, "%d.%d-%d.%d: ", yylloc.first_line, yylloc.first_column,
 		yylloc.last_line, yylloc.last_column);
@@ -199,7 +218,7 @@ void yyerror(char *s, ...)
 
 int yywrap()
 {
-	FILE *next = argf_get_next();
+	FILE *next = input_get_next();
 	out_dbg("Call to yywrap. File given by argf_get_next(): %lu\n", next);
 	out_dbg("\tyyin: %s\n", next == stdin ? "is being assigned to stdin" :
 			(next == NULL ? "yyin won't be assigned, lexer terminating" : "yyin is being assigned to an input file (not stdin)"));

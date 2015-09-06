@@ -96,9 +96,10 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
+am__dirstamp = $(am__leading_dot)dirstamp
 am_zsbc_OBJECTS = main.$(OBJEXT) expr.$(OBJEXT) vars.$(OBJEXT) \
 	numwrap.$(OBJEXT) program.$(OBJEXT) parser.$(OBJEXT) \
-	lexer.$(OBJEXT)
+	lexer.$(OBJEXT) bc/libmath.$(OBJEXT)
 zsbc_OBJECTS = $(am_zsbc_OBJECTS)
 zsbc_DEPENDENCIES = $(LIBBC)
 zsbc_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(zsbc_LDFLAGS) $(LDFLAGS) \
@@ -280,8 +281,11 @@ SUFFIXES = .c .h .y .l
 AM_CPPFLAGS = -Wshadow -Wall -I$(srcdir) -I$(srcdir)/../h
 AM_YFLAGS = -d
 @DEBUG_FLEX_TRUE@AM_LFLAGS = --debug
-zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h program.c program.h parser.y lexer.l common.h
+zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h program.c program.h parser.y lexer.l common.h bc/libmath.c
 zsbc_LDFLAGS = 
+
+# TODO: allow the user to NOT include libbc in compilation
+#zsbc_SOURCES += bc/libmath.c
 LIBBC = ../lib/libbc.a
 zsbc_LDADD = -lgmp $(LIBBC)
 BUILT_SOURCES = parser.h
@@ -369,6 +373,13 @@ clean-checkPROGRAMS:
 parser.h: parser.c
 	@if test ! -f $@; then rm -f parser.c; else :; fi
 	@if test ! -f $@; then $(MAKE) $(AM_MAKEFLAGS) parser.c; else :; fi
+bc/$(am__dirstamp):
+	@$(MKDIR_P) bc
+	@: > bc/$(am__dirstamp)
+bc/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) bc/$(DEPDIR)
+	@: > bc/$(DEPDIR)/$(am__dirstamp)
+bc/libmath.$(OBJEXT): bc/$(am__dirstamp) bc/$(DEPDIR)/$(am__dirstamp)
 
 zsbc$(EXEEXT): $(zsbc_OBJECTS) $(zsbc_DEPENDENCIES) $(EXTRA_zsbc_DEPENDENCIES) 
 	@rm -f zsbc$(EXEEXT)
@@ -376,6 +387,7 @@ zsbc$(EXEEXT): $(zsbc_OBJECTS) $(zsbc_DEPENDENCIES) $(EXTRA_zsbc_DEPENDENCIES)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f bc/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -387,17 +399,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/program.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vars.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@bc/$(DEPDIR)/libmath.Po@am__quote@
 
 .c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
@@ -526,6 +541,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f bc/$(DEPDIR)/$(am__dirstamp)
+	-rm -f bc/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -541,7 +558,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 	mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ./$(DEPDIR)
+	-rm -rf ./$(DEPDIR) bc/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -587,7 +604,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ./$(DEPDIR)
+	-rm -rf ./$(DEPDIR) bc/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -622,6 +639,9 @@ uninstall-am: uninstall-binPROGRAMS
 	uninstall-am uninstall-binPROGRAMS
 
 $(PROGRAMS): $(LIBBC)
+
+bc/libmath.c: bc/libmath.b
+	bc/mkreslib.sh $<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

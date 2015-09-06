@@ -35,11 +35,18 @@ void context_switch(context_t *c);
 struct array_t;
 typedef struct array_t array_t;
 
+enum {FTYPE_USER, FTYPE_BUILTIN};
+
 typedef struct function_t {
 	int is_void;
+	int ftype;
 	defargs_t *defargs;
 	defargs_t *autolist;
 	program_t *program;
+	int builtin_nb_args;
+	int (*builtin0arg)(numptr *pr);
+	int (*builtin1arg)(numptr *pr, const numptr a);
+	int (*builtin2arg)(numptr *pr, const numptr a, const numptr b);
 } function_t;
 
 typedef struct vars_value_t {
@@ -67,7 +74,8 @@ void vars_display_all();
 
 const numptr *vars_get_value(const char *name);
 const numptr *vars_array_get_value(const char *name, long int index);
-void vars_set_value(const char *name, const numptr new_value, const numptr **ppvarnum);
+int vars_set_value(const char *name, numptr new_value, const numptr **ppvarnum);
+void vars_set_update_callback(const char *name, int (*update_callback)(const char *name, numptr *pnum));
 void vars_array_set_value(const char *name, long int index, const numptr new_value, const numptr **ppvarnum);
 function_t *vars_get_function(const char *name);
 
@@ -82,7 +90,8 @@ array_t **vars_array_get_ref(const char *name);
 defargs_t *defargs_construct(defarg_type_t type, const char *name);
 void defargs_destruct(defargs_t *arg);
 
-int vars_function_construct(const char*name, defargs_t *args, program_t *program, int is_void);
+int vars_function_construct(const char *name, defargs_t *args, program_t *program, int is_void);
+void register_builtin_function(const char *name, int nb_args, void *f);
 
 #endif	/* VARS_H */
 

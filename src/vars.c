@@ -32,6 +32,7 @@ struct vars_t {
 	char *name;
 	vars_value_t value;
 	struct vars_t *next;
+	int (*update_callback)(const char *name, numptr *pnum);
 };
 
 typedef struct vars_container_t {
@@ -105,7 +106,7 @@ void vars_value_destruct(vars_value_t *value)
 		FATAL_ERROR("Unknown symbol type: %d for vars_value_t: %lu", value->type, value);
 }
 
-static vars_t *vars_t_construct(const char *name, int type)
+static vars_t *vars_t_construct(const char *name, int type, int ftype)
 {
 	out_dbg("Constructing one vars_t, name: %s, type: %d\n", name, type);
 
@@ -114,6 +115,7 @@ static vars_t *vars_t_construct(const char *name, int type)
 	vars_t *v = malloc(sizeof(vars_t));
 	int l = strlen(name) + 1;
 	v->name = (char *)malloc(l);
+	v->update_callback = NULL;
 	s_strncpy(v->name, name, l);
 	v->value.type = type;
 	v->value.num_ref = NULL;
@@ -123,11 +125,21 @@ static vars_t *vars_t_construct(const char *name, int type)
 	} else if (type == TYPE_ARRAY) {
 		v->value.array = NULL;
 	} else if (type == TYPE_FCNT) {
-		v->value.fcnt.defargs = NULL;
-		v->value.fcnt.autolist = NULL;
-		v->value.fcnt.program = NULL;
-	} else
+		v->value.fcnt.ftype = ftype;
+		if (ftype == FTYPE_USER) {
+			v->value.fcnt.defargs = NULL;
+			v->value.fcnt.autolist = NULL;
+			v->value.fcnt.program = NULL;
+		} else if (ftype == FTYPE_BUILTIN) {
+			v->value.fcnt.builtin_nb_args = -1;
+			v->value.fcnt.builtin1arg = NULL;
+			v->value.fcnt.builtin2arg = NULL;
+		} else {
+			FATAL_ERROR("Unknown ftype: %d", ftype);
+		}
+	} else {
 		FATAL_ERROR("Unknown symbol type: %d", type);
+	}
 
 	v->next = ctx->container.head;
 	ctx->container.head = v;
@@ -136,7 +148,7 @@ static vars_t *vars_t_construct(const char *name, int type)
 
 static vars_t *vars_t_construct_with_value(const char *name, const vars_value_t *value)
 {
-	vars_t *v = vars_t_construct(name, value->type);
+	vars_t *v = vars_t_construct(name, value->type, -1);
 	vars_value_soft_copy(&v->value, value);
 	return v;
 }
@@ -285,7 +297,7 @@ UNUSED(orig_src);
 	 * */
 array_t *vars_array_copy(const char *name)
 {
-	
+
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
 	out_dbg("Copying array %s\n", name);
@@ -313,19 +325,31 @@ function_t *vars_get_function(const char *name)
 		return NULL;
 }
 
-void vars_set_value_core(const char *name, const numptr new_value, vars_t *v, const numptr **ppvarnum)
+static int vars_set_value_core(const char *name, numptr new_value, vars_t *v, const numptr **ppvarnum)
 {
 	out_dbg("Setting value of %s\n", name);
 	if (v == NULL) {
 		out_dbg("\t%s is non-existent\n", name);
-		v = vars_t_construct(name, TYPE_NUM);
-	} else if (!v->value.num_ref) {
-		out_dbg("\t%s is a reference\n", name);
-		num_destruct(&v->value.num);
+		v = vars_t_construct(name, TYPE_NUM, -1);
 	} else {
-		out_dbg("\t%s is regular\n", name);
-		num_destruct(v->value.num_ref);
+
+		if (v->update_callback != NULL) {
+			int r = v->update_callback(name, &new_value);
+			if (r != ERROR_NONE) {
+				num_destruct(&new_value);
+				return r;
+			}
+		}
+
+		if (!v->value.num_ref) {
+			out_dbg("\t%s is a reference\n", name);
+			num_destruct(&v->value.num);
+		} else {
+			out_dbg("\t%s is regular\n", name);
+			num_destruct(v->value.num_ref);
+		}
 	}
+
 	if (!v->value.num_ref) {
 		v->value.num = new_value;
 		*ppvarnum = &v->value.num;
@@ -333,21 +357,39 @@ void vars_set_value_core(const char *name, const numptr new_value, vars_t *v, co
 		*v->value.num_ref = new_value;
 		*ppvarnum = v->value.num_ref;
 	}
+
+	return ERROR_NONE;
 }
 
-void vars_set_value(const char *name, const numptr new_value, const numptr **ppvarnum)
+int vars_set_value(const char *name, numptr new_value, const numptr **ppvarnum)
 {
 
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
 	vars_t *v = find_var(name, TYPE_NUM);
-	vars_set_value_core(name, new_value, v, ppvarnum);
+	return vars_set_value_core(name, new_value, v, ppvarnum);
+}
+
+void vars_set_update_callback(const char *name, int (*update_callback)(const char *name, numptr *pnum))
+{
+
+	assert(ctx->lib_reg_number == num_get_current_lib_number());
+
+	vars_t *v = find_var(name, TYPE_NUM);
+	if (v == NULL) {
+		const numptr *ppvarnum;
+		vars_set_value(name, num_construct(), &ppvarnum);
+		v = find_var(name, TYPE_NUM);
+		assert(v != NULL);
+	}
+
+	v->update_callback = update_callback;
 }
 
 static void vars_array_set_value_core(const char *name, long int index, const numptr new_value, vars_t *v, const numptr **ppvarnum)
 {
 	if (v == NULL) {
-		v = vars_t_construct(name, TYPE_ARRAY);
+		v = vars_t_construct(name, TYPE_ARRAY, -1);
 	}
 	array_t *a = find_index(v->value.array_ref ? *v->value.array_ref : v->value.array, index);
 
@@ -394,7 +436,7 @@ void vars_display_all()
 			/*  FIXME - At the moment, handles only TYPE_NUM variables */
 		if (w->value.type == TYPE_NUM) {
 			printf("%s=", w->name);
-			num_print(w->value.num, 10);
+			num_print(w->value.num);
 			printf("\n");
 		}
 	}
@@ -552,7 +594,7 @@ defargs_t *defargs_chain(defargs_t *base, defargs_t *append)
 
 
 
-int vars_function_construct(const char*name, defargs_t *defargs, program_t *program, int is_void)
+static void destruct_function_if_defined(const char *name)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
@@ -568,7 +610,15 @@ int vars_function_construct(const char*name, defargs_t *defargs, program_t *prog
 		outln_warning("Redefinition of function %s", name);
 	}
 
-	f = vars_t_construct(name, TYPE_FCNT);
+}
+
+int vars_function_construct(const char *name, defargs_t *defargs, program_t *program, int is_void)
+{
+	assert(ctx->lib_reg_number == num_get_current_lib_number());
+
+	destruct_function_if_defined(name);
+
+	vars_t *f = vars_t_construct(name, TYPE_FCNT, FTYPE_USER);
 
 	f->value.fcnt.is_void = is_void;
 	f->value.fcnt.defargs = defargs;
@@ -580,22 +630,43 @@ int vars_function_construct(const char*name, defargs_t *defargs, program_t *prog
 	return ERROR_NONE;
 }
 
+void register_builtin_function(const char *name, int nb_args, void *f)
+{
+	assert(ctx->lib_reg_number == num_get_current_lib_number());
+
+	destruct_function_if_defined(name);
+
+	vars_t *v = vars_t_construct(name, TYPE_FCNT, FTYPE_BUILTIN);
+	v->value.fcnt.builtin_nb_args = nb_args;
+	if (nb_args == 0)
+		v->value.fcnt.builtin0arg = f;
+	else if (nb_args == 1)
+		v->value.fcnt.builtin1arg = f;
+	else if (nb_args == 2)
+		v->value.fcnt.builtin2arg = f;
+	else if (nb_args >= 3)
+		FATAL_ERROR("Builtin functions with %d arguments is not supported (maximum: 3)", nb_args);
+	out_dbg("Constructed function: %lu, name: %s, nb args: %d, function: %lu\n", v, v->name, nb_args, f);
+}
+
 static void function_destruct(function_t f)
 {
 
 	out_dbg("Destructing function: defargs: %lu, program: %lu\n", f.defargs, f.program);
 
-	if (f.defargs != NULL) {
-		defargs_destruct(f.defargs);
-		f.defargs = NULL;
-	}
-	if (f.autolist != NULL) {
-		defargs_destruct(f.autolist);
-		f.autolist = NULL;
-	}
-	if (f.program != NULL) {
-		program_destruct(f.program);
-		f.program = NULL;
+	if (f.ftype == FTYPE_USER) {
+		if (f.defargs != NULL) {
+			defargs_destruct(f.defargs);
+			f.defargs = NULL;
+		}
+		if (f.autolist != NULL) {
+			defargs_destruct(f.autolist);
+			f.autolist = NULL;
+		}
+		if (f.ftype == FTYPE_USER) {
+			program_destruct(f.program);
+			f.program = NULL;
+		}
 	}
 }
 

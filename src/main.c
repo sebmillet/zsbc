@@ -42,18 +42,27 @@ static int out_level = L_NORMAL;
 static int opt_SCM = FALSE;		/* SCM = Special Check Mode, used for 'make check' checks */
 
 static int is_interactive = FALSE;
+static int bc_mathlib = FALSE;
 
 	/* When debug activated, name of files to display the debug of (NULL: display all) */
 const char *debug_filenames = NULL;
 
+enum {IT_FILE, IT_BUILTIN_DATA};
 	/* To manage input files specified in command line arguments */
-static char **argf_list = NULL;
-static int argf_nb_alloc = 0;
-static int argf_nb = 0;
-static int argf_cur;
-static char *argf_curname;
-static FILE *argf_curfile;
-static void argf_register_arg(const char *arg_to_add);
+typedef struct input_t {
+	int itype;
+	const char *name;
+	const void *data;
+	size_t data_size;
+} input_t;
+
+static input_t *input_list = NULL;
+static int input_nb_alloc = 0;
+static int input_nb = 0;
+static int input_cursor;
+static const char *input_name;
+static FILE *input_FILE;
+static void input_register(int itype, const char *name, const void *data, size_t data_size, int append);
 
 static const char *table_errors[] = {
 	NULL,								/* ERROR_NONE */
@@ -64,7 +73,9 @@ static const char *table_errors[] = {
 	NULL,								/* ERROR_BREAK */
 	NULL,								/* ERROR_CONTINUE */
 	"Illegal return statement",			/* ERROR_RETURN */
-	"Parameter type mismatch"			/* ERROR_ARGTYPE_MISMATCH */
+	"Parameter type mismatch",			/* ERROR_ARGTYPE_MISMATCH */
+	"Illegal value",					/* ERROR_ILLEGAL_VALUE */
+	"Square root of a negative number"	/* ERROR_SQRT_OF_NEG */
 };
 
 	/*
@@ -103,6 +114,43 @@ char *s_alloc_and_copy(char **dst, const char *src)
 	if (dst != NULL)
 		*dst = target;
 	return target;
+}
+
+char *interpret_escape_sequences_alloc(const char *s)
+{
+	char *orig_d = (char *)malloc(sizeof(char) * (strlen(s) + 1));
+	char *d = orig_d;
+
+	const char *orig_s = s;
+UNUSED(orig_s);
+
+	while (*s != '\0') {
+		if (*s == '\\') {
+			const char *sp1 = s + 1;
+			if (*sp1 == 'n') {
+				s++;
+				*d = '\n';
+			} else if (*sp1 == 't') {
+				s++;
+				*d = '\t';
+			} else if (*sp1 == '\\') {
+				s++;
+				*d = '\\';
+			} else {
+				*d = *s;
+			}
+		} else {
+			*d = *s;
+		}
+		++s;
+		++d;
+	}
+	*d = '\0';
+
+/*    out_dbg("String before interpretation: '%s'\n", orig_s);*/
+/*    out_dbg("String after interpretation:  '%s'\n", orig_d);*/
+
+	return orig_d;
 }
 
 	/*
@@ -144,6 +192,43 @@ int out(int level, const char *fmt, ...)
 	} else {
 		return -1;
 	}
+}
+
+int outstring_lw = 0;
+int outstring_line_length = ZSBC_DEFAULT_LINE_LENGTH;
+void outstring_1char(int c)
+{
+	++outstring_lw;
+	if (outstring_line_length != 0 && c != '\n' && outstring_lw >= outstring_line_length - 1) {
+		putchar('\\');
+		putchar('\n');
+		outstring_lw = 1;
+	}
+	putchar(c);
+	if (c == '\n')
+		outstring_lw = 0;
+}
+
+	/*
+	 * Output a string.
+	 * Uses a different logic from other functions: this one
+	 *
+	 * */
+void outstring(const char *s, int append_newline)
+{
+	char c;
+	while ((c = *s) != '\0') {
+		++s;
+		outstring_1char(c);
+	}
+	if (append_newline)
+		outstring_1char('\n');
+}
+
+void outstring_set_line_length(int ll)
+{
+	outstring_line_length = ll;
+	out_dbg("Line length set to %d\n", outstring_line_length);
 }
 
 int out_dbg_core(const char *filename, int line, const char *fmt, ...)
@@ -286,7 +371,7 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 	 * */
 static void opt_check(int n, const char *opt)
 {
-	static int defined_options[7] = {0, 0, 0, 0, 0, 0, 0};
+	static int defined_options[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	if (n == -1) {
 		assert(opt == NULL);
@@ -307,7 +392,8 @@ static void opt_check(int n, const char *opt)
 }
 
 static void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quiet, int *optset_debug,
-		int *opt_liblist, const char **nlib_tostartwith, const char **dbg_fname, int *o_SCM, int *isintrctv)
+		int *opt_liblist, const char **nlib_tostartwith, const char **dbg_fname, int *o_SCM, int *isintrctv,
+		int *mathlib)
 {
 	char *missing_option_value = NULL;
 
@@ -329,6 +415,9 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 		} else if (!strcmp(argv[a], "-interactive") || !strcmp(argv[a], "-i")) {
 			opt_check(6, argv[a]);
 			*isintrctv = TRUE;
+		} else if (!strcmp(argv[a], "-mathlib") || !strcmp(argv[a], "-l")) {
+			opt_check(7, argv[a]);
+			*mathlib = TRUE;
 		} else if (!strcmp(argv[a], "-quiet") || !strcmp(argv[a], "-q")) {
 			opt_check(1, argv[a]);
 			*optset_quiet = TRUE;
@@ -367,12 +456,12 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 				break;
 			}
 		} else {
-			argf_register_arg(argv[a]);
+			input_register(IT_FILE, argv[a], NULL, -1, TRUE);
 		}
 		++a;
 	}
 	while (a >= 1 && a < argc) {
-		argf_register_arg(argv[a]);
+		input_register(IT_FILE, argv[a], NULL, -1, TRUE);
 		++a;
 	}
 
@@ -439,6 +528,15 @@ static void cut_env_options(int *env_argc, char ***env_argv, const char **env_or
 	}
 }
 
+extern const char libbc_libmath[];
+extern const size_t libbc_libmath_len;
+
+/*static const char bi[] = {*/
+/*    'd', 'e', 'f', 'i', 'n', 'e', ' ', 'p', 'o', 'w', '2', '(', 'p', 'a', 'r', 'a', 'm', ')', ' ', '{', '\n',*/
+/*    '	', 'r', 'e', 't', 'u', 'r', 'n', ' ', '2', '^', 'p', 'a', 'r', 'a', 'm',  '\n',*/
+/*    '}', '\n'*/
+/*};*/
+
 int main(int argc, char *argv[])
 {
 
@@ -451,7 +549,7 @@ int main(int argc, char *argv[])
 
 	/* Interactive? */
 	/* Credits - the two lines below got copied from bc source (main.c) */
-	if (isatty(0) && isatty(1)) 
+	if (isatty(0) && isatty(1))
 		is_interactive = TRUE;
 
 	int optset_verbose = FALSE;
@@ -465,12 +563,12 @@ int main(int argc, char *argv[])
 	const char *env;
 	cut_env_options(&env_argc, &env_argv, &env);
 	parse_options(env_argc, env_argv, &optset_verbose, &optset_quiet, &optset_debug,
-		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive);
+		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive, &bc_mathlib);
 	optset_verbose = FALSE;
 	optset_quiet = FALSE;
 	optset_debug = FALSE;
 	parse_options(argc, argv, &optset_verbose, &optset_quiet, &optset_debug,
-		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive);
+		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive, &bc_mathlib);
 
 	if (optset_verbose && optset_quiet)
 		out_level = L_NORMAL;
@@ -506,10 +604,18 @@ int main(int argc, char *argv[])
 			exit(-2);
 		}
 	}
+	const libinfo_t *li = num_lib_get_current();
+	out_dbg("Numeric library is '%s'\n", li->libname);
+	if (strcmp(li->libname, "libbc") && bc_mathlib) {
+		fprintf(stderr, "%s: option -l (a.k. -mathlib) works only with libbc. Consider using option '-numlib bc'.\n", PACKAGE_NAME);
+		exit(-3);
+	}
+	if (bc_mathlib)
+		input_register(IT_BUILTIN_DATA, "<builtin mathlib>", libbc_libmath, libbc_libmath_len, FALSE);
 
 	int i;
-	for (i = 0; i < argf_nb; ++i) {
-		out_dbg("Input file #%d: %s\n", i + 1, argf_list[i]);
+	for (i = 0; i < input_nb; ++i) {
+		out_dbg("Input file #%d: %s\n", i + 1, input_list[i].name);
 	}
 
 		/*
@@ -518,7 +624,7 @@ int main(int argc, char *argv[])
 		 * The -1 below is important, see goto_next_input_file() (called
 		 * by yywrap()) to see why.
 		 * */
-	argf_cur = -1;
+	input_cursor = -1;
 	yywrap();
 
 	yyparse();
@@ -546,24 +652,43 @@ void lib_list()
 	} while (w != NULL);
 }
 
-	/* Adds one input file to read when program starts */
-static void argf_register_arg(const char *arg_to_add)
+	/*
+	 * Adds one entry to read when program starts.
+	 * Entry can be a file provided in the command-line but also internal
+	 * code to define some functions on start-up (ex. with -l option)
+	 *
+	 * Adds entry at first position if append is FALSE, or at last position if append is TRUE.
+	 * */
+static void input_register(int itype, const char *name, const void *data, size_t data_size, int append)
 {
-	if (++argf_nb > argf_nb_alloc) {
-		if (argf_list == NULL) {
-			argf_nb_alloc = 4;
-			argf_list = (char **)malloc(sizeof(char *) * argf_nb_alloc);
+	if (++input_nb > input_nb_alloc) {
+		if (input_list == NULL) {
+			input_nb_alloc = 1;
+			input_list = (input_t *)malloc(sizeof(input_t) * input_nb_alloc);
 		} else {
-			argf_nb_alloc *= 2;
-			argf_list = (char **)realloc(argf_list, sizeof(char *) * argf_nb_alloc);
+			input_nb_alloc *= 2;
+			input_list = (input_t *)realloc(input_list, sizeof(input_t) * input_nb_alloc);
 		}
 	}
-	argf_list[argf_nb - 1] = (char *)arg_to_add;
+	input_t *new_input;
+	if (!append) {
+		int i;
+		for (i = input_nb - 1; i >= 0; --i) {
+			input_list[i] = input_list[i - 1];
+		}
+		new_input = &input_list[0];
+	} else {
+		new_input = &input_list[input_nb - 1];
+	}
+	new_input->itype = itype;
+	new_input->name = name;
+	new_input->data = data;
+	new_input->data_size = data_size;
 }
 
-char *argf_get_curname()
+const char *input_get_name()
 {
-	return argf_curname;
+	return input_name;
 }
 
 	/*
@@ -572,34 +697,61 @@ char *argf_get_curname()
 	 * Once the end of the list is reached, returns stdin.
 	 * Then returns NULL to say it is over.
 	 * */
-FILE *argf_get_next()
+FILE *input_get_next()
 {
 
-	if (argf_cur >= 0 && argf_cur < argf_nb && argf_curfile != NULL) {
-		fclose(argf_curfile);
-		out_dbg("argf_get_next(): closed file %s\n", argf_get_curname());
+	if (input_cursor >= 0 && input_cursor < input_nb && input_FILE != NULL) {
+		fclose(input_FILE);
+		out_dbg("input_get_next(): closed file %s\n", input_get_name());
 	}
 
-	++argf_cur;
+	++input_cursor;
 
-	if (argf_cur < argf_nb) {
-		argf_curname = argf_list[argf_cur];
-		out_dbg("argf_get_next() is now on file: %s\n", argf_curname);
-		if ((argf_curfile = fopen(argf_curname, "r")) == NULL) {
-			outln_error("File '%s' is unavailable", argf_curname);
-			exit(-99);
-		} else {
-			out_dbg("argf_get_next(): opened file %s, it is the next yyin-to-be\n", argf_curname);
-		}
-	} else if (argf_cur == argf_nb) {
-		argf_curname = "";
-		argf_curfile = stdin;
-		out_dbg("argf_get_next(): stdin is the next yyin-to-be\n");
+	if (input_cursor < input_nb) {
+
+/* 1st category of input: entries (files or builtin) to read */
+
+		input_t *inp = &input_list[input_cursor];
+		input_name = inp->name;
+		out_dbg("input_get_next() is now on entry: %s\n", input_name);
+		if (inp->itype == IT_FILE) {
+
+/* 1st category -> 1st flavor of input: files provided as command-line arguments */
+
+			if ((input_FILE = fopen(input_name, "r")) == NULL) {
+				outln_error("File '%s' is unavailable", input_name);
+				exit(-99);
+			} else {
+				out_dbg("input_get_next(): opened file %s, it is the next yyin-to-be\n", input_name);
+			}
+		} else if (inp->itype == IT_BUILTIN_DATA) {
+
+/* 1st category -> 2nd flavor of input: builtin data */
+
+			if ((input_FILE = fmemopen((void *)inp->data, inp->data_size, "r")) == NULL) {
+				outln_error("Builtin data '%s' is unavailable!!! This program executable has serious issues!", input_name);
+				exit(-999);
+			} else {
+				out_dbg("input_get_next(): opened builtin data '%s', it is the next yyin-to-be\n", input_name);
+			}
+			
+		} else
+			FATAL_ERROR("Unknown input_t type, entry: %d, type: %d", input_cursor, inp->itype);
+	} else if (input_cursor == input_nb) {
+
+/* 2nd category of input: stdin */
+
+		input_name = "";
+		input_FILE = stdin;
+		out_dbg("input_get_next(): stdin is the next yyin-to-be\n");
 	} else {
-		argf_curname = NULL;
-		argf_curfile = NULL;
-		out_dbg("argf_get_next(): NULL is the next yyin-to-be\n");
+
+/* Inputs terminated... */
+
+		input_name = NULL;
+		input_FILE = NULL;
+		out_dbg("input_get_next(): NULL is the next yyin-to-be\n");
 	}
-	return argf_curfile;
+	return input_FILE;
 }
 

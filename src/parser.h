@@ -70,7 +70,8 @@ extern int yydebug;
     LOGIC_OR = 280,
     LOGIC_AND = 281,
     LOGIC_NOT = 282,
-    NEG = 283
+    NEG = 283,
+    LOWER_THAN_ELSE = 284
   };
 #endif
 /* Tokens.  */
@@ -100,13 +101,14 @@ extern int yydebug;
 #define LOGIC_AND 281
 #define LOGIC_NOT 282
 #define NEG 283
+#define LOWER_THAN_ELSE 284
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 56 "parser.y" /* yacc.c:1909  */
+#line 59 "parser.y" /* yacc.c:1909  */
 
 	numptr num;
 	expr_t *enode;
@@ -115,7 +117,7 @@ union YYSTYPE
 	defargs_t *defargs;
 	callargs_t *callargs;
 
-#line 119 "parser.h" /* yacc.c:1909  */
+#line 121 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -140,10 +142,10 @@ extern YYSTYPE yylval;
 extern YYLTYPE yylloc;
 int yyparse (void);
 /* "%code provides" blocks.  */
-#line 49 "parser.y" /* yacc.c:1909  */
+#line 52 "parser.y" /* yacc.c:1909  */
 
 void activate_bison_debug();
 
-#line 148 "parser.h" /* yacc.c:1909  */
+#line 150 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */

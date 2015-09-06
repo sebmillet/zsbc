@@ -43,7 +43,10 @@
 #define out_dbg(...) ;
 #endif
 
-#define ENV_ARGS	"ZSBC_ENV_ARGS"
+#define ENV_ARGS "ZSBC_ENV_ARGS"
+
+#define ZSBC_DEFAULT_LINE_LENGTH 0
+#define VAR_LAST "last"
 
 	/*
 	 * The constants below, in this order, are used to define corresponding error
@@ -58,7 +61,9 @@
 #define ERROR_CONTINUE					6	/* Not an error */
 #define ERROR_RETURN					7
 #define ERROR_ARGTYPE_MISMATCH			8
-#define ERROR_LAST						8
+#define ERROR_ILLEGAL_VALUE				9
+#define ERROR_SQRT_OF_NEG				10
+#define ERROR_LAST						10
 void outln_error_code(int e);
 
 #define L_ENFORCE	(-1)
@@ -77,9 +82,15 @@ void fatalln(const char *file, int line, const char *fmt, ...);
 	fatalln(__FILE__, __LINE__, s, __VA_ARGS__)
 int out_dbg_core(const char *filename, int line, const char *fmt, ...);
 
+void outstring_1char(int c);
+void outstring(const char *s, int append_newline);
+void outstring_set_line_length(int ll);
+
 char *s_strncpy(char *dest, const char *src, size_t n);
 char *s_strncat(char *dest, const char *src, size_t n);
 char *s_alloc_and_copy(char **dst, const char *src);
+
+char *interpret_escape_sequences_alloc(const char *s);
 
 void lib_list();
 

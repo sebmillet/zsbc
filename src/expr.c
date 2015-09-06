@@ -113,7 +113,8 @@ static int eval_number(const expr_t *self, const numptr *value_args, numptr *pva
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval);
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval);
-static int eval_function_call(const expr_t *self, numptr *pval);
+static int eval_builtin_function_call(const expr_t *self, const function_t *f, const numptr *value_args, numptr *pval);
+static int eval_function_call(const expr_t *self, const function_t *f, numptr *pval);
 
 static void (*table_destruct[])(expr_t *self) = {
 	destruct_number,		/* ENODE_NUMBER */
@@ -130,7 +131,7 @@ static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr 
 	eval_setvar,			/* ENODE_SETVAR */
 	eval_setvar,			/* ENODE_SETVAR_POSTFIX */
 	eval_builtin_op,		/* ENODE_BUILTIN_OP */
-	NULL					/* ENODE_FUNCTION_CALL -> managed separately from table_eval[] */
+	NULL					/* ENODE_FUNCTION_CALL - IT IS MANAGEd SEPARATELY FROM table_eval[] */
 };
 
 
@@ -447,7 +448,7 @@ static int myeval(const expr_t *e, numptr *pval)
 	if ((r = expr_eval(e, pval)) != ERROR_NONE)
 		return r;
 
-		/* 
+		/*
 		 * Can happen with a void function, defined as is:
 		 *   define void f(...)
 		 *
@@ -469,17 +470,32 @@ int expr_eval(const expr_t *self, numptr *pval)
 		*pval = num_undefvalue();
 		return ERROR_NONE;
 	}
-	out_dbg("Evaluating expression, type: %s, #args: %d\n", ENODE_TYPES[self->type], self->nb_args);
 
-	if (self->type == ENODE_FUNCTION_CALL)
-		return eval_function_call(self, pval);
+	int nbargs = self->nb_args;
+
+	out_dbg("Evaluating expression, type: %s, #args: %d\n", ENODE_TYPES[self->type], nbargs);
+
+	int is_builtin_function_call = FALSE;
+	function_t *f;
+	if (self->type == ENODE_FUNCTION_CALL) {
+		if ((f = vars_get_function(self->var.name)) == NULL)
+			return ERROR_FUNCTION_NOT_DEFINED;
+		if (f->ftype == FTYPE_USER)
+			return eval_function_call(self, f, pval);
+		else if (f->ftype == FTYPE_BUILTIN) {
+			is_builtin_function_call = TRUE;
+			if (f->builtin_nb_args != nbargs)
+				return ERROR_PARAMETER_NUMBER_MISMATCH;
+		} else
+			FATAL_ERROR("Unknown ftype: %d", f->ftype);
+	}
 
 	numptr *value_args = NULL;
-	if (self->nb_args >= 1)
-		value_args = malloc(sizeof(numptr) * (unsigned)self->nb_args);
+	if (nbargs >= 1)
+		value_args = malloc(sizeof(numptr) * (unsigned)nbargs);
 	int i;
 	int r = ERROR_NONE;
-	for (i = 0; i < self->nb_args; ++i) {
+	for (i = 0; i < nbargs; ++i) {
 		callargs_t *ca = &self->cargs[i];
 		if (ca->type == CARG_EXPR) {
 			if ((r = myeval(ca->e, &value_args[i])) != ERROR_NONE)
@@ -491,9 +507,12 @@ int expr_eval(const expr_t *self, numptr *pval)
 			FATAL_ERROR("Unknown call argument type: %d", ca->type);
 	}
 	if (r == ERROR_NONE) {
-		r = (table_eval[self->type])(self, (const numptr *)value_args, pval);
+		if (is_builtin_function_call)
+			r = eval_builtin_function_call(self, f, (const numptr *)value_args, pval);
+		else
+			r = (table_eval[self->type])(self, (const numptr *)value_args, pval);
 	}
-	for (i = 0; i < self->nb_args; ++i)
+	for (i = 0; i < nbargs; ++i)
 		num_destruct(&value_args[i]);
 	if (value_args != NULL)
 		free(value_args);
@@ -551,11 +570,11 @@ static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create
 		if (self->var.index != NULL) {
 			vars_array_set_value(self->var.name, idxval, num_construct(), ppval);
 		} else {
-			vars_set_value(self->var.name, num_construct(), ppval);
+			r = vars_set_value(self->var.name, num_construct(), ppval);
 		}
 	}
 
-	return ERROR_NONE;
+	return r;
 }
 
 static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
@@ -650,9 +669,10 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 		if (has_index) {
 			vars_array_set_value(self->var.name, idxval, num_construct_from_num(*presult), ppvarnum);
 		} else {
-			vars_set_value(self->var.name, num_construct_from_num(*presult), ppvarnum);
+			r = vars_set_value(self->var.name, num_construct_from_num(*presult), ppvarnum);
 		}
-		*pval = num_construct_from_num(is_postfix ? val : *presult);
+		if (r == ERROR_NONE)
+			*pval = num_construct_from_num(is_postfix ? val : *presult);
 	}
 
 	if (res_is_to_be_destructed)
@@ -743,6 +763,27 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 	}
 }
 
+static int eval_builtin_function_call(const expr_t *self, const function_t *f, const numptr *value_args, numptr *pval)
+{
+	int n = f->builtin_nb_args;
+
+	assert(((value_args == NULL && self->nb_args == 0) || (value_args != NULL && self->nb_args >= 1)) && self->nb_args == n);
+
+	out_dbg("Evaluating function %s that has %d argument(s)\n", self->var.name, n);
+
+	if (n == 0)
+		return f->builtin0arg(pval);
+	else if (n == 1)
+		return f->builtin1arg(pval, value_args[0]);
+	else if (n == 2)
+		return f->builtin2arg(pval, value_args[0], value_args[1]);
+	else
+		FATAL_ERROR("Number of arguments not implemented (%d) for function %s", n, self->var.name);
+
+		/* Never executed... */
+	return ERROR_NONE;
+}
+
 static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum)
 {
 	int r;
@@ -781,14 +822,12 @@ static int count_defargs(defargs_t *darg)
 	return n;
 }
 
-static int eval_function_call(const expr_t *self, numptr *pval)
+static int eval_function_call(const expr_t *self, const function_t *f, numptr *pval)
 {
 	assert(self->type == ENODE_FUNCTION_CALL);
 	assert(num_is_not_initialized(*pval));
 
-	function_t *f;
-	if ((f = vars_get_function(self->var.name)) == NULL)
-		return ERROR_FUNCTION_NOT_DEFINED;
+	out_dbg("Evaluating user function %s, call has %d argument(s)\n", self->var.name, self->nb_args);
 
 	int nbargs = count_defargs(f->defargs);
 	int nbauto = count_defargs(f->autolist);

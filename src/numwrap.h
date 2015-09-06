@@ -38,6 +38,7 @@ void num_terminate();
 int num_get_current_lib_number();
 int num_libswitch(const char *id);
 void num_lib_enumerate(char **paraml, libinfo_t *libinfo);
+const libinfo_t *num_lib_get_current();
 
 int num_get_count_ref();
 
@@ -50,7 +51,7 @@ numptr num_construct_from_num(const numptr num);
 numptr num_construct_from_str(const char *str, int base);
 numptr num_construct_from_int(int n);
 void num_destruct(numptr *pnum);
-void num_print(const numptr num, int base);
+void num_print(const numptr num);
 int num_is_zero(const numptr num);
 long int num_getlongint(const numptr num);
 

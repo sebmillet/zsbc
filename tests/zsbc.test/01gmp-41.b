@@ -14,10 +14,7 @@ define checkreturn() {
 }
 
 define fact(x) {
-	if (x > 1)
-		return fact(x - 1) * x
-	else
-		return 1
+	if (x > 1) return fact(x - 1) * x else return 1
 }
 
 define myfcnt(alpha,beta) {
