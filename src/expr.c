@@ -761,6 +761,7 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 		default:
 			assert(0);
 	}
+	return -1;
 }
 
 static int eval_builtin_function_call(const expr_t *self, const function_t *f, const numptr *value_args, numptr *pval)

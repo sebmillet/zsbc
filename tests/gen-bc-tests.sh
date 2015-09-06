@@ -2,6 +2,15 @@
 
 # Generate bc library tests from gmp
 
+echo "This will create 02-bc*.exp (from 01 to 43)"
+echo "Continue? (y/n)"
+
+read A
+if [ "$A" != "y" -a "$A" != "Y" ]; then
+	echo "Aborted."
+	exit
+fi
+
 for i in "01" "02" "03" "04" "05" "10" "20" "21" "30" "40" "41" "42" "43"; do
 	II=zsbc.test/01gmp-$i.exp
 	O=zsbc.test/02bc-$i.exp

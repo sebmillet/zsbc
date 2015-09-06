@@ -31,6 +31,7 @@ struct array_t {
 struct vars_t {
 	char *name;
 	vars_value_t value;
+	struct vars_t *prec;
 	struct vars_t *next;
 	int (*update_callback)(const char *name, numptr *pnum);
 };
@@ -44,6 +45,7 @@ struct context_t {
 	int lib_reg_number;
 };
 
+static vars_t *vars_t_construct(const char *name, int type, int ftype);
 static void vars_t_destruct(vars_t *var);
 static vars_t *find_var(const char *name, int type);
 static void function_destruct(function_t f);
@@ -54,6 +56,8 @@ context_t *ctx = NULL;
 
 void container_initialize(vars_container_t *container)
 {
+/*    vars_t v = vars_t_construct("", TYPE_NUM, -1);*/
+/*    v->value.num = num_construct();*/
 	container->head = NULL;
 }
 
@@ -142,7 +146,10 @@ static vars_t *vars_t_construct(const char *name, int type, int ftype)
 	}
 
 	v->next = ctx->container.head;
+	if (ctx->container.head != NULL)
+		ctx->container.head->prec = v;
 	ctx->container.head = v;
+	v->prec = NULL;
 	return v;
 }
 
@@ -531,8 +538,15 @@ void vars_recall_from_keeper(const char *name, vars_keeper_t *keeper)
 			/*  FIXME
 			 *  Needs proper destruction function
 			 *  */
-		free(w->name);
-		w->name = NULL;
+/*        free(w->name);*/
+/*        w->name = NULL;*/
+		if (w->prec != NULL)
+			w->prec->next = w->next;
+		else
+			ctx->container.head = w->next;
+		if (w->next != NULL)
+			w->next->prec = w->prec;
+		vars_t_destruct(w);
 
 	} else {
 		out_dbg("\tUndefined keeper value and variable not found => nothing to do\n");
