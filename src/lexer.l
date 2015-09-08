@@ -143,7 +143,11 @@ auto			return AUTOLIST;
 print			return PRINT;
 
 {identifier} {
-	s_alloc_and_copy(&yylval.str, yytext);
+	const char *what = yytext;
+	if (!strcmp(yytext, "."))
+		what = VAR_LAST;
+
+	s_alloc_and_copy(&yylval.str, what);
 	return IDENTIFIER;
 }
 

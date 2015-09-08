@@ -1134,14 +1134,18 @@ case 40:
 YY_RULE_SETUP
 #line 145 "lexer.l"
 {
-	s_alloc_and_copy(&yylval.str, yytext);
+	const char *what = yytext;
+	if (!strcmp(yytext, "."))
+		what = VAR_LAST;
+
+	s_alloc_and_copy(&yylval.str, what);
 	return IDENTIFIER;
 }
 	YY_BREAK
 case 41:
 /* rule 41 can match eol */
 YY_RULE_SETUP
-#line 150 "lexer.l"
+#line 154 "lexer.l"
 {
 	unsigned int len = strlen(yytext);
 	assert(yytext[len - 1] == '"');
@@ -1153,12 +1157,12 @@ YY_RULE_SETUP
 case 42:
 /* rule 42 can match eol */
 YY_RULE_SETUP
-#line 158 "lexer.l"
+#line 162 "lexer.l"
 { yycolumn = 1; return NEWLINE; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 160 "lexer.l"
+#line 164 "lexer.l"
 {
 		/* The code below is taken from bc source, with some minor variations */
 	char c = yytext[0];
@@ -1172,10 +1176,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 171 "lexer.l"
+#line 175 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1179 "lexer.c"
+#line 1183 "lexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2141,7 +2145,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 170 "lexer.l"
+#line 174 "lexer.l"
 
 
 

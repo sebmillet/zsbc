@@ -10,3 +10,5 @@ As of August 2015:
   called from (now: can be invoked anywhere, including, outside of a loop or
   function body)
 
+- Check variable names duplicate in arguments list and auto lists
+
