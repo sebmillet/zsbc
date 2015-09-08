@@ -118,11 +118,13 @@ void num_terminate()
 	for(l = libhead; l != NULL; l = lnext) {
 		libswitch(l, TRUE);
 
-		context_destruct(l->context);
+		out_dbg("Now terminating library %s\n", l->libinfo.libname);
+
 		l->libterminate();
+		context_destruct(l->context);
 
 		lnext = l->next;
-		free(l); l = NULL;
+		free(l);
 	}
 }
 
@@ -557,7 +559,10 @@ static void gmp_activate()
 	outstring_set_line_length(0);
 }
 
-static void gmp_terminate() { }
+static void gmp_terminate()
+{
+	free(gmp_identify_yourself);
+}
 
 static const char *gmp_lib_identify_yourself()
 {
@@ -971,7 +976,10 @@ static void libbc_activate()
 	outstring_set_line_length(libbc_bc_line_length);
 }
 
-static void libbc_terminate() { }
+static void libbc_terminate()
+{
+	free(libbc_identify_yourself);
+}
 
 static const char *libbc_lib_identify_yourself()
 {

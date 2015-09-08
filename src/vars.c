@@ -22,6 +22,12 @@
 #include <string.h>
 #include <stdio.h>
 
+const char *type_names[] = {
+	"TYPE_NUM",		/* TYPE_NUM */
+	"TYPE_ARRAY",	/* TYPE_ARRAY */
+	"TYPE_FCNT"		/* TYPE_FCNT */
+};
+
 struct array_t {
 	long int index;
 	numptr num;
@@ -83,6 +89,8 @@ void container_terminate(vars_container_t *container)
 void context_destruct(context_t *c)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
+
+	out_dbg("Call of context_destruct()\n");
 
 	container_terminate(&c->container);
 	free(c);
@@ -172,15 +180,16 @@ static void array_destruct(array_t *a)
 
 static void vars_t_destruct(vars_t *var)
 {
-	out_dbg("Destructing one vars_t of name %s\n", var->name == NULL ? "<NULL>" : var->name);
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
+
+	out_dbg("Destructing vars_t %s of type %s\n", var->name == NULL ? "<NULL>" : var->name, type_names[var->value.type]);
+
+	vars_value_destruct(&var->value);
 
 	if (var->name != NULL) {
 		free(var->name);
 		var->name = NULL;
 	}
-
-	vars_value_destruct(&var->value);
 
 	free(var);
 }
@@ -349,10 +358,10 @@ static int vars_set_value_core(const char *name, numptr new_value, vars_t *v, co
 		}
 
 		if (!v->value.num_ref) {
-			out_dbg("\t%s is a reference\n", name);
+			out_dbg("\t%s is regular\n", name);
 			num_destruct(&v->value.num);
 		} else {
-			out_dbg("\t%s is regular\n", name);
+			out_dbg("\t%s is a reference\n", name);
 			num_destruct(v->value.num_ref);
 		}
 	}

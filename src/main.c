@@ -65,6 +65,7 @@ static int input_cursor;
 static const char *input_name;
 static FILE *input_FILE;
 static void input_register(int itype, const char *name, const void *data, size_t data_size, int append);
+static void input_terminate();
 
 static const char *table_errors[] = {
 	NULL,								/* ERROR_NONE */
@@ -481,10 +482,11 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 	 * Acquire ENV_ARGS environment variable and cut it into an array
 	 * of strings, the delimiter being space or tab character.
 	 * */
-static void cut_env_options(int *env_argc, char ***env_argv, const char **env_orig)
+static void cut_env_options(int *env_argc, char ***env_argv, char **alloc_env, const char **env_orig)
 {
 	*env_argc = 0;
 	*env_argv = NULL;
+	*alloc_env = NULL;
 	*env_orig = getenv(ENV_ARGS);
 	if (*env_orig == NULL)
 		return;
@@ -493,7 +495,7 @@ static void cut_env_options(int *env_argc, char ***env_argv, const char **env_or
 		 * According to getenv manual, the returned string should not be modified
 		 * and we need to modify it...
 		 * */
-	char *env = s_alloc_and_copy(NULL, *env_orig);
+	*alloc_env = s_alloc_and_copy(NULL, *env_orig);
 
 	*env_argc = 1;
 	int env_argc_allocated = 2;
@@ -502,7 +504,7 @@ static void cut_env_options(int *env_argc, char ***env_argv, const char **env_or
 		/* Useless. Done in case argv[0] is ever used */
 	(*env_argv)[0] = ENV_ARGS;
 
-	char *p = env;
+	char *p = *alloc_env;
 	char *start_p;
 	while (*p != '\0') {
 		while (*p == ' ' || *p == '\t')
@@ -562,8 +564,9 @@ int main(int argc, char *argv[])
 
 	int env_argc;
 	char **env_argv;
-	const char *env;
-	cut_env_options(&env_argc, &env_argv, &env);
+	const char *orig_env;
+	char *alloc_env;
+	cut_env_options(&env_argc, &env_argv, &alloc_env, &orig_env);
 	parse_options(env_argc, env_argv, &optset_verbose, &optset_quiet, &optset_debug,
 		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive, &bc_mathlib);
 	optset_verbose = FALSE;
@@ -578,7 +581,7 @@ int main(int argc, char *argv[])
 		out_level = L_DEBUG;
 
 	if (env_argc >= 1) {
-		out_dbg("Environment variable '%s' found\n\tValue: '%s'\n\tResult of value parsing;\n", ENV_ARGS, env);
+		out_dbg("Environment variable '%s' found\n\tValue: '%s'\n\tResult of value parsing;\n", ENV_ARGS, orig_env);
 		int i;
 		for (i = 0; i < env_argc; ++i) {
 			out_dbg("\t\tenv_argv[%d] = '%s'\n", i, env_argv[i]);
@@ -632,6 +635,11 @@ int main(int argc, char *argv[])
 	yyparse();
 
 	num_terminate();
+	if (env_argv != NULL)
+		free(env_argv);
+	if (alloc_env != NULL)
+		free(alloc_env);
+	input_terminate();
 
 	int n = num_get_count_ref();
 	output_count_ref_report("number", n);
@@ -686,6 +694,12 @@ static void input_register(int itype, const char *name, const void *data, size_t
 	new_input->name = name;
 	new_input->data = data;
 	new_input->data_size = data_size;
+}
+
+void input_terminate()
+{
+	if (input_list != NULL)
+		free(input_list);
 }
 
 const char *input_get_name()
