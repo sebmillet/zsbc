@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-const char libbc_libmath[] = {
+char libbc_libmath[] = {
 's', 'c', 'a', 'l', 'e', ' ', '=', ' ', '2', '0', '\n', 
 'd', 'e', 'f', 'i', 'n', 'e', ' ', 'e', '(', 'x', ')', ' ', '{', '\n', 
 'a', 'u', 't', 'o', ' ', ' ', 'a', ',', ' ', 'b', ',', ' ', 'd', ',', ' ', 'e', ',', ' ', 'f', ',', ' ', 'i', ',', ' ', 'm', ',', ' ', 'n', ',', ' ', 'v', ',', ' ', 'z', '\n', 
@@ -203,6 +203,7 @@ const char libbc_libmath[] = {
 'v', ' ', '+', '=', ' ', 'e', ';', '\n', 
 '}', '\n', 
 '}', '\n', 
+'\0', '\0'
 };
 
 const size_t libbc_libmath_len = sizeof(libbc_libmath);

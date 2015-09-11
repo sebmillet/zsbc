@@ -51,6 +51,12 @@ void loc_reset();
 
 %code provides {
 void activate_bison_debug();
+
+#ifndef YY_TYPEDEF_YY_BUFFER_STATE
+#define YY_TYPEDEF_YY_BUFFER_STATE
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+#endif
+YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 }
 
 %defines

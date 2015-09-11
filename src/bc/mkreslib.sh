@@ -16,8 +16,14 @@ echo "/* DO NOT UPDATE MANUALLY */" >> $T
 echo >> $T
 echo "#include <stdlib.h>" >> $T
 echo >> $T
-echo "const char ${VAR}[] = {" >> $T
+echo "char ${VAR}[] = {" >> $T
 sed -r ':a; s%(.*)/\*.*\*/%\1%; ta; /\/\*/ !b; N; ba' "$S" | sed 's/^\s*//' | sed '/^$/d' | sed "s/./'&', /g" | sed "s/'\\\\'/'\\\\\\\\'/g" | sed "s/$/'\\\\n', /" >> $T
+
+# See http://flex.sourceforge.net/manual/Multiple-Input-Buffers.html
+#   The input buffer (when used in read-only mode) needs have two
+#   nul characters at the end.
+echo "'\\\\0', '\\\\0'" >> $T
+
 echo "};" >> $T
 echo >> $T
 echo "const size_t ${VAR}_len = sizeof($VAR);" >> $T

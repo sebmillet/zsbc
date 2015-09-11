@@ -38,6 +38,12 @@
 
 const char *VAR_LAST = "last";
 
+	/* Source data for the libmath library, taken from bc source,
+	 * that defines the functions e (exponent), l (logarithm), s (sinus),
+	 * c (cosine), a (arctan) and j (bessel) */
+extern char libbc_libmath[];
+extern const size_t libbc_libmath_len;
+
 int yywrap();
 
 static int out_level = L_NORMAL;
@@ -48,6 +54,40 @@ static int bc_mathlib = FALSE;
 
 	/* When debug activated, name of files to display the debug of (NULL: display all) */
 const char *debug_filenames = NULL;
+
+	/*
+	 * FIXME
+	 *
+	 * Originally, load of the libmath library (the bc syntax code that defines
+	 * e, l, s, c, a and j math functions) used a fake file open over built-in
+	 * data. By the way this built-in data is libbc_libmath, it is provided
+	 * by src/bc/libmath.c, built from the bc-original libmath.b.
+	 * This functionality would use the function fmemopen.
+	 * Good.
+	 *
+	 * Then I tried to compile it under Windows and... no fmemopen function!
+	 * And I didn't want to undergo the crazyness of writing the data stream into
+	 * a temp file read by the parser at program start-up.
+	 * So, I used yy_scan_buffer function.
+	 *
+	 * As it turns out, this way of working is MUCH easier than the initial
+	 * use of fmemopen.
+	 * Now, why this FIXME?
+	 * All the below (type of input as being file versus data, address of data, ...)
+	 * is useless! I leave it here for the time being, in case I'd need different
+	 * inputs (different from simple files whose name is specified as command-line
+	 * arguments).
+	 * But I think after an important delay I'll remove and simplify all this back.
+	 *
+	 */
+
+#ifdef MY_WINDOWS
+	/*
+	 * Hack to make mingw happy in the absence of fmemopen.
+	 * It is extremly gruiiik.
+	 * */
+#define fmemopen(a, b, c) fopen("", c)
+#endif
 
 enum {IT_FILE, IT_BUILTIN_DATA};
 	/* To manage input files specified in command line arguments */
@@ -532,15 +572,6 @@ static void cut_env_options(int *env_argc, char ***env_argv, char **alloc_env, c
 	}
 }
 
-extern const char libbc_libmath[];
-extern const size_t libbc_libmath_len;
-
-/*static const char bi[] = {*/
-/*    'd', 'e', 'f', 'i', 'n', 'e', ' ', 'p', 'o', 'w', '2', '(', 'p', 'a', 'r', 'a', 'm', ')', ' ', '{', '\n',*/
-/*    '	', 'r', 'e', 't', 'u', 'r', 'n', ' ', '2', '^', 'p', 'a', 'r', 'a', 'm',  '\n',*/
-/*    '}', '\n'*/
-/*};*/
-
 int main(int argc, char *argv[])
 {
 
@@ -615,13 +646,21 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s: option -l (a.k. -mathlib) works only with libbc. Consider using option '-numlib bc'.\n", PACKAGE_NAME);
 		exit(-3);
 	}
-	if (bc_mathlib)
-		input_register(IT_BUILTIN_DATA, "<builtin mathlib>", libbc_libmath, libbc_libmath_len, FALSE);
+/*    if (bc_mathlib)*/
+/*        input_register(IT_BUILTIN_DATA, "<builtin mathlib>", libbc_libmath, libbc_libmath_len, FALSE);*/
 
 	int i;
 	for (i = 0; i < input_nb; ++i) {
 		out_dbg("Input file #%d: %s\n", i + 1, input_list[i].name);
 	}
+
+	input_cursor = -1;
+	if (bc_mathlib)
+		yy_scan_buffer(libbc_libmath, libbc_libmath_len);
+	else
+		yywrap();
+
+	yyparse();
 
 		/*
 		 * Have to call yywrap() one first time for proper initialization
@@ -629,10 +668,9 @@ int main(int argc, char *argv[])
 		 * The -1 below is important, see goto_next_input_file() (called
 		 * by yywrap()) to see why.
 		 * */
-	input_cursor = -1;
-	yywrap();
+/*    yywrap();*/
 
-	yyparse();
+/*    yyparse();*/
 
 	num_terminate();
 	if (env_argv != NULL)
@@ -722,6 +760,7 @@ FILE *input_get_next()
 	}
 
 	++input_cursor;
+	out_dbg("input_get_next(): input_cursor = %d, input_nb = %d\n", input_cursor, input_nb);
 
 	if (input_cursor < input_nb) {
 
@@ -750,7 +789,7 @@ FILE *input_get_next()
 			} else {
 				out_dbg("input_get_next(): opened builtin data '%s', it is the next yyin-to-be\n", input_name);
 			}
-			
+
 		} else
 			FATAL_ERROR("Unknown input_t type, entry: %d, type: %d", input_cursor, inp->itype);
 	} else if (input_cursor == input_nb) {
