@@ -17,8 +17,8 @@
  * =====================================================================================
  */
 
-#define HAS_LIB_GMP
-#define HAS_LIB_LIBBC
+/*#define HAS_LIB_GMP*/
+/*#define HAS_LIB_LIBBC*/
 
 #include "numwrap.h"
 #include "vars.h"	/* Needed for context management */
@@ -26,14 +26,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-int asprintf(char **strp, const char *fmt, ...);
+/*int asprintf(char **strp, const char *fmt, ...);*/
 char *strcasestr(const char *haystack, const char *needle);
 #ifdef MY_WINDOWS
 #define strcasestr(haystack, needle) strstr(haystack, needle)
 #endif
 
 
+#undef I_GOT_ONE
+
 #ifdef HAS_LIB_GMP
+#define I_GOT_ONE
 
 	/* GMP LIBRARY */
 #include <gmp.h>
@@ -43,6 +46,7 @@ static void gmp_register();
 
 
 #ifdef HAS_LIB_LIBBC
+#define I_GOT_ONE
 
 	/* BC LIBRARY */
 #include "number.h"
@@ -51,6 +55,9 @@ static void libbc_register();
 
 #endif
 
+#ifndef I_GOT_ONE
+#error "Hey, how do you want me to compile this program without at least one bignum library?"
+#endif
 
 typedef struct lib_t {
 	libinfo_t libinfo;

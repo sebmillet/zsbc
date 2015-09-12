@@ -23,10 +23,6 @@ AC_PROG_YACC
 AC_PROG_LEX
 AC_PROG_RANLIB
 
-# Checks for libraries.
-
-AC_CHECK_LIB(gmp, __gmpz_init, , [AC_MSG_ERROR([GNU MP not found, see https://gmplib.org/ or try to install gmp dev lib on your system (libgmp-dev for deb, gmp-devel for rpm)])])
-
 # Checks for header files.
 AC_FUNC_ALLOCA
 AC_FUNC_VPRINTF
@@ -47,8 +43,23 @@ AC_ARG_ENABLE(bison-debug,
 		enable_bison_debug="$enableval", enable_bison_debug="no")
 
 AC_ARG_ENABLE(flex-debug,
-		[  --enable-flex-debug          enable debugging information for flex],
-		enable_flex_debug="$enableval", enable_flex_debug="no")
+		[  --enable-flex-debug           enable debugging information for flex],
+		enable_flex_debug="$enableval",  enable_flex_debug="no")
+
+AC_ARG_ENABLE(gmp,
+		[  --disable-gmp                 compile without the GNU Multi Precision library (gmp)])
+test -z "$enable_gmp" && enable_gmp="yes"
+if test "${enable_gmp}" = yes ; then
+  AC_CHECK_LIB(gmp, __gmpz_init, , [AC_MSG_ERROR([GNU MP not found, see https://gmplib.org/ or try to install gmp dev lib on your system (libgmp-dev for deb, gmp-devel for rpm)])])
+  CPPFLAGS="$CPPFLAGS -DHAS_LIB_GMP"
+fi
+
+AC_ARG_ENABLE(libbc,
+		[  --disable-libbc               compile without the bc/dc number library (libbc)])
+test -z "$enable_libbc" && enable_libbc="yes"
+if test "${enable_libbc}" = yes ; then
+  CPPFLAGS="$CPPFLAGS -DHAS_LIB_LIBBC"
+fi
 
 if test "${enable_bison_debug}" = yes ; then
 	CFLAGS="$CFLAGS -DBISON_DEBUG"
