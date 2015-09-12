@@ -17,6 +17,9 @@
  * =====================================================================================
  */
 
+#define HAS_LIB_GMP
+#define HAS_LIB_LIBBC
+
 #include "numwrap.h"
 #include "vars.h"	/* Needed for context management */
 
@@ -30,15 +33,23 @@ char *strcasestr(const char *haystack, const char *needle);
 #endif
 
 
+#ifdef HAS_LIB_GMP
+
 	/* GMP LIBRARY */
 #include <gmp.h>
 static void gmp_register();
 
+#endif
+
+
+#ifdef HAS_LIB_LIBBC
 
 	/* BC LIBRARY */
 #include "number.h"
 #define BC_VERSION	"1.06.95"
 static void libbc_register();
+
+#endif
 
 
 typedef struct lib_t {
@@ -103,8 +114,12 @@ static int (*Lnot)(numptr *pr, const numptr a);
 void num_init(int switch_to_first_registered_library)
 {
 
+#ifdef HAS_LIB_GMP
 	gmp_register();
+#endif
+#ifdef HAS_LIB_LIBBC
 	libbc_register();
+#endif
 
 	if (switch_to_first_registered_library) {
 		lib_t *l = libhead;
@@ -461,8 +476,10 @@ int num_not(numptr *pr, const numptr a)
 }
 
 
+#ifdef HAS_LIB_GMP
+
 /*-----------------------------------------------------------------------------
- *  GMP library functions
+ *  GMP LIBRARY
  *-----------------------------------------------------------------------------*/
 
 
@@ -753,9 +770,13 @@ static int gmp_not(numptr *pr, const numptr a)
 	return ERROR_NONE;
 }
 
+#endif
+
+
+#ifdef HAS_LIB_LIBBC
 
 /*-----------------------------------------------------------------------------
- *  BC functions
+ *  LIBBC LIBRARY
  *-----------------------------------------------------------------------------*/
 
 
@@ -1294,4 +1315,6 @@ static int libbc_not(numptr *pr, const numptr a)
 	*pr = libbc_construct_from_int(!logical_a);
 	return ERROR_NONE;
 }
+
+#endif
 
