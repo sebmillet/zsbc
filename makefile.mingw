@@ -6,8 +6,9 @@
 
 GCC = gcc.exe
 BUILD = build
-LIBGMP = C:\libgmp
-CPPFLAGS = -Wall -I$(LIBGMP)\include
+BUILDLIBBC = lib
+LIBGMP = C:\seb\libgmp
+CPPFLAGS = -Wall -I$(LIBGMP)\include -Ih
 LINKERFLAGS = -Wall -L$(LIBGMP)\lib -lgmp
 
 all : build libgmpwarning
@@ -32,14 +33,42 @@ build :
 
 all : $(BUILD)\zsbc.exe
 
-$(BUILD)\zsbc.exe : $(BUILD)\lexer.o $(BUILD)\parser.o
-	$(GCC) $(BUILD)\lexer.o $(BUILD)\parser.o -o $(BUILD)\zsbc.exe $(LINKERFLAGS)
+$(BUILD)\zsbc.exe : $(BUILD)\lexer.o $(BUILD)\parser.o $(BUILD)\main.o \
+		$(BUILD)\expr.o $(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o \
+		$(BUILD)\libmath.o \
+		$(BUILD)\libbc.a
+	$(GCC) $(BUILD)\lexer.o $(BUILD)\parser.o $(BUILD)\main.o \
+		$(BUILD)\expr.o $(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o \
+		$(BUILD)\libmath.o $(BUILD)\libbc.a -o $(BUILD)\zsbc.exe $(LINKERFLAGS)
 
 $(BUILD)\lexer.o : src\lexer.c
-	$(GCC) -c src\lexer.c -o $(BUILD)\lexer.o $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
 
 $(BUILD)\parser.o : src\parser.c
-	$(GCC) -c src\parser.c -o $(BUILD)\parser.o $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
+
+$(BUILD)\main.o : src\main.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
+
+$(BUILD)\expr.o : src\expr.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
+
+$(BUILD)\numwrap.o : src\numwrap.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
+
+$(BUILD)\program.o : src\program.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
+
+$(BUILD)\vars.o : src\vars.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
+
+$(BUILD)\libbc.a : lib\number.c
+	copy h\winconfig.h h\config.h
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	del h\config.h
+
+$(BUILD)\libmath.o : src\bc\libmath.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS)
 
 mrproper : clean
 
@@ -47,5 +76,6 @@ mrproper : clean
 
 clean :
 	-if exist $(BUILD)\*.o del $(BUILD)\*.o
+	-if exist $(BUILD)\*.a del $(BUILD)\*.a
 	-if exist $(BUILD)\zsbc.exe del $(BUILD)\zsbc.exe
 

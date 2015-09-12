@@ -25,6 +25,9 @@
 #include <limits.h>
 int asprintf(char **strp, const char *fmt, ...);
 char *strcasestr(const char *haystack, const char *needle);
+#ifdef MY_WINDOWS
+#define strcasestr(haystack, needle) strstr(haystack, needle)
+#endif
 
 
 	/* GMP LIBRARY */
@@ -496,7 +499,9 @@ static int gmp_not(numptr *pr, const numptr a);
 
 static void gmp_register()
 {
-	asprintf(&gmp_identify_yourself, "GMP library version %s", gmp_version);
+	const size_t s = 150;
+	gmp_identify_yourself = malloc(s);
+	snprintf(gmp_identify_yourself, s, "GMP library version %s", gmp_version);
 
 	libinfo_t li;
 	li.id = "gmp|gmpz";
@@ -809,7 +814,9 @@ static void libbc_register()
 {
 	bc_init_numbers();
 
-	asprintf(&libbc_identify_yourself, "BC library version %s", BC_VERSION);
+	const size_t s = 150;
+	libbc_identify_yourself = malloc(s);
+	snprintf(libbc_identify_yourself, s, "BC library version %s", BC_VERSION);
 
 	libinfo_t li;
 	li.id = "bc|bcnum";
