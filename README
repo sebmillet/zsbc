@@ -54,11 +54,26 @@ See COPYING file that comes along with the package the program belongs to.
 
 IV.   COMPILATION AND INSTALLATION
 
+0) Note about GMP versus MPIR
+
+MPIR can be a substitute to GMP. As the author of these lines could not build
+zsbc.exe along with libgmp using MSVC, decision was made to use libmpir in the
+case of Windows/msvc compilation.
+
+In the end the following was done:
+  Linux          compiled with libgmp
+  Windows/mingw  compiled with libgmp
+  Windows/msvc   compiled with libmpir
+
+That said, given the fact that MPIR is so close to GMP (as of writing of this
+text = September 2015), it is believed that MPIR can successfully compile with
+zsbc in all cases, including Linux and Windows/mingw.
+
 - Linux
 
 1) GMP library
 
-You need GMP lib available on your system to compile zsbc. GMP lib is the GNU
+GMP lib has to be available on your system to compile zsbc. GMP lib is the GNU
 Multi Precision Arithmetic Library.
 The debian package name is libgmp-dev.
 
@@ -75,22 +90,22 @@ instructions to compile and install the program, using the usual
 sequence.
 This INSTALL file is the one provided by default by autotools.
 
-- Windows
+- Windows (mingw)
 
-Mingw is to be used to successfully compile zsbc.
-Tested with both 32-bit (mingw) and 64-bit (mingw-w64) compiler.
+Done successfully with both 32-bit (mingw) and 64-bit (mingw-w64) compilers.
 
-The GNU MP (libgmp) library is necessary to build zsbc. There does not seem to
-be Windows-ready libgmp binaries around.
+There does not seem to be Windows-ready libgmp binaries around, to be used by
+mingw.
 This part - buid libgmp Windows binaries and link zsbc with - is the main
 factor of complexity.
 Only static linking with libgmp, using mingw compiler, was done.
 
-Note about MSVC
+Note about MSVC and libgmp
 	It was not possible to build zsbc.exe with msvc (Microsoft Visual C++
 	12.0). The compilation would eventually produce an error
 		unresolved reference __chkstk
 	at link time, inside libgmp objects.
+	That is why, MSVC builds zsbc.exe with MPIR instead of GMP.
 
 ** BUILD STEP 1
 
@@ -123,4 +138,6 @@ Enter top source directory and run
     mingw32-make.exe -f makefile.mingw
 
 You're done!
+
+- Windows (msvc)
 

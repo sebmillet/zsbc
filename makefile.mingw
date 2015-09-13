@@ -6,9 +6,8 @@
 
 GCC = gcc.exe
 BUILD = build
-BUILDLIBBC = lib
-LIBGMP = C:\seb\libgmp
-CPPFLAGS = -Wall -I$(LIBGMP)\include -Ih
+LIBGMP = C:\libgmp
+CPPFLAGS = -Wall -I$(LIBGMP)\include -Ih -DHAS_LIB_GMP -DHAS_LIB_LIBBC
 LINKERFLAGS = -Wall -L$(LIBGMP)\lib -lgmp
 
 all : build libgmpwarning

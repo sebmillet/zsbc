@@ -1,0 +1,95 @@
+# makefile.vc
+
+# Tested on:
+#   Windows 7 Pro
+#   Microsoft Visual Community 2015 ->
+#     cl version 19.00.23026
+#     link version 14.00.23026.0
+
+# 0: RELEASE COMPILATION
+# 1: DEBUG COMPILATION
+DEBUG = 1
+
+LIBMPIR = C:\mpir-2.7.0\lib\Win32\Release
+
+BUILD = build
+
+CPPFLAGS = /DWIN32 /DHAS_LIB_LIBBC /DHAS_LIB_GMP /W4 /D_CRT_SECURE_NO_WARNINGS /Ih /I$(LIBMPIR)
+
+LDFLAGS = /LIBPATH:$(LIBMPIR)
+
+!if "$(DEBUG)" == "0"
+DEBCL = /Ox
+DEBLINK =
+!endif
+!if "$(DEBUG)" == "1"
+DEBCL = /MDd /Od /Zi /D_DEBUG /DDEBUG
+DEBLINK = /DEBUG
+!endif
+
+OBJS = $(BUILD)\main.obj $(BUILD)\expr.obj $(BUILD)\program.obj $(BUILD)\vars.obj $(BUILD)\lexer.obj $(BUILD)\parser.obj $(BUILD)\libmath.obj $(BUILD)\numwrap.obj $(BUILD)\number.obj
+
+all: build libmpirwarning
+
+libmpirwarning:
+	@echo "***************************************************"
+	@echo "                       IMPORTANT                   "
+	@echo "***************************************************"
+	@echo "This makefile.vc is configured for the MPIR        "
+	@echo "library located here:                              "
+	@echo "  $(LIBMPIR)
+	@echo "This location corresponds to the situation if you: "
+	@echo "  - Extracted mpir source in c:\mpir-2.7.0         "
+	@echo "  - Did a 'Win32 - Release' compilation of         "
+	@echo "    mpir library.                                  "
+	@echo "Therefore to compile successfully, the following   "
+	@echo "files should exist:                                "
+	@echo "  $(LIBMPIR)\gmp.h
+	@echo "  $(LIBMPIR)\mpir.lib
+	@echo "Note the compilation is done with static linking   "
+	@echo "to libmpir.                                        "
+	@echo "***************************************************"
+
+build :
+	-if not exist $(BUILD) mkdir $(BUILD)
+
+all: $(BUILD)\zsbc.exe
+
+$(BUILD)\zsbc.exe: $(OBJS)
+	link /NOLOGO /OUT:$@ /SUBSYSTEM:CONSOLE $(LDFLAGS) $(DEBLINK) $(OBJS) mpir.lib Shell32.lib
+
+$(BUILD)\main.obj: src\main.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\main.c
+
+$(BUILD)\expr.obj: src\expr.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\expr.c
+
+$(BUILD)\program.obj: src\program.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\program.c
+
+$(BUILD)\vars.obj: src\vars.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\vars.c
+
+$(BUILD)\lexer.obj: src\lexer.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\lexer.c
+
+$(BUILD)\parser.obj: src\parser.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\parser.c
+
+$(BUILD)\numwrap.obj: src\numwrap.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\numwrap.c
+
+$(BUILD)\libmath.obj: src\bc\libmath.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\bc\libmath.c
+
+$(BUILD)\number.obj: lib\number.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) lib\number.c
+
+clean:
+	-if exist $(BUILD)\*.obj del $(BUILD)\*.obj
+	-if exist $(BUILD)\*.res del $(BUILD)\*.res
+	-if exist $(BUILD)\*.pch del $(BUILD)\*.pch
+	-if exist $(BUILD)\zsbc.exe del $(BUILD)\zsbc.exe
+	-if exist $(BUILD)\zsbc.ilk del $(BUILD)\zsbc.ilk
+	-if exist $(BUILD)\zsbc.pdb del $(BUILD)\zsbc.pdb
+

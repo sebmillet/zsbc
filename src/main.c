@@ -34,7 +34,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef MY_LINUX
 #include <unistd.h>
+#endif
 
 const char *VAR_LAST = "last";
 

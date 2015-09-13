@@ -599,7 +599,9 @@ char *yytext;
 
 #include <string.h>
 #include <stdarg.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 #define YY_NO_INPUT
 #define YY_NO_UNISTD_H
