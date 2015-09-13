@@ -22,6 +22,7 @@
 #include "common.h"
 #include "numwrap.h"
 #include "program.h"
+#include "array.h"
 
 struct context_t;
 typedef struct context_t context_t;
@@ -32,8 +33,8 @@ context_t *context_construct(int lib_reg_number);
 void context_destruct(context_t *c);
 void context_switch(context_t *c);
 
-struct array_t;
-typedef struct array_t array_t;
+//struct array_t;
+//typedef struct array_t array_t;
 
 enum {FTYPE_USER, FTYPE_BUILTIN};
 

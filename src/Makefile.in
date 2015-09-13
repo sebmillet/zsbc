@@ -98,8 +98,8 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
 am_zsbc_OBJECTS = main.$(OBJEXT) expr.$(OBJEXT) vars.$(OBJEXT) \
-	numwrap.$(OBJEXT) program.$(OBJEXT) parser.$(OBJEXT) \
-	lexer.$(OBJEXT) bc/libmath.$(OBJEXT)
+	array.$(OBJEXT) numwrap.$(OBJEXT) program.$(OBJEXT) \
+	parser.$(OBJEXT) lexer.$(OBJEXT) bc/libmath.$(OBJEXT)
 zsbc_OBJECTS = $(am_zsbc_OBJECTS)
 zsbc_DEPENDENCIES = $(LIBBC)
 zsbc_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(zsbc_LDFLAGS) $(LDFLAGS) \
@@ -281,7 +281,9 @@ SUFFIXES = .c .h .y .l
 AM_CPPFLAGS = -Wshadow -Wall -I$(srcdir) -I$(srcdir)/../h
 AM_YFLAGS = -d
 @DEBUG_FLEX_TRUE@AM_LFLAGS = --debug
-zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h program.c program.h parser.y lexer.l common.h bc/libmath.c
+zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h array.c array.h numwrap.c numwrap.h \
+               program.c program.h parser.y lexer.l common.h bc/libmath.c
+
 zsbc_LDFLAGS = 
 
 # TODO: allow the user to NOT include libbc in compilation
@@ -392,6 +394,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/array.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lexer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@

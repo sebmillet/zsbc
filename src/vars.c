@@ -18,6 +18,7 @@
 
 
 #include "vars.h"
+#include "array.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -26,12 +27,6 @@ const char *type_names[] = {
 	"TYPE_NUM",		/* TYPE_NUM */
 	"TYPE_ARRAY",	/* TYPE_ARRAY */
 	"TYPE_FCNT"		/* TYPE_FCNT */
-};
-
-struct array_t {
-	long int index;
-	numptr num;
-	struct array_t *next;
 };
 
 struct vars_t {
@@ -56,14 +51,11 @@ static void vars_t_destruct(vars_t *var);
 static vars_t *find_var(const char *name, int type);
 static void function_destruct(function_t f);
 static void vars_value_soft_copy(vars_value_t *dst, const vars_value_t *src);
-static void array_destruct(array_t *a);
 
 context_t *ctx = NULL;
 
 void container_initialize(vars_container_t *container)
 {
-/*    vars_t v = vars_t_construct("", TYPE_NUM, -1);*/
-/*    v->value.num = num_construct();*/
 	container->head = NULL;
 }
 
@@ -168,16 +160,6 @@ static vars_t *vars_t_construct_with_value(const char *name, const vars_value_t 
 	return v;
 }
 
-static void array_destruct(array_t *a)
-{
-	while (a != NULL) {
-		num_destruct(&a->num);
-		array_t *anext = a->next;
-		free(a);
-		a = anext;
-	}
-}
-
 static void vars_t_destruct(vars_t *var)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
@@ -217,16 +199,6 @@ array_t **vars_array_get_ref(const char *name)
 	return w->value.array_ref ? w->value.array_ref : &w->value.array;
 }
 
-static array_t *find_index(array_t *a, long int index)
-{
-	while (a != NULL) {
-		if (a->index == index)
-			return a;
-		a = a->next;
-	}
-	return NULL;
-}
-
 const numptr *vars_get_value(const char *name)
 {
 
@@ -256,60 +228,17 @@ const numptr *vars_array_get_value(const char *name, long int index)
 
 		out_dbg("\t%s[] is %s\n", name, w->value.array_ref ? "a reference" : "regular");
 
-		array_t *a = find_index(w->value.array_ref ? *w->value.array_ref : w->value.array, index);
-		if (a != NULL) {
-			out_dbg("\t[%d] found\n", index);
-			return &a->num;
-		} else {
-			out_dbg("\t[%d] not found\n", index);
-			return NULL;
-		}
+		return array_get_value(w->value.array_ref ? *w->value.array_ref : w->value.array, index);
+
 	}
 	out_dbg("\t%s[] is non-existent\n", name);
 	return NULL;
 }
 
 	/*
-	 * Copy an array_t chain.
-	 * The copy is done so that the order of elements remains
-	 * the same. It'd be acceptable the order becomes reversed (why not?)
-	 * but I preferred to keep the order...
-	 */
-static array_t *array_t_copy(const array_t *src)
-{
-	const array_t *orig_src = src;
-#if !DEBUG
-UNUSED(orig_src);
-#endif
-
-	array_t *ret = NULL;
-	array_t *prec = NULL;
-
-	int n = 0;
-
-
-	while (src != NULL) {
-		array_t *copy = (array_t *)malloc(sizeof(array_t));
-		copy->index = src->index;
-		copy->num = num_construct_from_num(src->num);
-		copy->next = NULL;
-		if (ret == NULL)
-			ret = copy;
-		if (prec != NULL)
-			prec->next = copy;
-		prec = copy;
-		src = src->next;
-		++n;
-	}
-
-	out_dbg("\tCopied array of %d element(s) from %lu to %lu\n", n, orig_src, ret);
-
-	return ret;
-}
-
-	/*
 	 * Copy the array given its name and returns a pointer to the copy.
 	 * If the array does not exist, return NULL.
+	 *
 	 * */
 array_t *vars_array_copy(const char *name)
 {
@@ -407,30 +336,11 @@ static void vars_array_set_value_core(const char *name, long int index, const nu
 	if (v == NULL) {
 		v = vars_t_construct(name, TYPE_ARRAY, -1);
 	}
-	array_t *a = find_index(v->value.array_ref ? *v->value.array_ref : v->value.array, index);
 
 	out_dbg("Setting value of %s[%d]\n", name, index);
 	out_dbg("\t%s is %s\n", name, v->value.array_ref ? "a reference" : "regular");
 
-	if (a == NULL) {
-		out_dbg("\t[%d] not found\n", index);
-		a = (array_t *)malloc(sizeof(array_t));
-		a->index = index;
-		a->num = num_undefvalue();
-		if (v->value.array_ref) {
-			a->next = (*v->value.array_ref)->next;
-			(*v->value.array_ref)->next = a;
-		} else {
-			a->next = v->value.array;
-			v->value.array = a;
-		}
-	} else {
-		out_dbg("\t[%d] found\n", index);
-		num_destruct(&a->num);
-	}
-
-	a->num = new_value;
-	*ppvarnum = &a->num;
+	array_set_value(v->value.array_ref ? v->value.array_ref : &v->value.array, index, new_value, ppvarnum);
 }
 
 void vars_array_set_value(const char *name, long int index, const numptr new_value, const numptr **ppvarnum)
@@ -517,6 +427,22 @@ void vars_send_to_keeper(vars_keeper_t *keeper, const char *name, const vars_val
 
 }
 
+static void vars_delete(vars_t *v)
+{
+		/*
+		 * Make w disappear from the chain and then
+		 * destruct it.
+		 *
+		 * */
+	if (v->prec != NULL)
+		v->prec->next = v->next;
+	else
+		ctx->container.head = v->next;
+	if (v->next != NULL)
+		v->next->prec = v->prec;
+	vars_t_destruct(v);
+}
+
 void vars_recall_from_keeper(const char *name, vars_keeper_t *keeper)
 {
 
@@ -544,18 +470,7 @@ void vars_recall_from_keeper(const char *name, vars_keeper_t *keeper)
 	} else if (w != NULL)  {
 		out_dbg("\tUndefined keeper value => destructing variable\n");
 
-			/*  FIXME
-			 *  Needs proper destruction function
-			 *  */
-/*        free(w->name);*/
-/*        w->name = NULL;*/
-		if (w->prec != NULL)
-			w->prec->next = w->next;
-		else
-			ctx->container.head = w->next;
-		if (w->next != NULL)
-			w->next->prec = w->prec;
-		vars_t_destruct(w);
+		vars_delete(w);
 
 	} else {
 		out_dbg("\tUndefined keeper value and variable not found => nothing to do\n");

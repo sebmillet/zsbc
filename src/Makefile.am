@@ -13,7 +13,8 @@ bin_PROGRAMS = zsbc
 
 check_PROGRAMS = zsbc
 
-zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h numwrap.c numwrap.h program.c program.h parser.y lexer.l common.h bc/libmath.c
+zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h array.c array.h numwrap.c numwrap.h \
+               program.c program.h parser.y lexer.l common.h bc/libmath.c
 zsbc_LDFLAGS = 
 
 # TODO: allow the user to NOT include libbc in compilation
