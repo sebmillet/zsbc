@@ -1,8 +1,19 @@
 # makefile.mingw
 
-# "zsbc" makefile for Mingw
+# Sébastien Millet, Februay, May, September 2015
 
-# Sébastien Millet, Februay, May 2015
+# Run
+#   mingw32-make -f makefile.mingw
+# for "release" compilation.
+#
+# Run
+#   mingw32-make -f makefile.mingw DEBUG=1
+# for "debug" compilation
+
+DEBCPP =
+ifeq ($(DEBUG), 1)
+DEBCPP = -g -DDEBUG
+endif
 
 GCC = gcc.exe
 BUILD = build
@@ -33,41 +44,44 @@ build :
 all : $(BUILD)\zsbc.exe
 
 $(BUILD)\zsbc.exe : $(BUILD)\lexer.o $(BUILD)\parser.o $(BUILD)\main.o \
-		$(BUILD)\expr.o $(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o \
+		$(BUILD)\expr.o $(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o $(BUILD)\array.o \
 		$(BUILD)\libmath.o \
 		$(BUILD)\libbc.a
 	$(GCC) $(BUILD)\lexer.o $(BUILD)\parser.o $(BUILD)\main.o \
-		$(BUILD)\expr.o $(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o \
+		$(BUILD)\expr.o $(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o $(BUILD)\array.o \
 		$(BUILD)\libmath.o $(BUILD)\libbc.a -o $(BUILD)\zsbc.exe $(LINKERFLAGS)
 
 $(BUILD)\lexer.o : src\lexer.c
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 $(BUILD)\parser.o : src\parser.c
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 $(BUILD)\main.o : src\main.c
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 $(BUILD)\expr.o : src\expr.c
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 $(BUILD)\numwrap.o : src\numwrap.c
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 $(BUILD)\program.o : src\program.c
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 $(BUILD)\vars.o : src\vars.c
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
+
+$(BUILD)\array.o : src\array.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 $(BUILD)\libbc.a : lib\number.c
 	copy h\winconfig.h h\config.h
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 	del h\config.h
 
 $(BUILD)\libmath.o : src\bc\libmath.c
-	$(GCC) -c $< -o $@ $(CPPFLAGS)
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 mrproper : clean
 

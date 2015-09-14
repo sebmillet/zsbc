@@ -1,14 +1,14 @@
 # makefile.vc
 
-# Tested on:
-#   Windows 7 Pro
-#   Microsoft Visual Community 2015 ->
-#     cl version 19.00.23026
-#     link version 14.00.23026.0
+# Sébastien Millet, September 2015
 
-# 0: RELEASE COMPILATION
-# 1: DEBUG COMPILATION
-DEBUG = 1
+# Run
+#   nmake -f makefile.vc
+# for "release" compilation.
+#
+# Run
+#   nmake -f makefile.vc DEBUG=1
+# for "debug" compilation
 
 LIBMPIR = C:\mpir-2.7.0\lib\Win32\Release
 
@@ -27,7 +27,7 @@ DEBCL = /MDd /Od /Zi /D_DEBUG /DDEBUG
 DEBLINK = /DEBUG
 !endif
 
-OBJS = $(BUILD)\main.obj $(BUILD)\expr.obj $(BUILD)\program.obj $(BUILD)\vars.obj $(BUILD)\lexer.obj $(BUILD)\parser.obj $(BUILD)\libmath.obj $(BUILD)\numwrap.obj $(BUILD)\number.obj
+OBJS = $(BUILD)\main.obj $(BUILD)\expr.obj $(BUILD)\program.obj $(BUILD)\vars.obj $(BUILD)\lexer.obj $(BUILD)\parser.obj $(BUILD)\array.obj $(BUILD)\libmath.obj $(BUILD)\numwrap.obj $(BUILD)\number.obj
 
 all: build libmpirwarning
 
@@ -75,6 +75,9 @@ $(BUILD)\lexer.obj: src\lexer.c
 
 $(BUILD)\parser.obj: src\parser.c
 	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\parser.c
+
+$(BUILD)\array.obj: src\array.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\array.c
 
 $(BUILD)\numwrap.obj: src\numwrap.c
 	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\numwrap.c
