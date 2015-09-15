@@ -1,4 +1,3 @@
-
    zsbc, a portable integer calculator using gmp
    =============================================
 
@@ -54,33 +53,47 @@ See COPYING file that comes along with the package the program belongs to.
 
 IV.   COMPILATION AND INSTALLATION
 
-0) Note about GMP versus MPIR
+1) Preliminary note about GMP versus MPIR
 
-MPIR can be a substitute to GMP. As the author of these lines could not build
-zsbc.exe along with libgmp using MSVC, decision was made to use libmpir in the
-case of Windows/msvc compilation.
+zsbc needs a "bignum" library, that is, a library capable of working on big
+numbers. GMP was chosen as the default, "canonical" one to zsbc. GMP is the
+GNU Multi Precision Arithmetic Library.
 
-In the end the following was done:
+Initially GMP was intended as being the default library in both Linux and
+Windows. However, the author of these lines could not build zsbc.exe along
+with libgmp using MSVC. It would work only with mingw.
+
+As msvc compilation is deemed an important feature, decision was made to use
+the "natural" substitute to GMP for msvc compilation, that works natively
+under Windows: MPIR.
+
+In the end the following was tested and documented.
   Linux          compiled with libgmp
   Windows/mingw  compiled with libgmp
   Windows/msvc   compiled with libmpir
 
 That said, given the fact that MPIR is so close to GMP (as of writing of this
-text = September 2015), it is believed that MPIR can successfully compile with
+text, September 2015), it is believed that MPIR can successfully compile with
 zsbc in all cases, including Linux and Windows/mingw.
 
-- Linux
+2) Linux build
 
-1) GMP library
+2.1) Making GMP development library available
 
-GMP lib has to be available on your system to compile zsbc. GMP lib is the GNU
-Multi Precision Arithmetic Library.
-The debian package name is libgmp-dev.
+As written above, while MPIR is certainly suitable for Linux compilation, GMP
+was tested and documented.
+"GMP library" (sometimes I simply write "libgmp") is the GNU Multi Precision
+Arithmetic Library.
+You can download the source and compile it but if using a package-enabled
+system, it is recommended to install the package source.
 
-The GMP library homepage:
+The deb package name is libgmp-dev.
+The rpm package name is libgmp-devel.
+
+The GMP library homepage is
 	https://gmplib.org
 
-2) Compilation
+2.2) Compilation
 
 The file of name INSTALL, distributed with zsbc source files, gives
 instructions to compile and install the program, using the usual
@@ -90,54 +103,89 @@ instructions to compile and install the program, using the usual
 sequence.
 This INSTALL file is the one provided by default by autotools.
 
-- Windows (mingw)
+3) Windows build with mingw
 
 Done successfully with both 32-bit (mingw) and 64-bit (mingw-w64) compilers.
 
-There does not seem to be Windows-ready libgmp binaries around, to be used by
-mingw.
+There does not seem to be Windows-ready libgmp binaries around that mingw
+could use.
 This part - buid libgmp Windows binaries and link zsbc with - is the main
 factor of complexity.
 Only static linking with libgmp, using mingw compiler, was done.
 
-Note about MSVC and libgmp
-	It was not possible to build zsbc.exe with msvc (Microsoft Visual C++
-	12.0). The compilation would eventually produce an error
-		unresolved reference __chkstk
-	at link time, inside libgmp objects.
-	That is why, MSVC builds zsbc.exe with MPIR instead of GMP.
-
-** BUILD STEP 1
+3.1) Install mingw
 
 At first you have to download and install Mingw *along with msys*.
-
-//FIXME//To be detailed
 
 Mingw homepage:
     http://www.mingw.org
 
-** BUILD STEP 2 **
+3.2) Get and compile libgmp
 
 You have to download the source of the GNU Multi Precision Arithmetic Library
-and build it with the source.
+and build it with mingw.
 Build needs be done from an msys terminal, using mingw gcc compiler.
 
 The GMP library homepage:
 	https://gmplib.org
 
-** BUILD STEP 3 **
+3.3) Update makefile.mingw
 
-You have to tune makefile.mingw depending on how you built the GMP library.
-Note you will also have to tune it a little bit if you wish to dynamically
-link libgmp to zsbc (with a .dll) instead of static linking as is Today.
-Dynamic linking was not tested.
+You have to tune makefile.mingw depending on how you built the GMP library, to
+designate the correct locations of GMP's include and lib files. After libgmp
+build, look for the files
+	gmp.h
+	libgmp.a
 
-** BUILD STEP 4 **
+3.4) Build zsbc.exe
 
-Enter top source directory and run
+For a "release" build, enter top source directory and run
     mingw32-make.exe -f makefile.mingw
+For a "debug" build, enter top source directory and run
+    mingw32-make.exe -f makefile.mingw DEBUG=1
 
-You're done!
+4) Windows build with msvc
 
-- Windows (msvc)
+4.1) Install msvc
+
+Discussing downloading and installation of MSVC is beyond the scope of this
+document.
+Please note the version successfully used to build libmpir (replaces libgmp
+for msvc build, see notes above) and zsbc is Microsoft Studio Community 2015,
+available for free.
+
+URL:
+	https://www.visualstudio.com
+
+4.2) Get and compile libmpir
+
+- As of September 2015, downloading and extracting archive content will produce
+a ready-to-compile source tree under the directory
+	mpir-2.7.0
+
+- Open the file (whatever)\mpir-2.7.0\build.vc14\mpir.sln with MSVC and
+generate the project, after selection of the proper generation type, win32
+versus x64 and release versus debug.
+
+4.3) Update makefile.vc
+
+You have to tune makefile.vc depending on how you built the MPIR library, to
+designate the correct locations of MPIR's include and lib files. After libmpir
+build, look for the files
+	gmp.h
+	mpir.lib
+
+gmp.h above is not a typo. gmp.h and mpir.h are 100% identical and illustrate
+to which extent MPIR can substitute to GMP: only the compilation needs be
+updated (to link against mpir), not one line of code had to be updated to
+switch from GMP to MPIR.
+
+3.4) Build zsbc.exe
+
+For a "release" build, enter top source directory under MSVC command-line
+environment and run
+    nmake -f makefile.vc
+For a "debug" build, enter top source directory under MSVC command-line
+environment and run
+    nmake -f makefile.vc DEBUG=1
 

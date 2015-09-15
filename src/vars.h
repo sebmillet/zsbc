@@ -33,9 +33,6 @@ context_t *context_construct(int lib_reg_number);
 void context_destruct(context_t *c);
 void context_switch(context_t *c);
 
-//struct array_t;
-//typedef struct array_t array_t;
-
 enum {FTYPE_USER, FTYPE_BUILTIN};
 
 typedef struct function_t {

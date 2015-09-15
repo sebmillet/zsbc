@@ -24,7 +24,6 @@ struct array_t {
 	struct array_t *next;
 };
 
-
 void array_destruct(array_t *a)
 {
 	while (a != NULL) {
