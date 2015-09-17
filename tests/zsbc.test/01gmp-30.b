@@ -54,3 +54,7 @@ define void verif2(*ar[], shift, id) {
 	print "VERIFBYREFOK:", id, "\n"
 }
 
+define void e0(a[]) {
+		a[0]
+}
+

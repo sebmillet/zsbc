@@ -25,7 +25,7 @@ struct array_t;
 typedef struct array_t array_t;
 
 void array_destruct(array_t *a);
-array_t *find_index(array_t *a, long int index);
+//array_t *find_index(array_t *a, long int index);
 array_t *array_t_copy(const array_t *src);
 
 const numptr *array_get_value(array_t *a, long int index);
