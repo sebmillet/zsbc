@@ -18,11 +18,16 @@
 #include "array.h"
 #include "vars.h"
 
-	/* The max index is equal to (2^TREE_SHIFTBITS_BY_LEVEL)^TREE_LEVELS */
-#define TREE_LEVELS					4
-#define TREE_NB_DESCENDANTS_BY_NODE	16			/* Equals 2^TREE_SHIFTBITS_BY_LEVEL */
-#define TREE_MASK					0x0F		/* Equals TREE_NB_DESCENDANTS_BY_NODE - 1 */
-#define TREE_SHIFTBITS_BY_LEVEL		4
+	/*
+	 * The max index is equal to
+	 *   (2 ^ TREE_SHIFTBITS_BY_LEVEL) ^ TREE_LEVELS - 1
+	 *
+	 * */
+#define TREE_UPPER_INDEX			16777215
+#define TREE_LEVELS					3
+#define TREE_NB_DESCENDANTS_BY_NODE	256			/* Equals 2 ^ TREE_SHIFTBITS_BY_LEVEL */
+#define TREE_MASK					0x00FF		/* Equals TREE_NB_DESCENDANTS_BY_NODE - 1 */
+#define TREE_SHIFTBITS_BY_LEVEL		8
 
 typedef struct node_t {
 	union {
@@ -179,31 +184,6 @@ static void node_tree_copy(node_t **dest, const node_t *src, int level)
 
 array_t *array_t_copy(const array_t *src)
 {
-/*    const array_t *orig_src = src;*/
-/*#if !DEBUG*/
-/*UNUSED(orig_src);*/
-/*#endif*/
-
-/*    array_t *ret = NULL;*/
-/*    array_t *prec = NULL;*/
-
-/*    int n = 0;*/
-
-
-/*    while (src != NULL) {*/
-/*        array_t *copy = (array_t *)malloc(sizeof(array_t));*/
-/*        copy->index = src->index;*/
-/*        copy->num = num_construct_from_num(src->num);*/
-/*        copy->next = NULL;*/
-/*        if (ret == NULL)*/
-/*            ret = copy;*/
-/*        if (prec != NULL)*/
-/*            prec->next = copy;*/
-/*        prec = copy;*/
-/*        src = src->next;*/
-/*        ++n;*/
-/*    }*/
-
 	if (src == NULL)
 		return NULL;
 
@@ -237,28 +217,13 @@ void array_set_value(array_t **pa, long int index, const numptr new_value, const
 	}
 	numptr *pnum = find_index(*pa, index, TRUE);
 
-/*    if (e == NULL) {*/
-/*        out_dbg("\t[%d] not found\n", index);*/
-/*        e = (array_t *)malloc(sizeof(array_t));*/
-/*        e->index = index;*/
-/*        e->num = num_undefvalue();*/
-/*        if (*pa != NULL) {*/
-/*            e->next = (*pa)->next;*/
-/*            (*pa)->next = e;*/
-/*        } else {*/
-/*            e->next = *pa;*/
-/*            *pa = e;*/
-/*        }*/
-/*    } else {*/
-/*        out_dbg("\t[%d] found\n", index);*/
-/*        num_destruct(&e->num);*/
-/*    }*/
-
 	*pnum = new_value;
 	*ppvarnum = pnum;
 
-/*    e->num = new_value;*/
-/*    *ppvarnum = &e->num;*/
+}
 
+int array_check_index(long int index)
+{
+	return index >= 0 && index <= TREE_UPPER_INDEX ? ERROR_NONE : ERROR_ARRAY_OUT_OF_BOUNDS;
 }
 

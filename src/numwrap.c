@@ -646,7 +646,12 @@ static int gmp_is_zero(const numptr num)
 
 static long int gmp_getlongint(const numptr num)
 {
-	return mpz_get_si(*(mpz_t *)num);
+	if (mpz_fits_slong_p(*(const mpz_t *)num))
+		return mpz_get_si(*(mpz_t *)num);
+	if (mpz_sgn(*(mpz_t *)num) == 1)
+		return LONG_MAX;
+	else
+		return LONG_MIN;
 }
 
 static int gmp_add(numptr *pr, const numptr a, const numptr b)
@@ -1190,7 +1195,14 @@ static int libbc_is_zero(const numptr num)
 
 static long int libbc_getlongint(const numptr num)
 {
-	return bc_num2long((bc_num)num);
+	long int i = bc_num2long((bc_num)num);
+	if (!bc_is_zero((bc_num)num) && i == 0) {
+		if (bc_is_neg((bc_num)num))
+			return LONG_MIN;
+		else
+			return LONG_MAX;
+	} else
+		return i;
 }
 
 static int libbc_add(numptr *pr, const numptr a, const numptr b)

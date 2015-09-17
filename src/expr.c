@@ -529,16 +529,16 @@ static int eval_number(const expr_t *self, const numptr *value_args, numptr *pva
 
 static int getindex(expr_t *index, long int *pidxval)
 {
-	int has_index = (index != NULL);
-	if (has_index) {
+	int r = ERROR_NONE;
+	if (index != NULL) {
 		numptr num = num_undefvalue();
-		int r = expr_eval(index, &num);
-		if (r != ERROR_NONE)
-			return r;
-		*pidxval = num_getlongint(num);
-		num_destruct(&num);
+		if ((r = expr_eval(index, &num)) == ERROR_NONE) {
+			*pidxval = num_getlongint(num);
+			r = array_check_index(*pidxval);
+			num_destruct(&num);
+		}
 	}
-	return ERROR_NONE;
+	return r;
 }
 
 static void getvar_core(const char *varname, int has_index, long int idxval, const numptr **ppval)

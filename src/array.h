@@ -31,5 +31,7 @@ array_t *array_t_copy(const array_t *src);
 const numptr *array_get_value(array_t *a, long int index);
 void array_set_value(array_t **pa, long int index, const numptr new_value, const numptr **ppvarnum);
 
+int array_check_index(long int index);
+
 #endif
 

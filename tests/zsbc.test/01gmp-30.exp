@@ -130,6 +130,55 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Array bounds (1)"
+send -- "193\nmyarray\[16777215\]\n391\n"
+expect {
+	-re "193\[^0-9\]+0\[^0-9\]+391\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Array bounds (2)"
+send -- "193\nmyarray\[16777216\]\n391\n"
+expect {
+	-re "193\[^0-9\]+Array index out of bounds\[^0-9\]+391\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Array bounds (3)"
+send -- "183\nmyarray\[10^20\]\n381\n"
+expect {
+	-re "183\[^0-9\]+Array index out of bounds\[^0-9\]+381\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Array bounds (4)"
+send -- "173\nmyarray\[2^48-1\]\n371\n"
+expect {
+	-re "173\[^0-9\]+Array index out of bounds\[^0-9\]+371\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Array bounds (5)"
+send -- "9193\nmyarray\[-1\]\n9391\n"
+expect {
+	-re "9193\[^0-9\]+Array index out of bounds\[^0-9\]+9391\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Array bounds (6)"
+send -- "9183\nmyarray\[-10^20\]\n9381\n"
+expect {
+	-re "9183\[^0-9\]+Array index out of bounds\[^0-9\]+9381\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Array bounds (7)"
+send -- "9173\nmyarray\[-2^48+1\]\n9371\n"
+expect {
+	-re "9173\[^0-9\]+Array index out of bounds\[^0-9\]+9371\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
 set test "Checking object count ref is null"
 send "quit\n"
 expect {

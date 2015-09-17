@@ -69,7 +69,8 @@ const char *VAR_LAST;
 #define ERROR_ARGTYPE_MISMATCH			8
 #define ERROR_ILLEGAL_VALUE				9
 #define ERROR_SQRT_OF_NEG				10
-#define ERROR_LAST						10
+#define ERROR_ARRAY_OUT_OF_BOUNDS		11
+#define ERROR_LAST						11
 void outln_error_code(int e);
 
 #define L_ENFORCE	(-1)
