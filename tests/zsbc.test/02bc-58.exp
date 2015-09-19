@@ -1,0 +1,34 @@
+# tests/zsbc.test/02bc-58.exp
+
+set timeout 3
+spawn "$ZSBC" -SCM -numlib bc -l
+send_user "***   BC - ibase and obase\n"
+
+set test "ibase"
+send "112\nibase=16\nF\nFF\nibase=2\nF\nFF\nibase=8\nF\nFF\nibase=A\nF\nFF\n211\n"
+expect {
+	-re "112\[^0-9\]+15\[^0-9\]+255\[^0-9\]+15\[^0-9\]+3\[^0-9\]+15\[^0-9\]+63\[^0-9\]+15\[^0-9\]+99\[^0-9\]+211\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "obase"
+send "113\nobase=16\nF\nFF\nobase=2\nF\nFF\nobase=8\nF\nFF\nobase=A\nF\nFF\n311\n"
+expect {
+	-re "113\[^0-9\]+F\[^0-9\]+63\[^0-9\]+1111\[^0-9\]+1100011\[^0-9\]+17\[^0-9\]+143\[^0-9\]+15\[^0-9\]+99\[^0-9\]+311\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Big obase"
+send "114\nobase=123456\n97^14\n411\n"
+expect {
+	-re "114\[^0-9\]+ 000227 078668 065313 024597 087695 106369\[^0-9\]+000411\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

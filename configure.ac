@@ -30,6 +30,8 @@ AC_CHECK_HEADERS([inttypes.h libintl.h malloc.h stddef.h stdlib.h string.h unist
 
 dnl ==================== Options ====================================
 
+has_one_numlib="no"
+
 AC_ARG_ENABLE(debug,
               [  --enable-debug          enable debugging information],
               enable_debug="$enableval", enable_debug="no")
@@ -50,15 +52,17 @@ AC_ARG_ENABLE(gmp,
 		[  --disable-gmp                 compile without the GNU Multi Precision library (gmp)])
 test -z "$enable_gmp" && enable_gmp="yes"
 if test "${enable_gmp}" = yes ; then
-  AC_CHECK_LIB(gmp, __gmpz_init, , [AC_MSG_ERROR([GNU MP not found, see https://gmplib.org/ or try to install gmp dev lib on your system (libgmp-dev for deb, gmp-devel for rpm)])])
-  CPPFLAGS="$CPPFLAGS -DHAS_LIB_GMP"
+	has_one_numlib="yes"
+	AC_CHECK_LIB(gmp, __gmpz_init, , [AC_MSG_ERROR([GNU MP not found, see https://gmplib.org/ or try to install gmp dev lib on your system (libgmp-dev for deb, gmp-devel for rpm)])])
+	CPPFLAGS="$CPPFLAGS -DHAS_LIB_GMP"
 fi
 
 AC_ARG_ENABLE(libbc,
 		[  --disable-libbc               compile without the bc/dc number library (libbc)])
 test -z "$enable_libbc" && enable_libbc="yes"
 if test "${enable_libbc}" = yes ; then
-  CPPFLAGS="$CPPFLAGS -DHAS_LIB_LIBBC"
+	has_one_numlib="yes"
+	CPPFLAGS="$CPPFLAGS -DHAS_LIB_LIBBC"
 fi
 
 if test "${enable_bison_debug}" = yes ; then
@@ -77,6 +81,13 @@ if test "${enable_flex_debug}" = yes ; then
 	fi
 fi
 AM_CONDITIONAL(DEBUG_FLEX, test $debug_flex = yes)
+
+AM_CONDITIONAL(WITH_GMP, [ test "${enable_gmp}" = yes ])
+AM_CONDITIONAL(WITH_LIBBC, [ test "${enable_libbc}" = yes ])
+
+if test "${has_one_numlib}" = no ; then
+	AC_MSG_ERROR([You have to compile with at least one num library])
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT16_T

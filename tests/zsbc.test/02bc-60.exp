@@ -1,0 +1,21 @@
+# tests/zsbc.test/02bc-60.exp
+
+set timeout 3
+
+spawn "/bin/sh" -c "BC_LINE_LENGTH=5 $ZSBC -SCM -numlib bc -l"
+send_user "***   BC - BC_LINE_LENGTH=5 environment variable\n"
+
+set test "Line cut at 4"
+send "0\n3^11\n"
+expect {
+	-re "0\[^0-9\]+177\[^0-9\]+147\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

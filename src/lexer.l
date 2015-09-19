@@ -61,7 +61,7 @@ const char *input_get_name();
 %option yylineno
 %option nounput
 
-number			([A-Z0-9]|\\\n)+(\.([A-Z0-9]|\\\n)*)?|\.([A-Z0-9]|\\\n)+
+number			([A-Z0-9])([A-Za-z0-9]|\\\n)*(\.([A-Za-z0-9]|\\\n)*)?|\.([A-Za-z0-9]|\\\n)+
 /*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
 /*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
 identifier		[a-z][[:alnum:]]*|\.
@@ -122,7 +122,7 @@ string			\"[^\"]*\"
 
 {number} {
 	cleanup_inputnumber(yytext);
-	yylval.num = num_construct_from_str(yytext, 10);
+	yylval.num = num_construct_from_str(yytext);
 	return INTEGER;
 }
 

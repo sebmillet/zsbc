@@ -26,7 +26,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-/*int asprintf(char **strp, const char *fmt, ...);*/
+#include <ctype.h>
+
 char *strcasestr(const char *haystack, const char *needle);
 #ifdef MY_WINDOWS
 #define strcasestr(haystack, needle) strstr(haystack, needle)
@@ -82,7 +83,7 @@ static int num_count_ref = 0;
 static const char* (*Llib_identify_yourself)();
 static numptr (*Lconstruct)();
 static numptr (*Lconstruct_from_num)(const numptr num);
-static numptr (*Lconstruct_from_str)(const char *str, int base);
+static numptr (*Lconstruct_from_str)(const char *str);
 static numptr (*Lconstruct_from_int)(int n);
 static void (*Ldestruct)(numptr *pnum);
 static void (*Lprint)(const numptr num);
@@ -342,10 +343,10 @@ numptr num_construct_from_num(const numptr num)
 	return r;
 }
 
-numptr num_construct_from_str(const char *str, int base)
+numptr num_construct_from_str(const char *str)
 {
 	out_dbg("Constructing one number from a string\n");
-	numptr r = Lconstruct_from_str(str, base);
+	numptr r = Lconstruct_from_str(str);
 	if (r != NULL)
 		++num_count_ref;
 	return r;
@@ -490,6 +491,18 @@ int num_not(numptr *pr, const numptr a)
  *-----------------------------------------------------------------------------*/
 
 
+	/* ibase */
+#define GMP_DEFAULT_IBASE 10
+#define GMP_MIN_IBASE 2
+#define GMP_MAX_IBASE 62
+static int gmp_ibase;
+
+	/* obase */
+#define GMP_DEFAULT_OBASE 10
+#define GMP_MIN_OBASE 2
+#define GMP_MAX_OBASE 62
+static int gmp_obase;
+
 char *gmp_identify_yourself = NULL;
 static int gmp_function_get_version(numptr *pr);
 static void gmp_firsttimeinit();
@@ -498,7 +511,7 @@ static void gmp_terminate();
 static const char *gmp_lib_identify_yourself();
 static numptr gmp_construct();
 static numptr gmp_construct_from_num(const numptr num);
-static numptr gmp_construct_from_str(const char *str, int base);
+static numptr gmp_construct_from_str(const char *str);
 static numptr gmp_construct_from_int(int n);
 static void gmp_destruct(numptr *num);
 static void gmp_print(const numptr num);
@@ -536,6 +549,44 @@ static void gmp_register()
 	lib_register(li, gmp_firsttimeinit, gmp_activate, gmp_terminate);
 }
 
+	/*
+	 * This function does 2 things
+	 *   1- Enforce the value to being an integer.
+	 *   2- Check whether the integer is in the interval [min_val, max_val]
+	 *      and return corresponding error code.
+	 */
+static int gmp_enforce_int_and_range(numptr *pnum, int *pint, int min_val, int max_val)
+{
+	long l = gmp_getlongint(*pnum);
+	if (l < min_val || l > max_val)
+		return ERROR_ILLEGAL_VALUE;
+
+	*pint = (int)l;
+
+	num_destruct(pnum);
+	*pnum = num_construct_from_int(*pint);
+
+	return ERROR_NONE;
+}
+
+static int gmp_var_update(const char *name, numptr *pnum)
+{
+	int r = ERROR_NONE;
+
+	if (!strcmp(name, "ibase")) {
+		if ((r = gmp_enforce_int_and_range(pnum, &gmp_ibase, GMP_MIN_IBASE, GMP_MAX_IBASE)) == ERROR_NONE) {
+			out_dbg("ibase set to %d\n", gmp_ibase);
+		}
+	} else if (!strcmp(name, "obase")) {
+		if ((r = gmp_enforce_int_and_range(pnum, &gmp_obase, GMP_MIN_OBASE, GMP_MAX_OBASE)) == ERROR_NONE) {
+			out_dbg("obase set to %d\n", gmp_obase);
+		}
+	} else
+		FATAL_ERROR("Unknown variable for update_callback: %s\n", name);
+
+	return r;
+}
+
 static int gmp_function_get_version(numptr *pr)
 {
 	out_dbg("Executing gmp_function_get_version()\n");
@@ -554,6 +605,16 @@ static int gmp_function_get_version(numptr *pr)
 
 static void gmp_firsttimeinit()
 {
+	const numptr *ppvarnum;
+
+	vars_set_update_callback("ibase", gmp_var_update);
+	vars_set_value("ibase", num_construct_from_int(GMP_DEFAULT_IBASE), &ppvarnum);
+	assert(gmp_ibase == GMP_DEFAULT_IBASE);
+
+	vars_set_update_callback("obase", gmp_var_update);
+	vars_set_value("obase", num_construct_from_int(GMP_DEFAULT_OBASE), &ppvarnum);
+	assert(gmp_obase == GMP_DEFAULT_OBASE);
+
 	register_builtin_function("gmpversion", 0, gmp_function_get_version);
 }
 
@@ -585,7 +646,7 @@ static void gmp_activate()
 	Lor = gmp_or;
 	Lnot = gmp_not;
 
-	outstring_set_line_length(0);
+	outstring_set_line_length(-1);
 }
 
 static void gmp_terminate()
@@ -612,10 +673,10 @@ static numptr gmp_construct_from_num(const numptr num)
 	return (numptr)mp;
 }
 
-static numptr gmp_construct_from_str(const char *str, int base)
+static numptr gmp_construct_from_str(const char *str)
 {
 	mpz_t *mp = (mpz_t *)malloc(sizeof(mpz_t));
-	mpz_init_set_str(*mp, str, base);
+	mpz_init_set_str(*mp, str, gmp_ibase);
 	return (numptr)mp;
 }
 
@@ -636,7 +697,25 @@ static void gmp_destruct(numptr *pnum)
 
 static void gmp_print(const numptr num)
 {
-	mpz_out_str(NULL, 10, *(const mpz_t *)num);
+	char *buf = mpz_get_str(NULL, gmp_obase, *(const mpz_t *)num);
+	char *p = buf;
+
+		/*
+		 * The below is done so that any string output by gmp_print
+		 * can be read 'as is' successfully. Thus, a number cannot
+		 * start with a letter and the token when read would be read
+		 * as an integer. Note there is no technical reason for doing
+		 * it, it is just a matter of consistency.
+		 *
+		 * */
+	if (isalpha(*p))
+		outstring_1char('0');
+
+	while (*p != '\0') {
+		outstring_1char(*p);
+		++p;
+	}
+	free(buf);
 }
 
 static int gmp_is_zero(const numptr num)
@@ -804,11 +883,13 @@ static int libbc_bc_line_length;
 
 	/* ibase */
 #define LIBBC_DEFAULT_IBASE 10
+#define LIBBC_MIN_IBASE 2
 #define LIBBC_MAX_IBASE 16
 static int libbc_ibase;
 
 	/* obase */
 #define LIBBC_DEFAULT_OBASE 10
+#define LIBBC_MIN_OBASE 2
 #define LIBBC_MAX_OBASE INT_MAX
 static int libbc_obase;
 
@@ -820,7 +901,7 @@ static void libbc_terminate();
 static const char *libbc_lib_identify_yourself();
 static numptr libbc_construct();
 static numptr libbc_construct_from_num(const numptr num);
-static numptr libbc_construct_from_str(const char *str, int base);
+static numptr libbc_construct_from_str(const char *str);
 static numptr libbc_construct_from_int(int n);
 static void libbc_destruct(numptr *pnum);
 static void libbc_print(const numptr num);
@@ -901,11 +982,11 @@ static int libbc_var_update(const char *name, numptr *pnum)
 			out_dbg("scale set to %d\n", libbc_scale);
 		}
 	} else if (!strcmp(name, "ibase")) {
-		if ((r = libbc_enforce_int_and_range(pnum, &libbc_ibase, 0, LIBBC_MAX_IBASE)) == ERROR_NONE) {
+		if ((r = libbc_enforce_int_and_range(pnum, &libbc_ibase, LIBBC_MIN_IBASE, LIBBC_MAX_IBASE)) == ERROR_NONE) {
 			out_dbg("ibase set to %d\n", libbc_ibase);
 		}
 	} else if (!strcmp(name, "obase")) {
-		if ((r = libbc_enforce_int_and_range(pnum, &libbc_obase, 0, LIBBC_MAX_OBASE)) == ERROR_NONE) {
+		if ((r = libbc_enforce_int_and_range(pnum, &libbc_obase, LIBBC_MIN_OBASE, LIBBC_MAX_OBASE)) == ERROR_NONE) {
 			out_dbg("obase set to %d\n", libbc_obase);
 		}
 	} else
@@ -1163,7 +1244,7 @@ int in_char()
 	 * of in_char() as called by push_constant().
 	 *
 	 * */
-static numptr libbc_construct_from_str(const char *str, int base)
+static numptr libbc_construct_from_str(const char *str)
 {
 	in_char_current = str;
 	bc_num bcn = NULL;

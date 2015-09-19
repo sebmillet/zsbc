@@ -82,6 +82,8 @@ build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = zsbc$(EXEEXT)
 check_PROGRAMS = zsbc$(EXEEXT)
+@WITH_GMP_TRUE@am__append_1 = -lgmp
+@WITH_LIBBC_TRUE@am__append_2 = bc/libmath.c
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am parser.h \
 	parser.c lexer.c $(top_srcdir)/admin/depcomp \
@@ -96,12 +98,16 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
+am__zsbc_SOURCES_DIST = main.c expr.c expr.h vars.c vars.h array.c \
+	array.h numwrap.c numwrap.h program.c program.h parser.y \
+	lexer.l common.h bc/libmath.c
 am__dirstamp = $(am__leading_dot)dirstamp
+@WITH_LIBBC_TRUE@am__objects_1 = bc/libmath.$(OBJEXT)
 am_zsbc_OBJECTS = main.$(OBJEXT) expr.$(OBJEXT) vars.$(OBJEXT) \
 	array.$(OBJEXT) numwrap.$(OBJEXT) program.$(OBJEXT) \
-	parser.$(OBJEXT) lexer.$(OBJEXT) bc/libmath.$(OBJEXT)
+	parser.$(OBJEXT) lexer.$(OBJEXT) $(am__objects_1)
 zsbc_OBJECTS = $(am_zsbc_OBJECTS)
-zsbc_DEPENDENCIES = $(LIBBC)
+@WITH_LIBBC_TRUE@zsbc_DEPENDENCIES = $(LIBBC)
 zsbc_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(zsbc_LDFLAGS) $(LDFLAGS) \
 	-o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -148,7 +154,7 @@ am__v_YACC_ = $(am__v_YACC_@AM_DEFAULT_V@)
 am__v_YACC_0 = @echo "  YACC    " $@;
 am__v_YACC_1 = 
 SOURCES = $(zsbc_SOURCES)
-DIST_SOURCES = $(zsbc_SOURCES)
+DIST_SOURCES = $(am__zsbc_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -278,18 +284,16 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUFFIXES = .c .h .y .l
-AM_CPPFLAGS = -Wshadow -Wall -I$(srcdir) -I$(srcdir)/../h
+AM_CFLAGS = @CFLAGS@ -Wshadow -Wall -I$(srcdir) -I$(srcdir)/../h
+AM_LDFLAGS = @LDFLAGS@
 AM_YFLAGS = -d
 @DEBUG_FLEX_TRUE@AM_LFLAGS = --debug
-zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h array.c array.h numwrap.c numwrap.h \
-               program.c program.h parser.y lexer.l common.h bc/libmath.c
-
-zsbc_LDFLAGS = 
-
-# TODO: allow the user to NOT include libbc in compilation
-#zsbc_SOURCES += bc/libmath.c
+zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h array.c array.h \
+	numwrap.c numwrap.h program.c program.h parser.y lexer.l \
+	common.h $(am__append_2)
+zsbc_LDFLAGS = $(am__append_1)
 LIBBC = ../lib/libbc.a
-zsbc_LDADD = -lgmp $(LIBBC)
+@WITH_LIBBC_TRUE@zsbc_LDADD = $(LIBBC)
 BUILT_SOURCES = parser.h
 MAINTAINERCLEANFILES = lexer.c parser.c parser.h
 all: $(BUILT_SOURCES)
@@ -641,7 +645,8 @@ uninstall-am: uninstall-binPROGRAMS
 	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
 	uninstall-am uninstall-binPROGRAMS
 
-$(PROGRAMS): $(LIBBC)
+
+@WITH_LIBBC_TRUE@$(PROGRAMS): $(LIBBC)
 
 bc/libmath.c: bc/libmath.b
 	bc/mkreslib.sh $<

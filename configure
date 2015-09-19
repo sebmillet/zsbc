@@ -626,6 +626,10 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+WITH_LIBBC_FALSE
+WITH_LIBBC_TRUE
+WITH_GMP_FALSE
+WITH_GMP_TRUE
 DEBUG_FLEX_FALSE
 DEBUG_FLEX_TRUE
 ALLOCA
@@ -5046,6 +5050,8 @@ done
 
 
 
+has_one_numlib="no"
+
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
   enableval=$enable_debug; enable_debug="$enableval"
@@ -5081,7 +5087,8 @@ fi
 
 test -z "$enable_gmp" && enable_gmp="yes"
 if test "${enable_gmp}" = yes ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __gmpz_init in -lgmp" >&5
+	has_one_numlib="yes"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for __gmpz_init in -lgmp" >&5
 $as_echo_n "checking for __gmpz_init in -lgmp... " >&6; }
 if ${ac_cv_lib_gmp___gmpz_init+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -5128,7 +5135,7 @@ else
   as_fn_error $? "GNU MP not found, see https://gmplib.org/ or try to install gmp dev lib on your system (libgmp-dev for deb, gmp-devel for rpm)" "$LINENO" 5
 fi
 
-  CPPFLAGS="$CPPFLAGS -DHAS_LIB_GMP"
+	CPPFLAGS="$CPPFLAGS -DHAS_LIB_GMP"
 fi
 
 # Check whether --enable-libbc was given.
@@ -5138,7 +5145,8 @@ fi
 
 test -z "$enable_libbc" && enable_libbc="yes"
 if test "${enable_libbc}" = yes ; then
-  CPPFLAGS="$CPPFLAGS -DHAS_LIB_LIBBC"
+	has_one_numlib="yes"
+	CPPFLAGS="$CPPFLAGS -DHAS_LIB_LIBBC"
 fi
 
 if test "${enable_bison_debug}" = yes ; then
@@ -5164,6 +5172,27 @@ else
   DEBUG_FLEX_FALSE=
 fi
 
+
+ if  test "${enable_gmp}" = yes ; then
+  WITH_GMP_TRUE=
+  WITH_GMP_FALSE='#'
+else
+  WITH_GMP_TRUE='#'
+  WITH_GMP_FALSE=
+fi
+
+ if  test "${enable_libbc}" = yes ; then
+  WITH_LIBBC_TRUE=
+  WITH_LIBBC_FALSE='#'
+else
+  WITH_LIBBC_TRUE='#'
+  WITH_LIBBC_FALSE=
+fi
+
+
+if test "${has_one_numlib}" = no ; then
+	as_fn_error $? "You have to compile with at least one num library" "$LINENO" 5
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 ac_fn_c_find_intX_t "$LINENO" "16" "ac_cv_c_int16_t"
@@ -5539,6 +5568,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DEBUG_FLEX_TRUE}" && test -z "${DEBUG_FLEX_FALSE}"; then
   as_fn_error $? "conditional \"DEBUG_FLEX\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WITH_GMP_TRUE}" && test -z "${WITH_GMP_FALSE}"; then
+  as_fn_error $? "conditional \"WITH_GMP\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WITH_LIBBC_TRUE}" && test -z "${WITH_LIBBC_FALSE}"; then
+  as_fn_error $? "conditional \"WITH_LIBBC\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

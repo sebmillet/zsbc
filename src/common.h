@@ -51,7 +51,6 @@
 
 #define ENV_ARGS "ZSBC_ENV_ARGS"
 
-#define ZSBC_DEFAULT_LINE_LENGTH 0
 const char *VAR_LAST;
 
 	/*

@@ -38,13 +38,18 @@
 #include <unistd.h>
 #endif
 
+#define LINE_LENGTH_ENV "ZSBC_LINE_LENGTH"
+#define DEFAULT_LINE_LENGTH 0
+static int rt_line_length = DEFAULT_LINE_LENGTH;
 const char *VAR_LAST = "last";
 
+#ifdef HAS_LIB_LIBBC
 	/* Source data for the libmath library, taken from bc source,
 	 * that defines the functions e (exponent), l (logarithm), s (sinus),
 	 * c (cosine), a (arctan) and j (bessel) */
 extern char libbc_libmath[];
 extern const size_t libbc_libmath_len;
+#endif
 
 int yywrap();
 
@@ -107,6 +112,8 @@ static int input_cursor;
 static const char *input_name;
 static FILE *input_FILE;
 static void input_register(int itype, const char *name, const void *data, size_t data_size, int append);
+static void set_input_name(const char *s);
+const char *input_get_name();
 static void input_terminate();
 
 static const char *table_errors[] = {
@@ -241,7 +248,7 @@ int out(int level, const char *fmt, ...)
 }
 
 int outstring_lw = 0;
-int outstring_line_length = ZSBC_DEFAULT_LINE_LENGTH;
+int outstring_line_length = DEFAULT_LINE_LENGTH;
 void outstring_1char(int c)
 {
 	++outstring_lw;
@@ -273,6 +280,8 @@ void outstring(const char *s, int append_newline)
 
 void outstring_set_line_length(int ll)
 {
+	if (ll == -1)
+		ll = rt_line_length;
 	outstring_line_length = ll;
 	out_dbg("Line length set to %d\n", outstring_line_length);
 }
@@ -590,6 +599,16 @@ int main(int argc, char *argv[])
 	if (isatty(0) && isatty(1))
 		is_interactive = TRUE;
 
+	char *env;
+	rt_line_length = DEFAULT_LINE_LENGTH;
+	if ((env = getenv(LINE_LENGTH_ENV)) != NULL) {
+		rt_line_length = atoi(env);
+		if (strlen(env) == 0 || (env[0] < '0' && env[0] > '9'))
+			rt_line_length = DEFAULT_LINE_LENGTH;
+		else if (rt_line_length < 3 && rt_line_length != 0)
+			rt_line_length = DEFAULT_LINE_LENGTH;
+	}
+
 	int optset_verbose = FALSE;
 	int optset_quiet = FALSE;
 	int optset_debug = FALSE;
@@ -658,9 +677,30 @@ int main(int argc, char *argv[])
 	}
 
 	input_cursor = -1;
-	if (bc_mathlib)
+	if (bc_mathlib) {
+#ifdef HAS_LIB_LIBBC
+
+#ifdef DEBUG
+#if 0
+#warning  Are you sure you want to execute this debug code?
+#warning  It is meant to see libbc_libmath content (at it is at load time)
+#error    in case an error (flex or bison) occurs during loading
+		char *p = libbc_libmath;
+		FILE *F = fopen("internal-image-libmath.b", "w");
+		while (*p != '\0') {
+			putc(*p, F);
+			++p;
+		}
+		fclose(F);
+#endif
+#endif
+
+		set_input_name("<internal libbc>");
 		yy_scan_buffer(libbc_libmath, libbc_libmath_len);
-	else
+#else
+		FATAL_ERROR("%s", "Bug: bc_mathlib can be used only along with libbc, and libbc can be activated only when HAS_LIB_LIBBC is set");
+#endif
+	} else
 		yywrap();
 
 	yyparse();
@@ -737,7 +777,7 @@ static void input_register(int itype, const char *name, const void *data, size_t
 	new_input->data_size = data_size;
 }
 
-void input_terminate()
+static void input_terminate()
 {
 	if (input_list != NULL)
 		free(input_list);
@@ -746,6 +786,11 @@ void input_terminate()
 const char *input_get_name()
 {
 	return input_name;
+}
+
+static void set_input_name(const char *s)
+{
+	input_name = s;
 }
 
 	/*

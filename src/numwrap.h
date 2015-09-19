@@ -48,7 +48,7 @@ void num_postcleanup(numptr *pnum);
 int num_is_not_initialized(numptr pnum);
 numptr num_construct();
 numptr num_construct_from_num(const numptr num);
-numptr num_construct_from_str(const char *str, int base);
+numptr num_construct_from_str(const char *str);
 numptr num_construct_from_int(int n);
 void num_destruct(numptr *pnum);
 void num_print(const numptr num);
