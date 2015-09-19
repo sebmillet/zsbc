@@ -12,3 +12,7 @@ As of August 2015:
 
 - Check variable names duplicate in arguments list and auto lists
 
+- gmp uses a different way of reading integers (different from bc'),
+  need some checks around (if a wrong int is read, it results in a
+  zero value -> should raise an error).
+
