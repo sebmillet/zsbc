@@ -23,6 +23,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "uthash.h"
+
 const char *type_names[] = {
 	"TYPE_NUM",		/* TYPE_NUM */
 	"TYPE_ARRAY",	/* TYPE_ARRAY */
@@ -32,13 +34,13 @@ const char *type_names[] = {
 struct vars_t {
 	char *name;
 	vars_value_t value;
-	struct vars_t *prec;
-	struct vars_t *next;
 	int (*update_callback)(const char *name, numptr *pnum);
+
+	UT_hash_handle hh;
 };
 
 typedef struct vars_container_t {
-	vars_t *head;
+	vars_t* heads[TYPE_NB];
 } vars_container_t;
 
 struct context_t {
@@ -56,7 +58,10 @@ context_t *ctx = NULL;
 
 void container_initialize(vars_container_t *container)
 {
-	container->head = NULL;
+	int i;
+	for (i = 0; i < TYPE_NB; ++i) {
+		container->heads[i] = NULL;
+	}
 }
 
 context_t *context_construct(int lib_reg_number)
@@ -69,12 +74,13 @@ context_t *context_construct(int lib_reg_number)
 
 void container_terminate(vars_container_t *container)
 {
-	vars_t *w;
-	vars_t *wnext;
-	for (w = container->head; w != NULL; w = wnext) {
-		wnext = w->next;
-		vars_t_destruct(w);
-		w = NULL;
+	int i;
+	for (i = 0; i < TYPE_NB; ++i) {
+		vars_t *w;
+		vars_t *tmp;
+		HASH_ITER(hh, container->heads[i], w, tmp) {
+			vars_t_destruct(w);
+		}
 	}
 }
 
@@ -117,7 +123,8 @@ static vars_t *vars_t_construct(const char *name, int type, int ftype)
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
 	vars_t *v = malloc(sizeof(vars_t));
-	int l = strlen(name) + 1;
+	int slen = strlen(name);
+	int l = slen + 1;
 	v->name = (char *)malloc(l);
 	v->update_callback = NULL;
 	s_strncpy(v->name, name, l);
@@ -145,11 +152,8 @@ static vars_t *vars_t_construct(const char *name, int type, int ftype)
 		FATAL_ERROR("Unknown symbol type: %d", type);
 	}
 
-	v->next = ctx->container.head;
-	if (ctx->container.head != NULL)
-		ctx->container.head->prec = v;
-	ctx->container.head = v;
-	v->prec = NULL;
+	HASH_ADD_KEYPTR(hh, ctx->container.heads[type], v->name, slen, v);
+
 	return v;
 }
 
@@ -166,6 +170,8 @@ static void vars_t_destruct(vars_t *var)
 
 	out_dbg("Destructing vars_t %s of type %s\n", var->name == NULL ? "<NULL>" : var->name, type_names[var->value.type]);
 
+	HASH_DEL(ctx->container.heads[var->value.type], var);
+
 	vars_value_destruct(&var->value);
 
 	if (var->name != NULL) {
@@ -179,12 +185,8 @@ static void vars_t_destruct(vars_t *var)
 static vars_t *find_var(const char *name, int type)
 {
 	vars_t *w;
-	for (w = ctx->container.head; w != NULL; w = w->next) {
-		if (w->name != NULL && !strcmp(w->name, name) && w->value.type == type) {
-			return w;
-		}
-	}
-	return NULL;
+	HASH_FIND_STR(ctx->container.heads[type], name, w);
+	return w;
 }
 
 array_t **vars_array_get_ref(const char *name)
@@ -352,18 +354,64 @@ void vars_array_set_value(const char *name, long int index, const numptr new_val
 	vars_array_set_value_core(name, index, new_value, v, ppvarnum);
 }
 
+int vars_sort(void *a, void *b)
+{
+	return strcmp(((vars_t *)a)->name, ((vars_t *)b)->name);
+}
+
 void vars_display_all()
 {
 
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
+	int I;
+	for (I = 0; I < TYPE_NB; ++I) {
+		HASH_SORT(ctx->container.heads[I], vars_sort);
+	}
+
 	vars_t *w;
-	for (w = ctx->container.head; w != NULL; w = w->next) {
-			/*  FIXME - At the moment, handles only TYPE_NUM variables */
-		if (w->value.type == TYPE_NUM) {
-			printf("%s=", w->name);
-			num_print(w->value.num);
-			printf("\n");
+	for(w = ctx->container.heads[TYPE_NUM]; w != NULL; w = w->hh.next) {
+		outstring(w->name, FALSE);
+		outstring("=", FALSE);
+		num_print(w->value.num);
+		outstring("", TRUE);
+	}
+	for(w = ctx->container.heads[TYPE_ARRAY]; w != NULL; w = w->hh.next) {
+		size_t l = strlen(w->name) + 50;
+		char *buf = malloc(l);
+		snprintf(buf, l, "%s[]: %li element(s)", w->name, array_count(w->value.array));
+		outstring(buf, TRUE);
+		free(buf);
+	}
+	for(w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
+		outstring(w->name, FALSE);
+		outstring("(", FALSE);
+		function_t *f = &w->value.fcnt;
+		if (f->ftype == FTYPE_BUILTIN) {
+			char c = 'a';
+			int i;
+			for (i = 0; i < f->builtin_nb_args; ++i) {
+				outstring_1char(c);
+				if (i < f->builtin_nb_args - 1)
+					outstring(", ", FALSE);
+				++c;
+			}
+			outstring(")", TRUE);
+		} else if (f->ftype == FTYPE_USER) {
+			defargs_t *dargs = f->defargs;
+			while (dargs != NULL) {
+				if (dargs->type == DARG_REF || dargs->type == DARG_ARRAYREF)
+					outstring("*", FALSE);
+				outstring(dargs->name, FALSE);
+				if (dargs->type == DARG_ARRAYVALUE || dargs->type == DARG_ARRAYREF)
+					outstring("[]", FALSE);
+				dargs = dargs->next;
+				if (dargs != NULL)
+					outstring(", ", FALSE);
+			}
+			outstring(")", TRUE);
+		} else {
+			FATAL_ERROR("Unknown ftype: %d", f->ftype);
 		}
 	}
 }
@@ -427,22 +475,6 @@ void vars_send_to_keeper(vars_keeper_t *keeper, const char *name, const vars_val
 
 }
 
-static void vars_delete(vars_t *v)
-{
-		/*
-		 * Make w disappear from the chain and then
-		 * destruct it.
-		 *
-		 * */
-	if (v->prec != NULL)
-		v->prec->next = v->next;
-	else
-		ctx->container.head = v->next;
-	if (v->next != NULL)
-		v->next->prec = v->prec;
-	vars_t_destruct(v);
-}
-
 void vars_recall_from_keeper(const char *name, vars_keeper_t *keeper)
 {
 
@@ -470,7 +502,8 @@ void vars_recall_from_keeper(const char *name, vars_keeper_t *keeper)
 	} else if (w != NULL)  {
 		out_dbg("\tUndefined keeper value => destructing variable\n");
 
-		vars_delete(w);
+			/* Used to be vars_delete() */
+		vars_t_destruct(w);
 
 	} else {
 		out_dbg("\tUndefined keeper value and variable not found => nothing to do\n");

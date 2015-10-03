@@ -27,7 +27,22 @@
 struct context_t;
 typedef struct context_t context_t;
 
-enum {TYPE_NUM, TYPE_ARRAY, TYPE_FCNT};
+	/*
+	 * The values are used in arrays so, while the ordering of the elements below
+	 * doesn't matter, it is important to use integers in the interval
+	 * [0, n - 1] where n is the number of TYPE_ constants, and to use each
+	 * integer once.
+	 *
+	 * TYPE_NB is a meta-one and is used only to get the number of constants.
+	 *
+	 * */
+enum {
+	TYPE_NUM = 0,
+	TYPE_ARRAY = 1,
+	TYPE_FCNT = 2,
+
+	TYPE_NB = 3
+};
 
 context_t *context_construct(int lib_reg_number);
 void context_destruct(context_t *c);

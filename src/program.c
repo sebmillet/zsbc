@@ -44,10 +44,17 @@ struct program_t {
 		char *str;				/* TINSTR_STR */
 		program_loop_t loop;	/* TINSTR_LOOP */
 		program_ifseq_t ifseq;	/* TINSTR_IFSEQ */
-		defargs_t *autolist;		/* TINSTR_DEFARGS */
+		defargs_t *autolist;	/* TINSTR_DEFARGS */
 	};
 
 	program_t *next;
+		/*
+		 * The variable below is not necessary, it aims to avoid
+		 * walk-through in the whole chain everytime an element
+		 * is added. It removes a O(n^2) condition that'd make it
+		 * impossible to deal with programs of thousands of lines.
+		 * */
+	program_t *tail;
 };
 
 static program_t *program_construct(instr_t type)
@@ -56,6 +63,7 @@ static program_t *program_construct(instr_t type)
 	p->type = type;
 	p->is_part_of_print = FALSE;
 	p->next = NULL;
+	p->tail = NULL;
 	return p;
 }
 
@@ -348,23 +356,18 @@ int program_execute(program_t *p, numptr *pval)
 
 program_t *program_chain(program_t *base, program_t *append)
 {
-	/*
-	 * TODO - FIXME
-	 * Will have to store list' tail in the head, to avoid systematical walk
-	 * through to append one instruction. Could seem as a "nice to have" optimization
-	 * but NOT doing it will make the creation of programs O(n^2) instead of
-	 * O(n), becoming a bug in case of very big size entry.
-	 */
 	out_dbg("Chaining one program, base: %lu, append: %lu\n", base, append);
 	if (append == NULL)
 		return base;
 	if (base == NULL) {
 		return append;
 	} else {
-		program_t *p = base;
-		while (p->next != NULL)
-			p = p->next;
-		p->next = append;
+		if (base->tail == NULL) {
+			base->next = append;
+		} else {
+			base->tail->next = append;
+		}
+		base->tail = (append->tail == NULL ? append : append->tail);
 	}
 	return base;
 }

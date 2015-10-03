@@ -705,16 +705,6 @@ int main(int argc, char *argv[])
 
 	yyparse();
 
-		/*
-		 * Have to call yywrap() one first time for proper initialization
-		 * of yyin.
-		 * The -1 below is important, see goto_next_input_file() (called
-		 * by yywrap()) to see why.
-		 * */
-/*    yywrap();*/
-
-/*    yyparse();*/
-
 	num_terminate();
 	if (env_argv != NULL)
 		free(env_argv);

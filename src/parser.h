@@ -52,7 +52,7 @@ extern int yydebug;
     OP_AND_ASSIGN = 262,
     PLUSPLUS_MINMIN = 263,
     QUIT = 264,
-    VARS = 265,
+    SYMBOLS = 265,
     LIBSWITCH = 266,
     LIBLIST = 267,
     WHILE = 268,
@@ -82,7 +82,7 @@ extern int yydebug;
 #define OP_AND_ASSIGN 262
 #define PLUSPLUS_MINMIN 263
 #define QUIT 264
-#define VARS 265
+#define SYMBOLS 265
 #define LIBSWITCH 266
 #define LIBLIST 267
 #define WHILE 268

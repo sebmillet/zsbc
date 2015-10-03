@@ -126,7 +126,7 @@ extern int yydebug;
     OP_AND_ASSIGN = 262,
     PLUSPLUS_MINMIN = 263,
     QUIT = 264,
-    VARS = 265,
+    SYMBOLS = 265,
     LIBSWITCH = 266,
     LIBLIST = 267,
     WHILE = 268,
@@ -156,7 +156,7 @@ extern int yydebug;
 #define OP_AND_ASSIGN 262
 #define PLUSPLUS_MINMIN 263
 #define QUIT 264
-#define VARS 265
+#define SYMBOLS 265
 #define LIBSWITCH 266
 #define LIBLIST 267
 #define WHILE 268
@@ -553,7 +553,7 @@ static const yytype_uint16 yyrline[] =
 static const char *const yytname[] =
 {
   "$end", "error", "$undefined", "INTEGER", "IDENTIFIER", "STRING",
-  "COMPARISON", "OP_AND_ASSIGN", "PLUSPLUS_MINMIN", "QUIT", "VARS",
+  "COMPARISON", "OP_AND_ASSIGN", "PLUSPLUS_MINMIN", "QUIT", "SYMBOLS",
   "LIBSWITCH", "LIBLIST", "WHILE", "FOR", "BREAK", "CONTINUE", "IF",
   "ELSE", "DEFINE", "VOID", "RETURN", "AUTOLIST", "PRINT", "NEWLINE",
   "LOGIC_OR", "LOGIC_AND", "LOGIC_NOT", "'+'", "'-'", "'*'", "'/'", "'%'",

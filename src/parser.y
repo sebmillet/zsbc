@@ -79,7 +79,7 @@ YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 %type <defargs> defargs_list_or_empty defargs_list defarg defargsbyval_list defargbyval
 %type <callargs> callarg callargs_list callargs_list_or_empty
 
-%token QUIT VARS LIBSWITCH LIBLIST
+%token QUIT SYMBOLS LIBSWITCH LIBLIST
 %token WHILE FOR BREAK CONTINUE IF ELSE
 %token DEFINE VOID RETURN AUTOLIST PRINT
 
@@ -335,7 +335,7 @@ function_call:
 statement:
 	function_definition
 	| QUIT { YYABORT; }
-	| VARS {
+	| SYMBOLS {
 		vars_display_all();
 	}
 	| LIBSWITCH STRING {

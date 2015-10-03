@@ -55,9 +55,9 @@ expect {
 }
 
 set test "All variables display"
-send "vars\n"
+send "tbl\[65000\]=0;tbl2\[60000\]=0;tbl2\[60001\]=0;tab\[0\]=0;tab\[10000\]=1;for(i=0;i<20000;++i){big\[i\]=i}\nsymbols\n"
 expect {
-	-re "d=3\[^0-9\]+zeta=13\[^0-9\]+golf=12\[^0-9\]+g=11\[^0-9\]+f=1\[^0-9\]+e=2\[^0-9\]+delta=8\[^0-9\]+charlie=7\[^0-9\]+bb1=6\[^0-9\]+a0=5\[^0-9\]+def=4\[^0-9\]+c=4\[^0-9\]+b=5\[^0-9\]+a=12\[^0-9\]+" { pass "$test" }
+	-re "a=12.*a0=5.*b=5.*bb1=6.*c=4.*charlie=7.*d=3.*def=4.*delta=8.*e=2.*f=1.*g=11.*golf=12.*zeta=13.*big.*: 20000 element.*tab.*: 2 element.*tbl.*: 1 element.*tbl2.*: 2 element" { pass "$test" }
 	default { fail "$test" }
 }
 
