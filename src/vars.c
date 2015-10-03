@@ -371,40 +371,45 @@ void vars_display_all()
 
 	vars_t *w;
 	for(w = ctx->container.heads[TYPE_NUM]; w != NULL; w = w->hh.next) {
-		printf("%s=", w->name);
+		outstring(w->name, FALSE);
+		outstring("=", FALSE);
 		num_print(w->value.num);
-		printf("\n");
+		outstring("", TRUE);
 	}
 	for(w = ctx->container.heads[TYPE_ARRAY]; w != NULL; w = w->hh.next) {
-		long int c = array_count(w->value.array);
-		printf("%s[]: %li element(s)\n", w->name, c);
+		size_t l = strlen(w->name) + 50;
+		char *buf = malloc(l);
+		snprintf(buf, l, "%s[]: %li element(s)", w->name, array_count(w->value.array));
+		outstring(buf, TRUE);
+		free(buf);
 	}
 	for(w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
-		printf("%s(", w->name);
+		outstring(w->name, FALSE);
+		outstring("(", FALSE);
 		function_t *f = &w->value.fcnt;
 		if (f->ftype == FTYPE_BUILTIN) {
 			char c = 'a';
 			int i;
 			for (i = 0; i < f->builtin_nb_args; ++i) {
-				printf("%c", c);
+				outstring_1char(c);
 				if (i < f->builtin_nb_args - 1)
-					printf(", ");
+					outstring(", ", FALSE);
 				++c;
 			}
-			printf(")\n");
+			outstring(")", TRUE);
 		} else if (f->ftype == FTYPE_USER) {
 			defargs_t *dargs = f->defargs;
 			while (dargs != NULL) {
 				if (dargs->type == DARG_REF || dargs->type == DARG_ARRAYREF)
-					printf("*");
-				printf("%s", dargs->name);
+					outstring("*", FALSE);
+				outstring(dargs->name, FALSE);
 				if (dargs->type == DARG_ARRAYVALUE || dargs->type == DARG_ARRAYREF)
-					printf("[]");
+					outstring("[]", FALSE);
 				dargs = dargs->next;
 				if (dargs != NULL)
-					printf(", ");
+					outstring(", ", FALSE);
 			}
-			printf(")\n");
+			outstring(")", TRUE);
 		} else {
 			FATAL_ERROR("Unknown ftype: %d", f->ftype);
 		}
