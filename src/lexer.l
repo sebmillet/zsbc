@@ -132,7 +132,7 @@ string			\"[^\"]*\"
 quit			return QUIT;
 libswitch|lib	return LIBSWITCH;
 liblist			return LIBLIST;
-vars			return VARS;
+symbols			return SYMBOLS;
 while			return WHILE;
 for				return FOR;
 define			return DEFINE;

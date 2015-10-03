@@ -38,8 +38,6 @@
 #include <unistd.h>
 #endif
 
-#include <search.h>
-
 #define LINE_LENGTH_ENV "ZSBC_LINE_LENGTH"
 #define DEFAULT_LINE_LENGTH 0
 static int rt_line_length = DEFAULT_LINE_LENGTH;
@@ -586,24 +584,8 @@ static void cut_env_options(int *env_argc, char ***env_argv, char **alloc_env, c
 	}
 }
 
-	/* FIXME */
-	/* Temporary code? */
-static int compare(const void *pa, const void *pb)
-{
-	return strcmp((char *)pa, (char *)pb);
-}
-
 int main(int argc, char *argv[])
 {
-
-	/* FIXME */
-	/*  Temporary code? */
-
-	void *root = NULL;
-	char *p = "bonjour";
-	void *val = tsearch((void*)&p, &root, compare);
-	tdestroy(root, free);
-
 
 	if (ERROR_LAST + 1 != sizeof(table_errors) / sizeof(*table_errors))
 		FATAL_ERROR("%s", "table_errors has initialization inconsistent with ERROR_ constants");
@@ -722,16 +704,6 @@ int main(int argc, char *argv[])
 		yywrap();
 
 	yyparse();
-
-		/*
-		 * Have to call yywrap() one first time for proper initialization
-		 * of yyin.
-		 * The -1 below is important, see goto_next_input_file() (called
-		 * by yywrap()) to see why.
-		 * */
-/*    yywrap();*/
-
-/*    yyparse();*/
 
 	num_terminate();
 	if (env_argv != NULL)

@@ -227,3 +227,32 @@ int array_check_index(long int index)
 	return index >= 0 && index <= TREE_UPPER_INDEX ? ERROR_NONE : ERROR_ARRAY_OUT_OF_BOUNDS;
 }
 
+static long int core_array_count(const node_t *nodes, int rec_level)
+{
+	if (nodes == NULL)
+		return 0;
+
+	long int r = 0;
+
+	if (rec_level < TREE_LEVELS - 1) {
+		int i;
+		for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i)
+			r += core_array_count(nodes[i].subnode, rec_level + 1);
+	} else {
+		int i;
+		for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i) {
+			if (!num_is_not_initialized(nodes[i].num))
+				++r;
+		}
+	}
+	return r;
+}
+
+long int array_count(const array_t *a)
+{
+	if (a == NULL)
+		return 0;
+
+	return core_array_count(a->nodes, 0);
+}
+
