@@ -108,7 +108,7 @@ extern int yydebug;
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 67 "parser.y" /* yacc.c:1909  */
+#line 69 "parser.y" /* yacc.c:1909  */
 
 	numptr num;
 	expr_t *enode;
@@ -145,6 +145,8 @@ int yyparse (void);
 #line 54 "parser.y" /* yacc.c:1909  */
 
 void activate_bison_debug();
+void hackbc_enter();
+void hackbc_terminate();
 
 #ifndef YY_TYPEDEF_YY_BUFFER_STATE
 #define YY_TYPEDEF_YY_BUFFER_STATE
@@ -152,6 +154,6 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 
-#line 156 "parser.h" /* yacc.c:1909  */
+#line 158 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */

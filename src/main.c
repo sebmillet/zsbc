@@ -171,6 +171,11 @@ char *s_alloc_and_copy(char **dst, const char *src)
 	return target;
 }
 
+int varname_cmp(const char *n1, const char *n2)
+{
+	return strcmp(n1, n2);
+}
+
 char *interpret_escape_sequences_alloc(const char *s)
 {
 	char *orig_d = (char *)malloc(sizeof(char) * (strlen(s) + 1));

@@ -1,0 +1,41 @@
+# tests/zsbc.test/02bc-70.exp
+
+set timeout 3
+spawn "$ZSBC" -SCM -numlib bc "$TESTDIR/02bc-70.b"
+send_user "***   BC - ibase management hack during function definition\n"
+
+set test "Function with ibase update inside (1)"
+send "f()\n"
+expect {
+	"255" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (2)"
+send "g()\n"
+expect {
+	"2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (3)"
+send "h()\n"
+expect {
+	"65535" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (4)"
+send "i()\n"
+expect {
+	"999" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

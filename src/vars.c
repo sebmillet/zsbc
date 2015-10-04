@@ -191,6 +191,14 @@ static vars_t *find_var(const char *name, int type)
 	return w;
 }
 
+void var_delete(const char *name)
+{
+	vars_t *w;
+	if ((w = find_var(name, TYPE_NUM)) != NULL) {
+		vars_t_destruct(w);
+	}
+}
+
 array_t **vars_array_get_ref(const char *name)
 {
 	vars_t *w;
@@ -358,7 +366,7 @@ void vars_array_set_value(const char *name, long int index, const numptr new_val
 
 int vars_sort(void *a, void *b)
 {
-	return strcmp(((vars_t *)a)->name, ((vars_t *)b)->name);
+	return varname_cmp(((vars_t *)a)->name, ((vars_t *)b)->name);
 }
 
 void vars_display_all()
@@ -578,7 +586,7 @@ defargs_t *defargs_chain(defargs_t *base, defargs_t *append)
 	defargs_t *prec;
 	do {
 		out_dbg("Comparing %s(%d) with %s(%d)\n", w->name, w->type, append->name, append->type);
-		if (darg_type_is_of_same_namespace(w->type, append->type) && !strcmp(w->name, append->name))
+		if (darg_type_is_of_same_namespace(w->type, append->type) && !varname_cmp(w->name, append->name))
 			return defarg_t_badarg;
 		prec = w;
 		w = w->next;
@@ -629,7 +637,7 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 	while (al != NULL) {
 		defargs_t *param = f->value.fcnt.defargs;
 		while (param != NULL) {
-			if (darg_type_is_of_same_namespace(param->type, al->type) && !strcmp(param->name, al->name)) {
+			if (darg_type_is_of_same_namespace(param->type, al->type) && !varname_cmp(param->name, al->name)) {
 				outln_error("%s: not created: duplicate names between parameters and autolist", name);
 				vars_t_destruct(f);
 			}

@@ -2200,6 +2200,7 @@ void yyerror(char *s, ...)
 	}
 	vfprintf(stderr, s, ap);
 	fprintf(stderr, "\n");
+	hackbc_terminate();
 }
 
 int yywrap()

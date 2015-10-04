@@ -111,5 +111,7 @@ struct defargs_t {
 typedef struct defargs_t defargs_t;
 defargs_t *defargs_chain(defargs_t *base, defargs_t *append);
 
+int varname_cmp(const char *n1, const char *n2);
+
 #endif /* COMMON_H */
 

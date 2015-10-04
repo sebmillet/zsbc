@@ -573,11 +573,11 @@ static int gmp_var_update(const char *name, numptr *pnum)
 {
 	int r = ERROR_NONE;
 
-	if (!strcmp(name, "ibase")) {
+	if (!varname_cmp(name, "ibase")) {
 		if ((r = gmp_enforce_int_and_range(pnum, &gmp_ibase, GMP_MIN_IBASE, GMP_MAX_IBASE)) == ERROR_NONE) {
 			out_dbg("ibase set to %d\n", gmp_ibase);
 		}
-	} else if (!strcmp(name, "obase")) {
+	} else if (!varname_cmp(name, "obase")) {
 		if ((r = gmp_enforce_int_and_range(pnum, &gmp_obase, GMP_MIN_OBASE, GMP_MAX_OBASE)) == ERROR_NONE) {
 			out_dbg("obase set to %d\n", gmp_obase);
 		}
@@ -977,15 +977,15 @@ static int libbc_var_update(const char *name, numptr *pnum)
 {
 	int r = ERROR_NONE;
 
-	if (!strcmp(name, "scale")) {
+	if (!varname_cmp(name, "scale")) {
 		if ((r = libbc_enforce_int_and_range(pnum, &libbc_scale, 0, LIBBC_MAX_SCALE)) == ERROR_NONE) {
 			out_dbg("scale set to %d\n", libbc_scale);
 		}
-	} else if (!strcmp(name, "ibase")) {
+	} else if (!varname_cmp(name, "ibase")) {
 		if ((r = libbc_enforce_int_and_range(pnum, &libbc_ibase, LIBBC_MIN_IBASE, LIBBC_MAX_IBASE)) == ERROR_NONE) {
 			out_dbg("ibase set to %d\n", libbc_ibase);
 		}
-	} else if (!strcmp(name, "obase")) {
+	} else if (!varname_cmp(name, "obase")) {
 		if ((r = libbc_enforce_int_and_range(pnum, &libbc_obase, LIBBC_MIN_OBASE, LIBBC_MAX_OBASE)) == ERROR_NONE) {
 			out_dbg("obase set to %d\n", libbc_obase);
 		}

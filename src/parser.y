@@ -53,6 +53,8 @@ extern defargs_t *defarg_t_badarg;
 
 %code provides {
 void activate_bison_debug();
+void hackbc_enter();
+void hackbc_terminate();
 
 #ifndef YY_TYPEDEF_YY_BUFFER_STATE
 #define YY_TYPEDEF_YY_BUFFER_STATE
@@ -324,12 +326,20 @@ defargs_list_or_empty:
 	| defargs_list
 ;
 
+hackbc_enter:
+	%empty { hackbc_enter(); }
+;
+
+hackbc_terminate:
+	%empty { hackbc_terminate(); }
+;
+
 function_definition:
-	DEFINE IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty {
-		vars_user_function_construct($2, $4, $7, FALSE);
+	hackbc_enter DEFINE IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty hackbc_terminate {
+		vars_user_function_construct($3, $5, $8, FALSE);
 	}
-	| DEFINE VOID IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty {
-		vars_user_function_construct($3, $5, $8, TRUE);
+	| hackbc_enter DEFINE VOID IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty hackbc_terminate {
+		vars_user_function_construct($4, $6, $9, TRUE);
 	}
 ;
 
@@ -373,6 +383,55 @@ statement:
 ;
 
 %%
+
+#define VARIBASE "ibase"
+static int save_ibase_is_set;
+static numptr save_ibase;
+
+void hackbc_enter()
+{
+	const numptr *pnum = vars_get_value(VARIBASE);
+	if (pnum == NULL) {
+		out_dbg("Entering function definition - no ibase variable set\n");
+		save_ibase_is_set = FALSE;
+	} else {
+		long int v = num_getlongint(*pnum);
+		out_dbg("Entering function definition - ibase set, value: %d\n", v);
+		save_ibase_is_set = TRUE;
+		save_ibase = num_construct_from_num(*pnum);
+	}
+}
+
+void hackbc_terminate()
+{
+	if (save_ibase_is_set) {
+		long int v = num_getlongint(save_ibase);
+		out_dbg("Terminating function definition - ibase set back to %d\n", v);
+		const numptr *pvar;
+		vars_set_value(VARIBASE, save_ibase, &pvar);
+	} else {
+		out_dbg("Terminating function definition - ibase is deleted\n");
+		var_delete(VARIBASE);
+	}
+	save_ibase_is_set = FALSE;
+}
+
+void hackbc_check(const char *name, expr_t *e)
+{
+	if (varname_cmp(name, VARIBASE))
+		return;
+	numptr num = num_undefvalue();
+	int r = expr_eval(e, &num);
+		/*
+		 * We just ignore cases when an error occurs (ex. with an
+		 * instruction like "ibase = 1 / 0", and also cases where
+		 * there is no return value.
+		*/
+	if (r == ERROR_NONE && !num_is_not_initialized(num)) {
+		const numptr *pvar;
+		vars_set_value(VARIBASE, num, &pvar);
+	}
+}
 
 void activate_bison_debug()
 {

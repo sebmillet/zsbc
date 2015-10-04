@@ -46,6 +46,7 @@ void callargs_chain_destruct(callargs_t *cargs);
 
 expr_t *expr_construct_function_call(const char *fcnt_name, callargs_t *callargs);
 
+int expr_is_constant(const expr_t *e);
 int expr_eval(const expr_t *self, numptr *pval);
 int expr_get_count_ref();
 

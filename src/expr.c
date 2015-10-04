@@ -22,6 +22,8 @@
 
 #include <string.h>
 
+void hackbc_check(const char*name, const expr_t *e);
+
 
 
 /*-----------------------------------------------------------------------------
@@ -341,6 +343,11 @@ expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op
 	self->var.index = index;
 	self->var.builtin = id;
 	callarg_set_to_expr(&self->cargs[0], e1);
+	if (self->type == ENODE_SETVAR && self->var.builtin == FN_NOOP) {
+		if (expr_is_constant(e1)) {
+			hackbc_check(self->var.name, e1);
+		}
+	}
 	return self;
 }
 
@@ -442,6 +449,19 @@ expr_t *expr_construct_function_call(const char *fcnt_name, callargs_t *callargs
  *-----------------------------------------------------------------------------*/
 
 
+
+int expr_is_constant(const expr_t *e)
+{
+	if (e->type != ENODE_NUMBER && e->type != ENODE_BUILTIN_OP)
+		return FALSE;
+	int i;
+	for (i = 0; i < e->nb_args; ++i) {
+		if (e->cargs[i].type == CARG_EXPR && e->cargs[i].e != NULL)
+			if (!expr_is_constant(e->cargs[i].e))
+				return FALSE;
+	}
+	return TRUE;
+}
 
 static int myeval(const expr_t *e, numptr *pval)
 {
@@ -552,13 +572,6 @@ static void getvar_core(const char *varname, int has_index, long int idxval, con
 	}
 
 }
-
-/*static void getvar(const char *varname, int has_index, long int idxval, numptr *pval)*/
-/*{*/
-/*    const numptr *pnum;*/
-/*    getvar_core(varname, has_index, idxval, &pnum);*/
-
-/*}*/
 
 static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create_if_missing)
 {
