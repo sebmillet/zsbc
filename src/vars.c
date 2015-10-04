@@ -25,6 +25,8 @@
 
 #include "uthash.h"
 
+extern defargs_t *defarg_t_badarg;
+
 const char *type_names[] = {
 	"TYPE_NUM",		/* TYPE_NUM */
 	"TYPE_ARRAY",	/* TYPE_ARRAY */
@@ -542,18 +544,46 @@ void defargs_destruct(defargs_t *defargs)
 	}
 }
 
+int darg_type_is_of_same_namespace(int t1, int t2)
+{
+	if ((t1 == DARG_VALUE || t1 == DARG_REF) &&
+		(t2 == DARG_VALUE || t2 == DARG_REF))
+		return TRUE;
+	if ((t1 == DARG_ARRAYVALUE || t1 == DARG_ARRAYREF) &&
+		(t2 == DARG_ARRAYVALUE || t2 == DARG_ARRAYREF))
+		return TRUE;
+	return FALSE;
+}
+
 defargs_t *defargs_chain(defargs_t *base, defargs_t *append)
 {
 	/*
-	 * FIXME
+	 * *WARNING*
 	 * Should save the base in the list to avoid systematical walk through
 	 * the entire list to append one element, that has O(n^2) execution time.
+	 *
+	 * That said, a list of arguments should rarely go beyond a few dozens,
+	 * and never beyond a few hundreds!
+	 * By the way, the detection of duplicates is deeply O(n^2). Getting rid
+	 * of it would require to do a "clean" quick-sort of the list, but I don't
+	 * see the point for a list of arguments.
+	 *
+	 * Ultimately this warning is a warning, not a FIXME.
 	 */
 	assert(base != NULL && append != NULL);
+	if (base == defarg_t_badarg || append == defarg_t_badarg)
+		return defarg_t_badarg;
+
 	defargs_t *w = base;
-	while (w->next != NULL)
+	defargs_t *prec;
+	do {
+		out_dbg("Comparing %s(%d) with %s(%d)\n", w->name, w->type, append->name, append->type);
+		if (darg_type_is_of_same_namespace(w->type, append->type) && !strcmp(w->name, append->name))
+			return defarg_t_badarg;
+		prec = w;
 		w = w->next;
-	w->next = append;
+	} while (w != NULL);
+	prec->next = append;
 	return base;
 }
 
@@ -569,23 +599,23 @@ static void destruct_function_if_defined(const char *name)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
-	vars_t *f;
-	if ((f = find_var(name, TYPE_FCNT)) != NULL) {
-
-			/*  FIXME
-			 *  Needs proper destruction function
-			 *  */
-		free(f->name);
-		f->name = NULL;
-
+	vars_t *w;
+	if ((w = find_var(name, TYPE_FCNT)) != NULL) {
+		vars_t_destruct(w);
 		outln_warning("Redefinition of function %s", name);
 	}
-
 }
 
-int vars_function_construct(const char *name, defargs_t *defargs, program_t *program, int is_void)
+void vars_user_function_construct(char *name, defargs_t *defargs, program_t *program, int is_void)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
+
+	if (defargs == defarg_t_badarg) {
+		outln_error("%s: not created: duplicate parameter names", name);
+		program_destruct(program);
+		free(name);
+		return;
+	}
 
 	destruct_function_if_defined(name);
 
@@ -595,10 +625,20 @@ int vars_function_construct(const char *name, defargs_t *defargs, program_t *pro
 	f->value.fcnt.defargs = defargs;
 	f->value.fcnt.program = program;
 	program_gather_defargs(&f->value.fcnt.autolist, &f->value.fcnt.program);
+	defargs_t *al = f->value.fcnt.autolist;
+	while (al != NULL) {
+		defargs_t *param = f->value.fcnt.defargs;
+		while (param != NULL) {
+			if (darg_type_is_of_same_namespace(param->type, al->type) && !strcmp(param->name, al->name)) {
+				outln_error("%s: not created: duplicate names between parameters and autolist", name);
+				vars_t_destruct(f);
+			}
+			param = param->next;
+		}
+		al = al->next;
+	}
 
 	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->value.fcnt.defargs, f->value.fcnt.autolist, f->value.fcnt.program);
-
-	return ERROR_NONE;
 }
 
 void register_builtin_function(const char *name, int nb_args, void *f)

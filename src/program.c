@@ -23,6 +23,8 @@
 
 int instr_count_ref = 0;
 
+extern defargs_t *defarg_t_badarg;
+
 typedef enum {
 	TINSTR_EXPR_EXPR,
 	TINSTR_EXPR_ASSIGN_EXPR,
@@ -125,7 +127,7 @@ program_t *program_construct_ifseq(program_ifseq_t *ifseq)
 program_t *program_construct_autolist(defargs_t *autolist)
 {
 	program_t *p = program_construct(TINSTR_AUTOLIST);
-	p->autolist = autolist;
+	p->autolist = (autolist == defarg_t_badarg ? NULL : autolist);
 	out_dbg("Construct of one program of type autolist, autolist: %lu, address = %lu\n", autolist, p);
 	return p;
 }

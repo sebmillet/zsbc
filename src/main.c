@@ -43,6 +43,8 @@
 static int rt_line_length = DEFAULT_LINE_LENGTH;
 const char *VAR_LAST = "last";
 
+defargs_t *defarg_t_badarg;
+
 #ifdef HAS_LIB_LIBBC
 	/* Source data for the libmath library, taken from bc source,
 	 * that defines the functions e (exponent), l (logarithm), s (sinus),
@@ -88,13 +90,13 @@ const char *debug_filenames = NULL;
 	 *
 	 */
 
-#ifdef MY_WINDOWS
+/*#ifdef MY_WINDOWS*/
 	/*
 	 * Hack to make mingw happy in the absence of fmemopen.
 	 * It is extremly gruiiik.
 	 * */
-#define fmemopen(a, b, c) fopen("", c)
-#endif
+/*#define fmemopen(a, b, c) fopen("", c)*/
+/*#endif*/
 
 enum {IT_FILE, IT_BUILTIN_DATA};
 	/* To manage input files specified in command line arguments */
@@ -586,6 +588,8 @@ static void cut_env_options(int *env_argc, char ***env_argv, char **alloc_env, c
 
 int main(int argc, char *argv[])
 {
+		/* done to have a non NULL defarg_t_badarg pointer (any address would be fine) */
+	defarg_t_badarg = (defargs_t *)VAR_LAST;
 
 	if (ERROR_LAST + 1 != sizeof(table_errors) / sizeof(*table_errors))
 		FATAL_ERROR("%s", "table_errors has initialization inconsistent with ERROR_ constants");

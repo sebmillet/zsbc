@@ -366,9 +366,11 @@ callargs_t *callargs_construct(callarg_type_t type, expr_t *e, const char *array
 callargs_t *callargs_chain(callargs_t *base, callargs_t *append)
 {
 	/*
-	 * FIXME
+	 * *WARNING*
 	 * Should save the base in the list to avoid systematical walk through
 	 * the entire list to append one element, that has O(n^2) execution time.
+	 * Same remark as vars.c (look for *WARNING* in function defargs_chain)
+	 * -> not a FIXME.
 	 */
 	assert(base != NULL && append != NULL);
 	callargs_t *w = base;

@@ -10,8 +10,6 @@ As of August 2015:
   called from (now: can be invoked anywhere, including, outside of a loop or
   function body)
 
-- Check variable names duplicate in arguments list and auto lists
-
 - gmp uses a different way of reading integers (different from bc'),
   need some checks around (if a wrong int is read, it results in a
   zero value -> should raise an error).

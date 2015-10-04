@@ -1,0 +1,98 @@
+# tests/zsbc.test/01gmp-60.exp
+
+set timeout 3
+spawn "$ZSBC" -SCM "$TESTDIR/01gmp-60.b"
+send_user "***   GMP - Arguments and autolist check for duplicates\n"
+
+set test "Check errors displayed at load time"
+expect {
+	"Error: ko1: not created: duplicate parameter names" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (2)"
+expect {
+	"Error: ko2: not created: duplicate parameter names" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (3)"
+expect {
+	"Error: ko3: not created: duplicate parameter names" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (4)"
+expect {
+	"Error: ko4: not created: duplicate parameter names" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (5)"
+expect {
+	"Error: ko5: not created: duplicate parameter names" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (6)"
+expect {
+	"Error: ko6: not created: duplicate parameter names" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (7)"
+expect {
+	"Error: ko7: not created: duplicate parameter names" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (8)"
+expect {
+	"Error: ko8: not created: duplicate parameter names" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (9)"
+expect {
+	-re "01gmp-60.b.*duplicate names in autolist .autolist will be ignored." { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (10)"
+expect {
+	"Error: autoko3: not created: duplicate names between parameters and autolist" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (11)"
+expect {
+	"Error: autoko4: not created: duplicate names between parameters and autolist" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (12)"
+expect {
+	"Error: autoko5: not created: duplicate names between parameters and autolist" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check errors displayed at load time (13)"
+expect {
+	"Error: autoko6: not created: duplicate names between parameters and autolist" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check symbols created"
+send "symbols\n"
+expect {
+	-re "ibase=10.*obase=10.*autoko1().*autoko2\\(\\).*autook1\\(a\\).*autook2\\(a\\\[\\\]\\).*autook3\\(\\*a\\).*autook4\\(\\*a\\\[\\\]\\).*gmpversion\\(\\).*ok1\\(a, b\\).*ok2\\(a, a\\\[\\\]).*ok3\\(\\*a, a\\\[\\\]\\).*ok4\\(a, \\*a\\\[\\\]).*ok5\\(\\*a, \\*a\\\[\\\]\\).*ok6\\(a\\\[\\\], a\\).*ok7\\(\\*a\\\[\\\], a\\).*ok8\\(a\\\[\\\], \\*a\\).*ok9\\(\\*a\\\[\\\], \\*a\\)" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

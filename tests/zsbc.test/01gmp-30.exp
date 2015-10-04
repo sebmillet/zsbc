@@ -138,9 +138,9 @@ expect {
 }
 
 set test "Array bounds (2)"
-send -- "193\nmyarray\[16777216\]\n391\n"
+send -- "993\nmyarray\[16777216\]\n991\n"
 expect {
-	-re "193\[^0-9\]+Array index out of bounds\[^0-9\]+391\[^0-9\]+" { pass "$test" }
+	-re "993\[^0-9\]+Array index out of bounds\[^0-9\]+991\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 

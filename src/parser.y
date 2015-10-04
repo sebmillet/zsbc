@@ -43,6 +43,8 @@ extern int yylex();
 void yyerror(char *s, ...);
 void loc_reset();
 
+extern defargs_t *defarg_t_badarg;
+
 #ifdef BISON_DEBUG
 #define YYDEBUG 1
 #endif
@@ -287,12 +289,34 @@ defarg:
 
 defargsbyval_list:
 	defargbyval
-	| defargsbyval_list ',' defargbyval { $$ = defargs_chain($1, $3); }
+	| defargsbyval_list ',' defargbyval {
+		$$ = defargs_chain($1, $3);
+		if ($$ == defarg_t_badarg && $1 != defarg_t_badarg && $3 != defarg_t_badarg) {
+			yyerror("duplicate names in autolist (autolist will be ignored)");
+		}
+		if ($$ == defarg_t_badarg) {
+			if ($1 != defarg_t_badarg)
+				free($1);
+			if ($3 != defarg_t_badarg)
+				free($3);
+		}
+	}
 ;
 
 defargs_list:
 	defarg
-	| defargs_list ',' defarg { $$ = defargs_chain($1, $3); }
+	| defargs_list ',' defarg {
+		$$ = defargs_chain($1, $3);
+		if ($$ == defarg_t_badarg && $1 != defarg_t_badarg && $3 != defarg_t_badarg) {
+			yyerror("duplicate parameter names");
+		}
+		if ($$ == defarg_t_badarg) {
+			if ($1 != defarg_t_badarg)
+				free($1);
+			if ($3 != defarg_t_badarg)
+				free($3);
+		}
+	}
 ;
 
 defargs_list_or_empty:
@@ -302,14 +326,10 @@ defargs_list_or_empty:
 
 function_definition:
 	DEFINE IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty {
-		int r;
-		if ((r = vars_function_construct($2, $4, $7, FALSE)) != ERROR_NONE)
-			outln_error_code(r);
+		vars_user_function_construct($2, $4, $7, FALSE);
 	}
 	| DEFINE VOID IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty {
-		int r;
-		if ((r = vars_function_construct($3, $5, $8, TRUE)) != ERROR_NONE)
-			outln_error_code(r);
+		vars_user_function_construct($3, $5, $8, TRUE);
 	}
 ;
 
@@ -340,7 +360,7 @@ statement:
 	}
 	| LIBSWITCH STRING {
 		if (num_libswitch($2) == 0) {
-			outln_error("Unknown library");
+			outln_error("%s", "Unknown library");
 		}
 		free($2);
 	}
