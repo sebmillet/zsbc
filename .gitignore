@@ -11,3 +11,4 @@ config.status
 src/.deps/
 site.exp
 build/
+lib/libbc.a
