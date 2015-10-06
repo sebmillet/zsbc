@@ -1,0 +1,66 @@
+Notes about zsbc programming
+
+1) ibase management
+===================
+
+bc keeps numbers as strings and will take into account ibase at the very last
+moment, when the string is to be converted into a bcnum.
+
+zsbc converts strings into numbers at function definition time, not later
+during execution. As a result, constructs like the following could fail if
+found inside a function definition, and assuming ibase is 10 at the time the
+function is being defined:
+    ibase=16
+    x=FF /* assign 255 (decimal) to x */
+
+Here comes the functions hackbc*, defined in parser.y.
+It is really a hack... It catches ibase assignment inside the code and will
+execute it immediately (not only at run time) in certain conditions. The
+conditions are:
+    - ibase assignment occurs inside a function definition
+      (well it is not a condition strictly speaking but a reminder ; out of a
+      function definition, ibase assignment is always executed immediately, as
+      is normal)
+    - ibase is assigned a constant expression, ex.:
+        ibase=16
+        ibase=4^2
+        ibase=(1+1)*(1+1+1+1+1+1+1+1)
+    - ibase assignment occurs at the level of the function block, not inside
+      an if instruction or while or the like. That is to say, the following
+      will work (assumption: ibase is 10 when "define f..." is executed):
+        define f() {
+            ibase=16
+            x=FF
+        }
+        => it will work in the sense that ibase=16 will be executed at
+        function *definition* time (and also at function execution time as
+        always), thus FF will be correctly read as the decimal number
+        255.
+      But the following won't work:
+        define f() {
+            if (1) ibase=16
+            x=FF
+        }
+        => because ibase assignment occurs inside an if, it is not executed at
+        function definition time and thus x=FF is read with ibase being 10.
+        With bc as numlib, it'll produce the decimal 99 number and even at
+        function execution time, x will be set to 99.
+
+You might wonder why all these complications and not simply stick to the bc
+way. I didn't want that because zsbc has a logic of its own and bc
+compatibility is done to re-use bc scripts and ease tests (zsbc produces the
+same results as bc in almost all cases, when using bc numeric library). But
+zsbc is not meant to be identical to bc internally.
+
+By the way zsbc uses gmp as the default numeric library, not bc's. It must be
+run with the option
+  -numlib bc
+to use bc library instead.
+
+Also note in real life I have never found a case where ibase assignment occurs
+in an if statement or inside a loop. ibase assignments are always done at the
+beginning of function definitions and at the end (to revert ibase back to its
+original value).
+
+Ultimately this hack, while clearly being a hack, works fine.
+
