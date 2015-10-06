@@ -55,6 +55,8 @@ extern defargs_t *defarg_t_badarg;
 void activate_bison_debug();
 void hackbc_enter();
 void hackbc_terminate();
+void hackbc_inc_nested();
+void hackbc_dec_nested();
 
 #ifndef YY_TYPEDEF_YY_BUFFER_STATE
 #define YY_TYPEDEF_YY_BUFFER_STATE
@@ -78,7 +80,8 @@ YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 %token <num> INTEGER
 %type <enode> expression expression_no_assignment expression_assignment expression_or_empty function_call
 %token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
-%type <prog> instruction_block instruction_inside_block instruction_list instruction instruction_non_empty instruction_expr_assignment
+%type <prog> instruction_block instruction_inside_block instruction_list instruction
+%type <prog> my_instruction_non_empty instruction_non_empty instruction_expr_assignment
 %type <prog> loop_while loop_for ifseq instruction_string instruction_expr_no_assignment print_elem print_list
 %type <defargs> defargs_list_or_empty defargs_list defarg defargsbyval_list defargbyval
 %type <callargs> callarg callargs_list callargs_list_or_empty
@@ -143,10 +146,14 @@ instruction_list:
 
 instruction:
 	%empty { $$ = NULL; }
-	| instruction_non_empty
+	| my_instruction_non_empty
 ;
 
 instruction_non_empty:
+	{ hackbc_inc_nested(); } my_instruction_non_empty { hackbc_dec_nested(); $$ = $2; }
+;
+
+my_instruction_non_empty:
 	instruction_expr_assignment
 	| instruction_expr_no_assignment
 	| instruction_string
@@ -385,8 +392,10 @@ statement:
 %%
 
 #define VARIBASE "ibase"
+static int hackbc_has_entered = FALSE;
+static int hackbc_nested_level;
 static int save_ibase_is_set;
-static numptr save_ibase;
+static int save_ibase;
 
 void hackbc_enter()
 {
@@ -395,31 +404,61 @@ void hackbc_enter()
 		out_dbg("Entering function definition - no ibase variable set\n");
 		save_ibase_is_set = FALSE;
 	} else {
-		long int v = num_getlongint(*pnum);
-		out_dbg("Entering function definition - ibase set, value: %d\n", v);
+
+			/*
+			 * FIXME???
+			 * Check int versus long int storage capacity?
+			 * It'd be a bit strange to have ibase greater than INT_MAX...
+			 * So I just ignore it.
+			 *
+			*/
+		save_ibase = (int)num_getlongint(*pnum);
+
+		out_dbg("Entering function definition - ibase set, value: %d\n", save_ibase);
 		save_ibase_is_set = TRUE;
-		save_ibase = num_construct_from_num(*pnum);
 	}
+	hackbc_has_entered = TRUE;
+	hackbc_nested_level = 0;
 }
 
 void hackbc_terminate()
 {
+	if (!hackbc_has_entered)
+		return;
+
 	if (save_ibase_is_set) {
-		long int v = num_getlongint(save_ibase);
-		out_dbg("Terminating function definition - ibase set back to %d\n", v);
+		out_dbg("Terminating function definition - ibase set back to %d\n", save_ibase);
 		const numptr *pvar;
-		vars_set_value(VARIBASE, save_ibase, &pvar);
+		vars_set_value(VARIBASE, num_construct_from_int(save_ibase), &pvar);
 	} else {
 		out_dbg("Terminating function definition - ibase is deleted\n");
 		var_delete(VARIBASE);
 	}
-	save_ibase_is_set = FALSE;
+	hackbc_has_entered = FALSE;
+}
+
+void hackbc_inc_nested()
+{
+	++hackbc_nested_level;
+	out_dbg("hack_inc_nested(): nested = %d\n", hackbc_nested_level);
+}
+
+void hackbc_dec_nested()
+{
+	--hackbc_nested_level;
+	out_dbg("hack_dec_nested(): nested = %d\n", hackbc_nested_level);
 }
 
 void hackbc_check(const char *name, expr_t *e)
 {
-	if (varname_cmp(name, VARIBASE))
+	if (!hackbc_has_entered || varname_cmp(name, VARIBASE))
 		return;
+
+	if (hackbc_nested_level != 1) {
+		out_dbg("hackbc_check(): eligible assignment but not at correct nested level\n");
+		return;
+	}
+
 	numptr num = num_undefvalue();
 	int r = expr_eval(e, &num);
 		/*
@@ -428,8 +467,11 @@ void hackbc_check(const char *name, expr_t *e)
 		 * there is no return value.
 		*/
 	if (r == ERROR_NONE && !num_is_not_initialized(num)) {
+		out_dbg("hackbc_check(): caught variable assignment successfully: assigning new value\n");
 		const numptr *pvar;
 		vars_set_value(VARIBASE, num, &pvar);
+	} else {
+		out_dbg("hackbc_check(): CAUGHT VARIABLE ASSIGNMENT BUT COULD NOT CALCULATE CONSTANT EXPRESSION VALUE!\n");
 	}
 }
 

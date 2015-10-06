@@ -640,6 +640,7 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 			if (darg_type_is_of_same_namespace(param->type, al->type) && !varname_cmp(param->name, al->name)) {
 				outln_error("%s: not created: duplicate names between parameters and autolist", name);
 				vars_t_destruct(f);
+				return;
 			}
 			param = param->next;
 		}

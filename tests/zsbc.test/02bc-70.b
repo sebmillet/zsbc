@@ -15,3 +15,13 @@ define i() {
 	ibase=z
 	return FFF
 }
+define j() {
+	if (0) ibase=2
+	return 8
+}
+define k() {
+	if (0) {
+		ibase=4
+	}
+	return 7
+}

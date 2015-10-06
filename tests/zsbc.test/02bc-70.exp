@@ -32,6 +32,34 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Function with ibase update inside (5)"
+send "ibase=2*5\nj()+1000\n"
+expect {
+	"1008" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (6)"
+send "k()+5000\nibase=16\n"
+expect {
+	"5007" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check simple syntax error does not change ibase"
+send "ibase\na b\n0\n3*ibase\n"
+expect {
+	-re "16\[^0-9\]+.*\[^0-9\]+0\[^0-9\]+48\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with syntax error"
+send "ibase\n(ibase=2*5)\ndefine z(){a b}\n0\n100+ibase\n"
+expect {
+	-re "16\[^0-9\]+10\[^0-9\]+.*\[^0-9\]+0\[^0-9\]+110\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
 set test "Checking object count ref is null"
 send "quit\n"
 expect {
