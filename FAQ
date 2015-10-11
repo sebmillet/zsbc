@@ -49,13 +49,13 @@ conditions are:
 You might wonder why all these complications and not simply stick to the bc
 way. I didn't want that because zsbc has a logic of its own and bc
 compatibility is done to re-use bc scripts and ease tests (zsbc produces the
-same results as bc in almost all cases, when using bc numeric library). But
+same results as bc in almost all cases, when using bc numbers library). But
 zsbc is not meant to be identical to bc internally.
 
-By the way zsbc uses gmp as the default numeric library, not bc's. It must be
+By the way zsbc uses gmp as the default number library, not bc's. It must be
 run with the option
   -numlib bc
-to use bc library instead.
+to use bc numbers library instead.
 
 Also note in real life I have never found a case where ibase assignment occurs
 in an if statement or inside a loop. ibase assignments are always done at the

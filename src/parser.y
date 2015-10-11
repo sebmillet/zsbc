@@ -125,7 +125,10 @@ input:
 
 program:
 	instruction_list {
-		program_execute($1, NULL);
+		int r = program_execute($1, NULL);
+		if (r != ERROR_NONE) {
+			outln_error_code(r);
+		}
 		program_destruct($1);
 	}
 ;

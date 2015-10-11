@@ -12,7 +12,6 @@
  *       Compiler:  gcc
  *
  *         Author:  Sébastien Millet (smt), milletseb@laposte.net
- *   Organization:  
  *
  * =====================================================================================
  */
@@ -220,6 +219,16 @@ void program_destruct(program_t *p)
 	}
 }
 
+	/*
+	 * This function manages the output as follows:
+	 *
+	 *   - Outputs something (using num_print() and outstring() functions) when there is no error
+	 *
+	 *   - DOES NOT OUTPUT ANYTHING if an error occurs. It is then up to the caller to manage
+	 *     displaying an error, typically calling outln_error_code(r), r being the return value
+	 *     of program_execute().
+	 *
+	 * */
 int program_execute(program_t *p, numptr *pval)
 {
 	out_dbg("Entering program_execute for %lu\n", p);
@@ -240,7 +249,7 @@ int program_execute(program_t *p, numptr *pval)
 				print_result = (p->type == TINSTR_EXPR_EXPR || (p->is_part_of_print && p->type == TINSTR_EXPR_ASSIGN_EXPR));
 				num = num_undefvalue();
 				if ((r = expr_eval(p->expr, &num)) != ERROR_NONE) {
-					outln_error_code(r);
+/*                    outln_error_code(r);*/
 				} else if (print_result && !num_is_not_initialized(num)) {
 					num_print(num);
 					if (!p->is_part_of_print)
@@ -249,7 +258,7 @@ int program_execute(program_t *p, numptr *pval)
 				if (p->type == TINSTR_EXPR_RETURN) {
 					r = ERROR_RETURN;
 					if (pval == NULL) {
-						outln_error_code(r);
+/*                        outln_error_code(r);*/
 						num_destruct(&num);
 					} else {
 						*pval = num;
