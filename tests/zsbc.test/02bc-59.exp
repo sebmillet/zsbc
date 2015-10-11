@@ -2,7 +2,7 @@
 
 set timeout 3
 
-spawn "/bin/sh" -c "BC_LINE_LENGTH=0 $ZSBC -SCM -numlib bc -l"
+spawn "/bin/sh" -c "BC_LINE_LENGTH=0 $ZSBC --SCM --numlib bc -l"
 send_user "***   BC - BC_LINE_LENGTH=0 environment variable\n"
 
 set test "No line cut"

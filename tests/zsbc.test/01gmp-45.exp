@@ -1,7 +1,7 @@
 # tests/zsbc.test/01gmp-45.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM
+spawn "$ZSBC" --SCM
 send_user "***   GMP - last variable\n"
 
 set test "Check last is updated"

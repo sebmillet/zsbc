@@ -2,7 +2,7 @@
 
 set timeout 3
 
-spawn "/bin/sh" -c "ZSBC_LINE_LENGTH=70 $ZSBC -SCM -numlib bc -l"
+spawn "/bin/sh" -c "ZSBC_LINE_LENGTH=70 $ZSBC --SCM --numlib bc -l"
 send_user "***   GMP - BC_LINE_LENGTH=70 environment variable\n"
 
 set test "Line cut at 69"

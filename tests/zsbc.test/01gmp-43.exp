@@ -1,7 +1,7 @@
 # tests/zsbc.test/01gmp-43.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM "$TESTDIR/01gmp-43.b"
+spawn "$ZSBC" --SCM "$TESTDIR/01gmp-43.b"
 send_user "***   GMP - auto lists\n"
 
 set test "Function modify()"

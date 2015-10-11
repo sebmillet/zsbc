@@ -133,7 +133,7 @@ static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr 
 	eval_setvar,			/* ENODE_SETVAR */
 	eval_setvar,			/* ENODE_SETVAR_POSTFIX */
 	eval_builtin_op,		/* ENODE_BUILTIN_OP */
-	NULL					/* ENODE_FUNCTION_CALL - IT IS MANAGEd SEPARATELY FROM table_eval[] */
+	NULL					/* ENODE_FUNCTION_CALL - IT IS MANAGED SEPARATELY FROM table_eval[] */
 };
 
 

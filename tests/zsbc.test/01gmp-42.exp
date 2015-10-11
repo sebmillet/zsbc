@@ -1,7 +1,7 @@
 # tests/zsbc.test/01gmp-42.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM "$TESTDIR/01gmp-42.b"
+spawn "$ZSBC" --SCM "$TESTDIR/01gmp-42.b"
 send_user "***   GMP - functions defined from files invoked in command-line arguments with byref arguments\n"
 
 set test "Function fc(*a)"

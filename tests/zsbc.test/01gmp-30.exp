@@ -1,7 +1,7 @@
 # tests/zsbc.test/01gmp-30.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM "$TESTDIR/01gmp-30.b"
+spawn "$ZSBC" --SCM "$TESTDIR/01gmp-30.b"
 send_user "***   GMP - arrays\n"
 
 set test "Array"

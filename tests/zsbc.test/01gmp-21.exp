@@ -1,7 +1,7 @@
 # tests/zsbc.test/01gmp-21.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM
+spawn "$ZSBC" --SCM
 send_user "***   GMP - programs - while loop\n"
 
 set test "while (1)"

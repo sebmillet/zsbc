@@ -1,7 +1,7 @@
 # tests/zsbc.test/02bc-58.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM -numlib bc -l
+spawn "$ZSBC" --SCM --numlib bc -l
 send_user "***   BC - ibase and obase\n"
 
 set test "ibase"

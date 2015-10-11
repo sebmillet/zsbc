@@ -36,7 +36,7 @@ for i in "RIENDUTOUT"; do
 	cat $II >> $O
 	sed -i "s/\/$FII/\/$FO/" $O
 	sed -i 's/^\(send_user.*\)GMP - /\1BC - /' $O
-	sed -i 's/^spawn "\$ZSBC" -SCM/& -numlib bc/' $O
+	sed -i 's/^spawn "\$ZSBC" --SCM/& --numlib bc/' $O
 	sed -i 's/set test \"Get GMP Library version\"/set test \"Get BC library version\"/' $O
 	sed -i 's/-nocase \"gmp library\"/-nocase \"bc library\"/' $O
 	sed -i 's/fail \"Could not get GMP library version\"/fail \"Could not get BC library version\"/' $O

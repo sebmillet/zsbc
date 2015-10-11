@@ -1,7 +1,7 @@
 # tests/zsbc.test/01gmp-40.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM
+spawn "$ZSBC" --SCM
 send_user "***   GMP - functions\n"
 
 set test "Function (1)"

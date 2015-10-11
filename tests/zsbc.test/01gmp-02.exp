@@ -1,10 +1,10 @@
 # tests/zsbc.test/01gmp-02.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM
 send_user "***   GMP - Error cases tests\n"
 
-spawn "$ZSBC" -SCM
+spawn "$ZSBC" --SCM
+
 set test "Get GMP Library version"
 expect {
 	-nocase "gmp library" { pass "$test" }

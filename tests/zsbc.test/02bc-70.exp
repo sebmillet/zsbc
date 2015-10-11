@@ -1,7 +1,7 @@
 # tests/zsbc.test/02bc-70.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM -numlib bc "$TESTDIR/02bc-70.b"
+spawn "$ZSBC" --SCM --numlib bc "$TESTDIR/02bc-70.b"
 send_user "***   BC - ibase management hack during function definition\n"
 
 set test "Function with ibase update inside (1)"

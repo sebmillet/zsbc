@@ -1,7 +1,7 @@
 # tests/zsbc.test/02bc-57.exp
 
 set timeout 3
-spawn "$ZSBC" -SCM -numlib bc -l
+spawn "$ZSBC" --SCM --numlib bc -l
 send_user "***   BC - built-in libmath functions, scale 200\n"
 
 set test "Function e()"

@@ -14,7 +14,7 @@ for F in $IDIR/*.b; do
 	ZSBCOUT=`echo $G | sed s/\.b$/-zsbc.out/`
 
 	cat "$F" | bc -l > $ODIR/$BCOUT
-	cat "$F" | $ZSBCEXE -numlib bc -l > $ODIR/$ZSBCOUT
+	cat "$F" | $ZSBCEXE --numlib bc -l > $ODIR/$ZSBCOUT
 
 	PRINTBCHASH=`sha1sum $ODIR/$BCOUT`
 	BCHASH=`echo $PRINTBCHASH | sed 's/ .*$//'`

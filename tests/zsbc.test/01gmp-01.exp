@@ -16,7 +16,7 @@ expect {
 }
 
 # ==DELETE-END-TAG==
-spawn "$ZSBC" -SCM
+spawn "$ZSBC" --SCM
 set test "Get GMP Library version"
 expect {
 	-nocase "gmp library" { pass "$test" }
