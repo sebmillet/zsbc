@@ -108,7 +108,7 @@ extern int yydebug;
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 71 "parser.y" /* yacc.c:1909  */
+#line 75 "parser.y" /* yacc.c:1909  */
 
 	numptr num;
 	expr_t *enode;
@@ -142,7 +142,7 @@ extern YYSTYPE yylval;
 extern YYLTYPE yylloc;
 int yyparse (void);
 /* "%code provides" blocks.  */
-#line 54 "parser.y" /* yacc.c:1909  */
+#line 58 "parser.y" /* yacc.c:1909  */
 
 void activate_bison_debug();
 void hackbc_enter();

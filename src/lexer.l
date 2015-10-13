@@ -76,11 +76,11 @@ string			\"[^\"]*\"
 	   reading code. It just relies on regex management of flex.
 	*/
 \/\*([^*]|\n|(\*[^/]))*\*\/ {
-	int i;
-	for (i = 0; yytext[i] != '\0'; ++i) {
-		if (yytext[i] == '\n')
-			++yylineno;
-	}
+/*    int i;*/
+/*    for (i = 0; yytext[i] != '\0'; ++i) {*/
+/*        if (yytext[i] == '\n')*/
+/*            ++yylineno;*/
+/*    }*/
 /*    fprintf(stderr, "\n\n[=====\n");*/
 /*    fputs(yytext, stderr);*/
 /*    fprintf(stderr, "\n=====]\n\n");*/
@@ -158,6 +158,13 @@ print			return PRINT;
 	unsigned int len = strlen(yytext);
 	assert(yytext[len - 1] == '"');
 	yytext[len - 1] = '\0';
+
+/*    int i;*/
+/*    for (i = 1; yytext[i] != '\0'; ++i) {*/
+/*        if (yytext[i] == '\n')*/
+/*            ++yylineno;*/
+/*    }*/
+
 	s_alloc_and_copy(&yylval.str, yytext + 1);
 	return STRING;
 }
@@ -198,12 +205,25 @@ void cleanup_inputnumber(char *s)
 
 void loc_reset()
 {
+	out_dbg("Location reset\n");
 	yylloc.first_column = 1;
 	yylloc.first_line = 1;
 	yylloc.last_column = 1;
 	yylloc.last_line = 1;
 	yycolumn = 1;
 	yylineno = 1;
+}
+
+const code_location_t code_loc(const YYLTYPE yl)
+{
+	code_location_t loc;
+	loc.is_set = TRUE;
+	loc.file_name = strlen(input_get_name()) >= 1 ? input_get_name() : NULL;
+	loc.first_line = yl.first_line;
+	loc.first_column = yl.first_column;
+	loc.last_line = yl.last_line;
+	loc.last_column = yl.last_column;
+	return loc;
 }
 
 void yyerror(char *s, ...)
@@ -231,6 +251,8 @@ int yywrap()
 	out_dbg("\tyyin: %s\n", next == stdin ? "is being assigned to stdin" :
 			(next == NULL ? "yyin won't be assigned, lexer terminating" : "yyin is being assigned to an input file (not stdin)"));
 
+	loc_reset();
+
 	if (next == NULL) {
 		out_dbg("\tyywrap returns 1 (non zero means TERMINATE)\n");
 		return 1;
@@ -240,6 +262,5 @@ int yywrap()
 		return 0;
 	}
 
-	loc_reset();
 }
 

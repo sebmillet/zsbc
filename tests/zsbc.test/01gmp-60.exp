@@ -6,49 +6,49 @@ send_user "***   GMP - Arguments and autolist check for duplicates\n"
 
 set test "Check errors displayed at load time"
 expect {
-	"Error: ko1: not created: duplicate parameter names" { pass "$test" }
+	"Function ko1 not created: duplicate parameter names" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (2)"
 expect {
-	"Error: ko2: not created: duplicate parameter names" { pass "$test" }
+	"Function ko2 not created: duplicate parameter names" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (3)"
 expect {
-	"Error: ko3: not created: duplicate parameter names" { pass "$test" }
+	"Function ko3 not created: duplicate parameter names" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (4)"
 expect {
-	"Error: ko4: not created: duplicate parameter names" { pass "$test" }
+	"Function ko4 not created: duplicate parameter names" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (5)"
 expect {
-	"Error: ko5: not created: duplicate parameter names" { pass "$test" }
+	"Function ko5 not created: duplicate parameter names" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (6)"
 expect {
-	"Error: ko6: not created: duplicate parameter names" { pass "$test" }
+	"Function ko6 not created: duplicate parameter names" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (7)"
 expect {
-	"Error: ko7: not created: duplicate parameter names" { pass "$test" }
+	"Function ko7 not created: duplicate parameter names" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (8)"
 expect {
-	"Error: ko8: not created: duplicate parameter names" { pass "$test" }
+	"Function ko8 not created: duplicate parameter names" { pass "$test" }
 	default { fail "$test" }
 }
 
@@ -60,25 +60,25 @@ expect {
 
 set test "Check errors displayed at load time (10)"
 expect {
-	"Error: autoko3: not created: duplicate names between parameters and autolist" { pass "$test" }
+	"Function autoko3 not created: duplicate names between parameters and autolist" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (11)"
 expect {
-	"Error: autoko4: not created: duplicate names between parameters and autolist" { pass "$test" }
+	"Function autoko4 not created: duplicate names between parameters and autolist" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (12)"
 expect {
-	"Error: autoko5: not created: duplicate names between parameters and autolist" { pass "$test" }
+	"Function autoko5 not created: duplicate names between parameters and autolist" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Check errors displayed at load time (13)"
 expect {
-	"Error: autoko6: not created: duplicate names between parameters and autolist" { pass "$test" }
+	"Function autoko6 not created: duplicate names between parameters and autolist" { pass "$test" }
 	default { fail "$test" }
 }
 

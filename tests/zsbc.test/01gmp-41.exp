@@ -56,7 +56,7 @@ expect {
 set test "Calling with wrong number of arguments (1)"
 send "4550\ncheckreturn(0)\n4551\n"
 expect {
-	-re "4550\[^0-9\]+Parameter number mismatch\[^0-9\]+4551" { pass "$test" }
+	-re "4550\[^0-9\]+checkreturn\\(\\): Parameter number mismatch\[^0-9\]+4551" { pass "$test" }
 	default { fail "$test" }
 }
 

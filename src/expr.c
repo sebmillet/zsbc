@@ -111,12 +111,12 @@ static void destruct_setvar(expr_t *self);
 static void destruct_builtin_op(expr_t *self);
 static void destruct_function_call(expr_t *self);
 
-static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval);
-static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval);
-static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval);
-static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval);
-static int eval_builtin_function_call(const expr_t *self, const function_t *f, const numptr *value_args, numptr *pval);
-static int eval_function_call(const expr_t *self, const function_t *f, numptr *pval);
+static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err);
+static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err);
+static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err);
+static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err);
+static int eval_builtin_function_call(const expr_t *self, const function_t *f, const numptr *value_args, numptr *pval, exec_err_t *pexec_err);
+static int eval_function_call(const expr_t *self, const function_t *f, numptr *pval, exec_err_t *pexec_err);
 
 static void (*table_destruct[])(expr_t *self) = {
 	destruct_number,		/* ENODE_NUMBER */
@@ -127,7 +127,7 @@ static void (*table_destruct[])(expr_t *self) = {
 	destruct_function_call	/* ENODE_FUNCTION_CALL */
 };
 
-static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr *pval) = {
+static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err) = {
 	eval_number,			/* ENODE_NUMBER */
 	eval_getvar,			/* ENODE_GETVAR */
 	eval_setvar,			/* ENODE_SETVAR */
@@ -463,11 +463,11 @@ int expr_is_constant(const expr_t *e)
 	return TRUE;
 }
 
-static int myeval(const expr_t *e, numptr *pval)
+static int myeval(const expr_t *e, numptr *pval, exec_err_t *pexec_err)
 {
 	*pval = num_undefvalue();
 	int r;
-	if ((r = expr_eval(e, pval)) != ERROR_NONE)
+	if ((r = expr_eval(e, pval, pexec_err)) != ERROR_NONE)
 		return r;
 
 		/*
@@ -486,7 +486,7 @@ static int myeval(const expr_t *e, numptr *pval)
 	return ERROR_NONE;
 }
 
-int expr_eval(const expr_t *self, numptr *pval)
+int expr_eval(const expr_t *self, numptr *pval, exec_err_t *pexec_err)
 {
 	if (self == NULL) {
 		*pval = num_undefvalue();
@@ -500,11 +500,14 @@ int expr_eval(const expr_t *self, numptr *pval)
 	int is_builtin_function_call = FALSE;
 	function_t *f;
 	if (self->type == ENODE_FUNCTION_CALL) {
-		if ((f = vars_get_function(self->var.name)) == NULL)
+		if ((f = vars_get_function(self->var.name)) == NULL) {
+			set_exec_error_message(pexec_err, "Function %s not defined", self->var.name);
 			return ERROR_FUNCTION_NOT_DEFINED;
-		if (f->ftype == FTYPE_USER)
-			return eval_function_call(self, f, pval);
-		else if (f->ftype == FTYPE_BUILTIN) {
+		}
+		if (f->ftype == FTYPE_USER) {
+			pexec_err->function_name = self->var.name;
+			return eval_function_call(self, f, pval, pexec_err);
+		} else if (f->ftype == FTYPE_BUILTIN) {
 			is_builtin_function_call = TRUE;
 			if (f->builtin_nb_args != nbargs)
 				return ERROR_PARAMETER_NUMBER_MISMATCH;
@@ -520,7 +523,7 @@ int expr_eval(const expr_t *self, numptr *pval)
 	for (i = 0; i < nbargs; ++i) {
 		callargs_t *ca = &self->cargs[i];
 		if (ca->type == CARG_EXPR) {
-			if ((r = myeval(ca->e, &value_args[i])) != ERROR_NONE)
+			if ((r = myeval(ca->e, &value_args[i], pexec_err)) != ERROR_NONE)
 				break;
 		} else if (ca->type == CARG_ARRAY) {
 			r = ERROR_ARGTYPE_MISMATCH;
@@ -530,9 +533,9 @@ int expr_eval(const expr_t *self, numptr *pval)
 	}
 	if (r == ERROR_NONE) {
 		if (is_builtin_function_call)
-			r = eval_builtin_function_call(self, f, (const numptr *)value_args, pval);
+			r = eval_builtin_function_call(self, f, (const numptr *)value_args, pval, pexec_err);
 		else
-			r = (table_eval[self->type])(self, (const numptr *)value_args, pval);
+			r = (table_eval[self->type])(self, (const numptr *)value_args, pval, pexec_err);
 	}
 	for (i = 0; i < nbargs; ++i)
 		num_destruct(&value_args[i]);
@@ -541,7 +544,7 @@ int expr_eval(const expr_t *self, numptr *pval)
 	return r;
 }
 
-static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval)
+static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err)
 {
 	assert(self->type == ENODE_NUMBER && self->nb_args == 0 && value_args == NULL);
 	assert(num_is_not_initialized(*pval));
@@ -549,12 +552,12 @@ static int eval_number(const expr_t *self, const numptr *value_args, numptr *pva
 	return ERROR_NONE;
 }
 
-static int getindex(expr_t *index, long int *pidxval)
+static int getindex(expr_t *index, long int *pidxval, exec_err_t *pexec_err)
 {
 	int r = ERROR_NONE;
 	if (index != NULL) {
 		numptr num = num_undefvalue();
-		if ((r = expr_eval(index, &num)) == ERROR_NONE) {
+		if ((r = expr_eval(index, &num, pexec_err)) == ERROR_NONE) {
 			*pidxval = num_getlongint(num);
 			r = array_check_index(*pidxval);
 			num_destruct(&num);
@@ -573,11 +576,11 @@ static void getvar_core(const char *varname, int has_index, long int idxval, con
 
 }
 
-static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create_if_missing)
+static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create_if_missing, exec_err_t *pexec_err)
 {
 	long int idxval;
 	int r;
-	if ((r = getindex(self->var.index, &idxval)) != ERROR_NONE)
+	if ((r = getindex(self->var.index, &idxval, pexec_err)) != ERROR_NONE)
 		return r;
 	getvar_core(self->var.name, self->var.index != NULL, idxval, ppval);
 
@@ -592,14 +595,14 @@ static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create
 	return r;
 }
 
-static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval)
+static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err)
 {
 	assert(self->type == ENODE_GETVAR && self->nb_args == 0 && value_args == NULL);
 	assert(num_is_not_initialized(*pval));
 
 	int r;
 	const numptr *pnum;
-	if ((r = eval_getvar_core(self, &pnum, FALSE)) != ERROR_NONE)
+	if ((r = eval_getvar_core(self, &pnum, FALSE, pexec_err)) != ERROR_NONE)
 		return r;
 
 	if (pnum == NULL)
@@ -610,7 +613,7 @@ static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pva
 	return ERROR_NONE;
 }
 
-static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr *pval, const numptr **ppvarnum)
+static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr *pval, const numptr **ppvarnum, exec_err_t *pexec_err)
 {
 	int is_postfix = (self->type == ENODE_SETVAR_POSTFIX);
 	assert((self->type == ENODE_SETVAR || self->type == ENODE_SETVAR_POSTFIX) && self->nb_args == 1 && value_args != NULL);
@@ -625,7 +628,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 	int res_is_to_be_destructed = FALSE;
 	const numptr *presult = NULL;
 
-	int r = getindex(self->var.index, &idxval);
+	int r = getindex(self->var.index, &idxval, pexec_err);
 	if (r != ERROR_NONE)
 		return r;
 
@@ -672,7 +675,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 			expr_t *earg0 = expr_construct_number(num_construct_from_num(value_args[0]));
 			etmp = expr_construct_op2_builtin_id(self->var.builtin, exprval, earg0);
 		}
-		r = expr_eval(etmp, &res);
+		r = expr_eval(etmp, &res, pexec_err);
 		if (r == ERROR_NONE) {
 			res_is_to_be_destructed = TRUE;
 			presult = &res;
@@ -698,13 +701,13 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 	return r;
 }
 
-static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval)
+static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err)
 {
 	const numptr *pvarnum;
-	return eval_setvar_core(self, value_args, pval, &pvarnum);
+	return eval_setvar_core(self, value_args, pval, &pvarnum, pexec_err);
 }
 
-static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval)
+static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval, exec_err_t *pexec_err)
 {
 	assert(self->type == ENODE_BUILTIN_OP);
 	assert(num_is_not_initialized(*pval));
@@ -779,7 +782,7 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 	return -1;
 }
 
-static int eval_builtin_function_call(const expr_t *self, const function_t *f, const numptr *value_args, numptr *pval)
+static int eval_builtin_function_call(const expr_t *self, const function_t *f, const numptr *value_args, numptr *pval, exec_err_t *pexec_err)
 {
 	int n = f->builtin_nb_args;
 
@@ -800,14 +803,14 @@ static int eval_builtin_function_call(const expr_t *self, const function_t *f, c
 	return ERROR_NONE;
 }
 
-static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum)
+static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum, exec_err_t *pexec_err)
 {
 	int r;
 	if (self->type == ENODE_GETVAR) {
 
 		assert(self->nb_args == 0);
 
-		if ((r = eval_getvar_core(self, ppvarnum, TRUE)) != ERROR_NONE)
+		if ((r = eval_getvar_core(self, ppvarnum, TRUE, pexec_err)) != ERROR_NONE)
 			return r;
 
 		return ERROR_NONE;
@@ -816,10 +819,10 @@ static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum)
 		assert(self->nb_args == 1 && self->cargs[0].type == CARG_EXPR);
 
 		numptr arg1;
-		if ((r = myeval(self->cargs[0].e, &arg1)) != ERROR_NONE)
+		if ((r = myeval(self->cargs[0].e, &arg1, pexec_err)) != ERROR_NONE)
 			return r;
 		numptr val = num_undefvalue();
-		if ((r = eval_setvar_core(self, &arg1, &val, ppvarnum)) != ERROR_NONE)
+		if ((r = eval_setvar_core(self, &arg1, &val, ppvarnum, pexec_err)) != ERROR_NONE)
 			return r;
 		num_destruct(&arg1);
 		num_destruct(&val);
@@ -838,7 +841,7 @@ static int count_defargs(defargs_t *darg)
 	return n;
 }
 
-static int eval_function_call(const expr_t *self, const function_t *f, numptr *pval)
+static int eval_function_call(const expr_t *self, const function_t *f, numptr *pval, exec_err_t *pexec_err)
 {
 	assert(self->type == ENODE_FUNCTION_CALL);
 	assert(num_is_not_initialized(*pval));
@@ -878,7 +881,7 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 				break;
 			}
 			nv.type = TYPE_NUM;
-			if ((r = myeval(ca->e, &nv.num)) != ERROR_NONE)
+			if ((r = myeval(ca->e, &nv.num, pexec_err)) != ERROR_NONE)
 				break;
 		} else if (darg->type == DARG_ARRAYVALUE) {
 			out_dbg("Argument %d (#%s) is array byval\n", ii, darg->name);
@@ -896,7 +899,7 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 			}
 			expr_t *e = ca->e;
 			const numptr *plvnum;
-			if ((r = expr_eval_left_value(e, &plvnum)) != ERROR_NONE)
+			if ((r = expr_eval_left_value(e, &plvnum, pexec_err)) != ERROR_NONE)
 				break;
 			nv.type = TYPE_NUM;
 			nv.num_ref = (numptr *)plvnum;
@@ -952,7 +955,7 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 	if (r == ERROR_NONE) {
 		assert(darg == NULL);
 		assert(ii == nbargs + nbauto);
-		r = program_execute(f->program, pval);
+		r = program_execute(f->program, pval, pexec_err);
 		if (r == ERROR_NONE || r == ERROR_RETURN) {
 			r = ERROR_NONE;
 			if (!num_is_not_initialized(*pval) && f->is_void) {

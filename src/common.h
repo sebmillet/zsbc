@@ -70,7 +70,6 @@ const char *VAR_LAST;
 #define ERROR_SQRT_OF_NEG				10
 #define ERROR_ARRAY_OUT_OF_BOUNDS		11
 #define ERROR_LAST						11
-void outln_error_code(int e);
 
 #define L_ENFORCE	(-1)
 #define L_ERROR		0
@@ -112,6 +111,27 @@ typedef struct defargs_t defargs_t;
 defargs_t *defargs_chain(defargs_t *base, defargs_t *append);
 
 int varname_cmp(const char *n1, const char *n2);
+
+typedef struct code_location_t {
+	int is_set;
+	const char *file_name;
+	int first_line, first_column;
+	int last_line, last_column;
+} code_location_t;
+
+code_location_t construct_unset_code_location_t();
+
+typedef struct exec_err_t {
+	const char *function_name;
+	const code_location_t *ploc;
+	char *error_message;
+} exec_err_t;
+
+exec_err_t construct_exec_err_t();
+void set_exec_error_message(exec_err_t *exec_err, const char *fmt, ...);
+void outln_exec_error(int e, exec_err_t *exec_err, int is_warning);
+
+void loc_reset();
 
 #endif /* COMMON_H */
 

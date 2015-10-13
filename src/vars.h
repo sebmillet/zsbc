@@ -104,7 +104,7 @@ array_t **vars_array_get_ref(const char *name);
 defargs_t *defargs_construct(defarg_type_t type, const char *name);
 void defargs_destruct(defargs_t *arg);
 
-void vars_user_function_construct(char *name, defargs_t *args, program_t *program, int is_void);
+void vars_user_function_construct(char *name, defargs_t *args, program_t *program, int is_void, const code_location_t loc);
 void register_builtin_function(const char *name, int nb_args, void *f);
 
 #endif	/* VARS_H */

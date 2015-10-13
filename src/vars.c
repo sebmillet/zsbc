@@ -603,29 +603,47 @@ defargs_t *defargs_chain(defargs_t *base, defargs_t *append)
 
 
 
-static void destruct_function_if_defined(const char *name)
+	/*
+	 *   *WARNING*
+	 *
+	 * pexec_err CAN BE NULL
+	 * ... as is the case when called from register_builtin_function()
+	 *
+	 * */
+static void destruct_function_if_defined(const char *name, exec_err_t *pexec_err)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
 	vars_t *w;
 	if ((w = find_var(name, TYPE_FCNT)) != NULL) {
 		vars_t_destruct(w);
-		outln_warning("Redefinition of function %s", name);
+		if (pexec_err != NULL) {
+			set_exec_error_message(pexec_err, "Redefinition of function %s", name);
+			outln_exec_error(ERROR_NONE, pexec_err, TRUE);
+		} else {
+			outln_warning("Redefinition of function %s", name);
+		}
 	}
 }
 
-void vars_user_function_construct(char *name, defargs_t *defargs, program_t *program, int is_void)
+void vars_user_function_construct(char *name, defargs_t *defargs, program_t *program, int is_void, const code_location_t loc)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
+	exec_err_t exec_err = construct_exec_err_t();
+	exec_err.ploc = &loc;
+
 	if (defargs == defarg_t_badarg) {
-		outln_error("%s: not created: duplicate parameter names", name);
+
+		set_exec_error_message(&exec_err, "Function %s not created: duplicate parameter names", name);
+		outln_exec_error(ERROR_NONE, &exec_err, FALSE);
+
 		program_destruct(program);
 		free(name);
 		return;
 	}
 
-	destruct_function_if_defined(name);
+	destruct_function_if_defined(name, &exec_err);
 
 	vars_t *f = vars_t_construct(name, TYPE_FCNT, FTYPE_USER);
 
@@ -638,7 +656,10 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 		defargs_t *param = f->value.fcnt.defargs;
 		while (param != NULL) {
 			if (darg_type_is_of_same_namespace(param->type, al->type) && !varname_cmp(param->name, al->name)) {
-				outln_error("%s: not created: duplicate names between parameters and autolist", name);
+
+				set_exec_error_message(&exec_err, "Function %s not created: duplicate names between parameters and autolist", name);
+				outln_exec_error(ERROR_NONE, &exec_err, FALSE);
+
 				vars_t_destruct(f);
 				return;
 			}
@@ -654,7 +675,7 @@ void register_builtin_function(const char *name, int nb_args, void *f)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
-	destruct_function_if_defined(name);
+	destruct_function_if_defined(name, NULL);
 
 	vars_t *v = vars_t_construct(name, TYPE_FCNT, FTYPE_BUILTIN);
 	v->value.fcnt.builtin_nb_args = nb_args;

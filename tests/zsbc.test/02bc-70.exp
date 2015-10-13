@@ -63,7 +63,7 @@ expect {
 set test "Function definition with execution error in ibase assignment"
 send "define zz(){ibase=1/0\nreturn 3FF}\n978\nzz()\n879\n"
 expect {
-	-re "978\[^0-9\]+Division by 0\[^0-9\]+879\[^0-9\]+" { pass "$test" }
+	-re "978\[^0-9\]+Divide by 0\[^0-9\]+879\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 

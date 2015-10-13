@@ -40,19 +40,19 @@ typedef struct program_ifseq_t {
 	program_t *pelse;
 } program_ifseq_t;
 
-program_t *program_construct_expr(expr_t *e, int is_assignment);
-program_t *program_construct_str(const char *s);
-program_t *program_construct_loop(program_loop_t *loop);
-program_t *program_construct_return(expr_t *e);
-program_t *program_construct_continue();
-program_t *program_construct_break();
-program_t *program_construct_ifseq(program_ifseq_t *ifseq);
-program_t *program_construct_autolist(defargs_t *defargs);
+program_t *program_construct_expr(expr_t *e, int is_assignment, const code_location_t loc);
+program_t *program_construct_str(const char *s, const code_location_t loc);
+program_t *program_construct_loop(program_loop_t *loop, const code_location_t loc);
+program_t *program_construct_return(expr_t *e, const code_location_t loc);
+program_t *program_construct_continue(const code_location_t loc);
+program_t *program_construct_break(const code_location_t loc);
+program_t *program_construct_ifseq(program_ifseq_t *ifseq, const code_location_t loc);
+program_t *program_construct_autolist(defargs_t *defargs, const code_location_t loc);
 void program_gather_defargs(defargs_t **pdefargs, program_t **pprogram);
 
 void program_destruct(program_t *p);
 
-int program_execute(program_t *p, numptr *pval);
+int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err);
 program_t *program_chain(program_t *base, program_t *append);
 
 void program_notify_is_part_of_print(program_t *program);

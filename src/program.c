@@ -38,6 +38,7 @@ typedef enum {
 
 struct program_t {
 	instr_t type;
+	code_location_t loc;
 	int is_part_of_print;		/* for TINSTR_EXPR* and TINSTR_STR */
 
 	union {
@@ -58,74 +59,77 @@ struct program_t {
 	program_t *tail;
 };
 
-static program_t *program_construct(instr_t type)
+static program_t *program_construct(instr_t type, const code_location_t *ploc)
 {
 	program_t *p = (program_t *)malloc(sizeof(program_t));
 	p->type = type;
+
+	p->loc = *ploc;
+
 	p->is_part_of_print = FALSE;
 	p->next = NULL;
 	p->tail = NULL;
 	return p;
 }
 
-program_t *program_construct_expr(expr_t *e, int is_assignment)
+program_t *program_construct_expr(expr_t *e, int is_assignment, const code_location_t loc)
 {
-	program_t *p = program_construct(is_assignment ? TINSTR_EXPR_ASSIGN_EXPR : TINSTR_EXPR_EXPR);
+	program_t *p = program_construct(is_assignment ? TINSTR_EXPR_ASSIGN_EXPR : TINSTR_EXPR_EXPR, &loc);
 	p->expr = e;
 	out_dbg("Construct of one program of type %s, address = %lu\n", is_assignment ? "TINSTR_ASSIGN_EXPR" : "TINSTR_EXPR", p);
 	return p;
 }
 
-program_t *program_construct_return(expr_t *e)
+program_t *program_construct_return(expr_t *e, const code_location_t loc)
 {
-	program_t *p = program_construct(TINSTR_EXPR_RETURN);
+	program_t *p = program_construct(TINSTR_EXPR_RETURN, &loc);
 	p->expr = e;
 	out_dbg("Construct of one program of type return, expression: %lu, address = %lu\n", e, p);
 	return p;
 }
 
-program_t *program_construct_str(const char *s)
+program_t *program_construct_str(const char *s, const code_location_t loc)
 {
-	program_t *p = program_construct(TINSTR_STR);
+	program_t *p = program_construct(TINSTR_STR, &loc);
 	p->str = (char *)s;
 	out_dbg("Construct one program of type string, string value: '%s', address = %lu\n", s, p);
 	return p;
 }
 
-program_t *program_construct_loop(program_loop_t *loop)
+program_t *program_construct_loop(program_loop_t *loop, const code_location_t loc)
 {
-	program_t *p = program_construct(TINSTR_LOOP);
+	program_t *p = program_construct(TINSTR_LOOP, &loc);
 	p->loop = *loop;
 	out_dbg("Construct one program of type loop, address = %lu\n", p);
 	return p;
 }
 
-program_t *program_construct_break()
+program_t *program_construct_break(const code_location_t loc)
 {
-	program_t *p = program_construct(TINSTR_BREAK);
+	program_t *p = program_construct(TINSTR_BREAK, &loc);
 	out_dbg("Construct of one program of type break, address = %lu\n", p);
 	return p;
 }
 
-program_t *program_construct_continue()
+program_t *program_construct_continue(const code_location_t loc)
 {
-	program_t *p = program_construct(TINSTR_CONTINUE);
+	program_t *p = program_construct(TINSTR_CONTINUE, &loc);
 	out_dbg("Construct of one program of type continue, address = %lu\n", p);
 	return p;
 }
 
-program_t *program_construct_ifseq(program_ifseq_t *ifseq)
+program_t *program_construct_ifseq(program_ifseq_t *ifseq, const code_location_t loc)
 {
-	program_t *p = program_construct(TINSTR_IFSEQ);
+	program_t *p = program_construct(TINSTR_IFSEQ, &loc);
 	p->ifseq = *ifseq;
 	out_dbg("Construct of one program of type if, expression: %lu, program_if: %lu, program_else: %lu, address = %lu\n",
 		ifseq->expr, ifseq->pif, ifseq->pelse, p);
 	return p;
 }
 
-program_t *program_construct_autolist(defargs_t *autolist)
+program_t *program_construct_autolist(defargs_t *autolist, const code_location_t loc)
 {
-	program_t *p = program_construct(TINSTR_AUTOLIST);
+	program_t *p = program_construct(TINSTR_AUTOLIST, &loc);
 	p->autolist = (autolist == defarg_t_badarg ? NULL : autolist);
 	out_dbg("Construct of one program of type autolist, autolist: %lu, address = %lu\n", autolist, p);
 	return p;
@@ -225,16 +229,16 @@ void program_destruct(program_t *p)
 	 *   - Outputs something (using num_print() and outstring() functions) when there is no error
 	 *
 	 *   - DOES NOT OUTPUT ANYTHING if an error occurs. It is then up to the caller to manage
-	 *     displaying an error, typically calling outln_error_code(r), r being the return value
-	 *     of program_execute().
+	 *     displaying an error.
 	 *
 	 * */
-int program_execute(program_t *p, numptr *pval)
+int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
 {
 	out_dbg("Entering program_execute for %lu\n", p);
 	int r = ERROR_NONE;
 	while (p != NULL && r == ERROR_NONE) {
 		out_dbg("Executing one instruction, type: %d, address: %lu\n", p->type, p);
+		pexec_err->ploc = &p->loc;
 		numptr num;
 		program_loop_t *loop;
 		program_ifseq_t *ifseq;
@@ -248,8 +252,9 @@ int program_execute(program_t *p, numptr *pval)
 			case TINSTR_EXPR_RETURN:
 				print_result = (p->type == TINSTR_EXPR_EXPR || (p->is_part_of_print && p->type == TINSTR_EXPR_ASSIGN_EXPR));
 				num = num_undefvalue();
-				if ((r = expr_eval(p->expr, &num)) != ERROR_NONE) {
-/*                    outln_error_code(r);*/
+				if ((r = expr_eval(p->expr, &num, pexec_err)) != ERROR_NONE) {
+					out_dbg("Expression produced return value %d\n", r);
+					break;
 				} else if (print_result && !num_is_not_initialized(num)) {
 					num_print(num);
 					if (!p->is_part_of_print)
@@ -258,7 +263,6 @@ int program_execute(program_t *p, numptr *pval)
 				if (p->type == TINSTR_EXPR_RETURN) {
 					r = ERROR_RETURN;
 					if (pval == NULL) {
-/*                        outln_error_code(r);*/
 						num_destruct(&num);
 					} else {
 						*pval = num;
@@ -281,7 +285,7 @@ int program_execute(program_t *p, numptr *pval)
 
 					/* First term of 3-term for() */
 				num = num_undefvalue();
-				if ((r = expr_eval(loop->exprbefore, &num)) != ERROR_NONE)
+				if ((r = expr_eval(loop->exprbefore, &num, pexec_err)) != ERROR_NONE)
 					break;
 				num_destruct(&num);
 
@@ -290,7 +294,7 @@ int program_execute(program_t *p, numptr *pval)
 						/* Second term of a 3-term for() or test part of a while() */
 					if (loop->testbefore != NULL) {
 						num = num_undefvalue();
-						if ((r = expr_eval(loop->testbefore, &num)) != ERROR_NONE)
+						if ((r = expr_eval(loop->testbefore, &num, pexec_err)) != ERROR_NONE)
 							break;
 						b = num_is_zero(num);
 						num_destruct(&num);
@@ -299,7 +303,7 @@ int program_execute(program_t *p, numptr *pval)
 					}
 
 						/* The content of the loop being executed, for every loops realms */
-					r = program_execute(loop->core, pval);
+					r = program_execute(loop->core, pval, pexec_err);
 					if (r == ERROR_BREAK) {
 						r = ERROR_NONE;
 						break;
@@ -314,7 +318,7 @@ int program_execute(program_t *p, numptr *pval)
 						/* Test part of a do ... while() */
 					if (loop->testafter != NULL) {
 						num = num_undefvalue();
-						if ((r = expr_eval(loop->testafter, &num)) != ERROR_NONE)
+						if ((r = expr_eval(loop->testafter, &num, pexec_err)) != ERROR_NONE)
 							break;
 						b = num_is_zero(num);
 						num_destruct(&num);
@@ -324,7 +328,7 @@ int program_execute(program_t *p, numptr *pval)
 
 						/* Third term of a 3-term for() */
 					num = num_undefvalue();
-					if ((r = expr_eval(loop->exprafter, &num)) != ERROR_NONE)
+					if ((r = expr_eval(loop->exprafter, &num, pexec_err)) != ERROR_NONE)
 						break;
 					num_destruct(&num);
 
@@ -344,16 +348,16 @@ int program_execute(program_t *p, numptr *pval)
 					/* PART 1 - TEST */
 
 				num = num_undefvalue();
-				if ((r = expr_eval(ifseq->expr, &num)) != ERROR_NONE)
+				if ((r = expr_eval(ifseq->expr, &num, pexec_err)) != ERROR_NONE)
 					break;
 				b = num_is_zero(num);
 				num_destruct(&num);
 
 					/* PART 2 - IF or ELSE execution*/
 				if (!b)
-					r = program_execute(ifseq->pif, pval);
+					r = program_execute(ifseq->pif, pval, pexec_err);
 				else
-					r = program_execute(ifseq->pelse, pval);
+					r = program_execute(ifseq->pelse, pval, pexec_err);
 
 				break;
 			default:

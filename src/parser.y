@@ -41,7 +41,11 @@
 
 extern int yylex();
 void yyerror(char *s, ...);
-void loc_reset();
+
+typedef struct YYLTYPE YYLTYPE;
+const code_location_t code_loc(const YYLTYPE yl);
+
+const char *input_get_name();
 
 extern defargs_t *defarg_t_badarg;
 
@@ -125,9 +129,10 @@ input:
 
 program:
 	instruction_list {
-		int r = program_execute($1, NULL);
+		exec_err_t exec_err = construct_exec_err_t();
+		int r = program_execute($1, NULL, &exec_err);
 		if (r != ERROR_NONE) {
-			outln_error_code(r);
+			outln_exec_error(r, &exec_err, TRUE);
 		}
 		program_destruct($1);
 	}
@@ -163,34 +168,34 @@ my_instruction_non_empty:
 	| loop_while
 	| loop_for
 	| ifseq
-	| RETURN { $$ = program_construct_return(NULL); }
-	| RETURN expression { $$ = program_construct_return($2); }
-	| BREAK { $$ = program_construct_break(); }
-	| CONTINUE { $$ = program_construct_continue(); }
+	| RETURN { $$ = program_construct_return(NULL, code_loc(@$)); }
+	| RETURN expression { $$ = program_construct_return($2, code_loc(@$)); }
+	| BREAK { $$ = program_construct_break(code_loc(@$)); }
+	| CONTINUE { $$ = program_construct_continue(code_loc(@$)); }
 	| PRINT print_list { $$ = $2; }
-	| AUTOLIST defargsbyval_list { $$ = program_construct_autolist($2); }
+	| AUTOLIST defargsbyval_list { $$ = program_construct_autolist($2, code_loc(@$)); }
 	| instruction_block { $$ = $1; }
 ;
 
 instruction_expr_assignment:
 	IDENTIFIER OP_AND_ASSIGN expression {
 		expr_t *enode = expr_construct_setvar($1, NULL, $2, FALSE, $3);
-		$$ = program_construct_expr(enode, TRUE);
+		$$ = program_construct_expr(enode, TRUE, code_loc(@$));
 		free($2);
 	}
 	| IDENTIFIER '[' expression ']' OP_AND_ASSIGN expression {
 		expr_t *enode = expr_construct_setvar($1, $3, $5, FALSE, $6);
-		$$ = program_construct_expr(enode, TRUE);
+		$$ = program_construct_expr(enode, TRUE, code_loc(@$));
 		free($5);
 	}
 ;
 
 instruction_expr_no_assignment:
-	expression_no_assignment { $$ = program_construct_expr($1, FALSE); }
+	expression_no_assignment { $$ = program_construct_expr($1, FALSE, code_loc(@$)); }
 ;
 
 instruction_string:
-	STRING { $$ = program_construct_str($1); }
+	STRING { $$ = program_construct_str($1, code_loc(@$)); }
 ;
 
 expression:
@@ -250,7 +255,7 @@ loop_while:
 		loop.core = $6;
 		loop.testafter = NULL;
 		loop.exprafter = NULL;
-		$$ = program_construct_loop(&loop);
+		$$ = program_construct_loop(&loop, code_loc(@$));
 	}
 ;
 
@@ -267,7 +272,7 @@ loop_for:
 		loop.core = $10;
 		loop.testafter = NULL;
 		loop.exprafter = $7;
-		$$ = program_construct_loop(&loop);
+		$$ = program_construct_loop(&loop, code_loc(@$));
 	}
 ;
 
@@ -277,14 +282,14 @@ ifseq:
 		ifseq.expr = $3;
 		ifseq.pif = $6;
 		ifseq.pelse = NULL;
-		$$ = program_construct_ifseq(&ifseq);
+		$$ = program_construct_ifseq(&ifseq, code_loc(@$));
 	}
 	| IF '(' expression ')' newlines_or_empty instruction_non_empty ELSE newlines_or_empty instruction_non_empty {
 		program_ifseq_t ifseq;
 		ifseq.expr = $3;
 		ifseq.pif = $6;
 		ifseq.pelse = $9;
-		$$ = program_construct_ifseq(&ifseq);
+		$$ = program_construct_ifseq(&ifseq, code_loc(@$));
 	}
 ;
 
@@ -346,10 +351,10 @@ hackbc_terminate:
 
 function_definition:
 	hackbc_enter DEFINE IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty hackbc_terminate {
-		vars_user_function_construct($3, $5, $8, FALSE);
+		vars_user_function_construct($3, $5, $8, FALSE, code_loc(@$));
 	}
 	| hackbc_enter DEFINE VOID IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty hackbc_terminate {
-		vars_user_function_construct($4, $6, $9, TRUE);
+		vars_user_function_construct($4, $6, $9, TRUE, code_loc(@$));
 	}
 ;
 
@@ -463,7 +468,8 @@ void hackbc_check(const char *name, expr_t *e)
 	}
 
 	numptr num = num_undefvalue();
-	int r = expr_eval(e, &num);
+	exec_err_t exec_err = construct_exec_err_t();
+	int r = expr_eval(e, &num, &exec_err);
 		/*
 		 * We just ignore cases when an error occurs (ex. with an
 		 * instruction like "ibase = 1 / 0", and also cases where

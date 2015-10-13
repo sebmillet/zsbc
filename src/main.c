@@ -120,7 +120,7 @@ static void input_terminate();
 
 static const char *table_errors[] = {
 	NULL,								/* ERROR_NONE */
-	"Division by 0",					/* ERROR_DIV0 */
+	"Divide by 0",						/* ERROR_DIV0 */
 	"Negative exponent not authorized",	/* ERROR_NEGATIVE_EXP */
 	"Function not defined",				/* ERROR_FUNCTION_NOT_DEFINED */
 	"Parameter number mismatch",		/* ERROR_PARAMETER_NUMBER_MISMATCH */
@@ -328,25 +328,84 @@ int outln_warning(const char *fmt, ...)
 	return r;
 }
 
-void outln_error_code(int e)
+exec_err_t construct_exec_err_t()
 {
-	if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
-		const char *msg = table_errors[e];
-		if (msg == NULL) {
-			FATAL_ERROR("Error code %d has no defined error message!", e);
+	exec_err_t exec_err;
+	exec_err.function_name = NULL;
+	exec_err.ploc = NULL;
+	exec_err.error_message = NULL;
+	return exec_err;
+}
+
+code_location_t construct_unset_code_location_t()
+{
+	code_location_t loc;
+	loc.is_set = FALSE;
+	loc.file_name = NULL;
+	loc.first_line = -1;
+	loc.first_column = -1;
+	loc.last_line = -1;
+	loc.last_column = -1;
+	return loc;
+}
+
+void set_exec_error_message(exec_err_t *exec_err, const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+
+		/* FIXME */
+	size_t len = strlen(fmt) + 500;
+
+	exec_err->error_message = (char *)malloc(sizeof(char) * len);
+	vsnprintf(exec_err->error_message, len, fmt, args);
+	va_end(args);
+}
+
+void outln_exec_error(int e, exec_err_t *exec_err, int is_warning)
+{
+	if (is_warning)
+		fprintf(stderr, "Warning: ");
+	else
+		fprintf(stderr, "Error: ");
+
+	const char *builtin_error_message = NULL;
+	if (exec_err->error_message == NULL) {
+		if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
+			builtin_error_message = table_errors[e];
+			if (builtin_error_message == NULL) {
+				FATAL_ERROR("Error code %d has no defined error message!", e);
+			}
 		} else {
-			outln_error("%s", msg);
+				/*
+				 * FIXME (?)
+				 *   Remove FATAL below and instead, display error code number if ever it is unknown.
+				 *   I personally prefer hardened code. Error codes should be controlled.
+				 * */
+			FATAL_ERROR("Error code %d unknown!", e);
 		}
-	} else {
+	}
 
-			/*
-			 * Should an unknown error immediately stop the program execution?
-			 * Not sure of it.
-			 * I leave it active for the moment.
-			*/
-		assert(e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors)));
+	const char *error_message = exec_err->error_message != NULL ? exec_err->error_message : builtin_error_message;
 
-		outln_error("Unknown error code %d", e);
+	if (exec_err->ploc != NULL && exec_err->ploc->is_set) {
+		if (exec_err->ploc->file_name != NULL)
+			fprintf(stderr, "%s: ", exec_err->ploc->file_name);
+		if (!opt_SCM && exec_err->ploc->first_line >= 1 && exec_err->ploc->first_column >= 1 &&
+				exec_err->ploc->last_line >= 1 && exec_err->ploc->last_column >= 1)
+			fprintf(stderr, "%d.%d-%d.%d: ", exec_err->ploc->first_line, exec_err->ploc->first_column,
+				exec_err->ploc->last_line, exec_err->ploc->last_column);
+	}
+
+	if (exec_err != NULL)
+		if (exec_err->function_name != NULL)
+			fprintf(stderr, "%s(): ", exec_err->function_name);
+
+	fprintf(stderr, "%s\n", error_message);
+
+	if (exec_err->error_message != NULL) {
+		free (exec_err->error_message);
+		exec_err->error_message = NULL;
 	}
 }
 
@@ -411,7 +470,7 @@ void out_of_memory()
 }
 
 	/*
-	 * Needed by FATAL_ERROR marco
+	 * Needed by FATAL_ERROR macro
 	 * */
 void fatalln(const char *file, int line, const char *fmt, ...)
 {
@@ -674,7 +733,7 @@ int main(int argc, char *argv[])
 	const libinfo_t *li = num_lib_get_current();
 	out_dbg("Numeric library is '%s'\n", li->libname);
 	if (strcmp(li->libname, "libbc") && bc_mathlib) {
-		fprintf(stderr, "%s: option -l (a.k. -mathlib) works only with libbc. Consider using option '-numlib bc'.\n", PACKAGE_NAME);
+		fprintf(stderr, "%s: option -l (a.k. -mathlib) works only with libbc. Consider using option '--numlib bc'.\n", PACKAGE_NAME);
 		exit(-3);
 	}
 /*    if (bc_mathlib)*/
@@ -706,6 +765,7 @@ int main(int argc, char *argv[])
 
 		set_input_name("<internal libbc>");
 		yy_scan_buffer(libbc_libmath, libbc_libmath_len);
+		loc_reset();
 #else
 		FATAL_ERROR("%s", "Bug: bc_mathlib can be used only along with libbc, and libbc can be activated only when HAS_LIB_LIBBC is set");
 #endif

@@ -920,11 +920,11 @@ case 1:
 YY_RULE_SETUP
 #line 78 "lexer.l"
 {
-	int i;
-	for (i = 0; yytext[i] != '\0'; ++i) {
-		if (yytext[i] == '\n')
-			++yylineno;
-	}
+/*    int i;*/
+/*    for (i = 0; yytext[i] != '\0'; ++i) {*/
+/*        if (yytext[i] == '\n')*/
+/*            ++yylineno;*/
+/*    }*/
 /*    fprintf(stderr, "\n\n[=====\n");*/
 /*    fputs(yytext, stderr);*/
 /*    fprintf(stderr, "\n=====]\n\n");*/
@@ -1157,6 +1157,13 @@ YY_RULE_SETUP
 	unsigned int len = strlen(yytext);
 	assert(yytext[len - 1] == '"');
 	yytext[len - 1] = '\0';
+
+/*    int i;*/
+/*    for (i = 1; yytext[i] != '\0'; ++i) {*/
+/*        if (yytext[i] == '\n')*/
+/*            ++yylineno;*/
+/*    }*/
+
 	s_alloc_and_copy(&yylval.str, yytext + 1);
 	return STRING;
 }
@@ -1164,12 +1171,12 @@ YY_RULE_SETUP
 case 42:
 /* rule 42 can match eol */
 YY_RULE_SETUP
-#line 165 "lexer.l"
+#line 172 "lexer.l"
 { yycolumn = 1; return NEWLINE; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 167 "lexer.l"
+#line 174 "lexer.l"
 {
 		/* The code below is taken from bc source, with some minor variations */
 	char c = yytext[0];
@@ -1183,10 +1190,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 178 "lexer.l"
+#line 185 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1190 "lexer.c"
+#line 1197 "lexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2152,7 +2159,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 177 "lexer.l"
+#line 184 "lexer.l"
 
 
 
@@ -2177,12 +2184,25 @@ void cleanup_inputnumber(char *s)
 
 void loc_reset()
 {
+	out_dbg("Location reset\n");
 	yylloc.first_column = 1;
 	yylloc.first_line = 1;
 	yylloc.last_column = 1;
 	yylloc.last_line = 1;
 	yycolumn = 1;
 	yylineno = 1;
+}
+
+const code_location_t code_loc(const YYLTYPE yl)
+{
+	code_location_t loc;
+	loc.is_set = TRUE;
+	loc.file_name = strlen(input_get_name()) >= 1 ? input_get_name() : NULL;
+	loc.first_line = yl.first_line;
+	loc.first_column = yl.first_column;
+	loc.last_line = yl.last_line;
+	loc.last_column = yl.last_column;
+	return loc;
 }
 
 void yyerror(char *s, ...)
@@ -2210,6 +2230,8 @@ int yywrap()
 	out_dbg("\tyyin: %s\n", next == stdin ? "is being assigned to stdin" :
 			(next == NULL ? "yyin won't be assigned, lexer terminating" : "yyin is being assigned to an input file (not stdin)"));
 
+	loc_reset();
+
 	if (next == NULL) {
 		out_dbg("\tyywrap returns 1 (non zero means TERMINATE)\n");
 		return 1;
@@ -2219,7 +2241,6 @@ int yywrap()
 		return 0;
 	}
 
-	loc_reset();
 }
 
 
