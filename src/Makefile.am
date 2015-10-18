@@ -15,7 +15,7 @@ bin_PROGRAMS = zsbc
 check_PROGRAMS = zsbc
 
 zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h array.c array.h numwrap.c numwrap.h \
-               program.c program.h parser.y lexer.l common.h
+               program.c program.h parser.y lexer.l common.h uthash.h
 zsbc_LDFLAGS = 
 
 LIBBC = ../lib/libbc.a
@@ -26,7 +26,7 @@ endif
 
 if WITH_LIBBC
 $(PROGRAMS): $(LIBBC)
-zsbc_SOURCES += bc/libmath.c
+zsbc_SOURCES += bc/libmath.c bc/libmath.b
 zsbc_LDADD = $(LIBBC)
 endif
 
