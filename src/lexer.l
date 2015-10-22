@@ -122,8 +122,11 @@ string			\"[^\"]*\"
 
 {number} {
 	cleanup_inputnumber(yytext);
-	yylval.num = num_construct_from_str(yytext);
-	return INTEGER;
+	int r;
+	if ((r = num_construct_from_str(yytext, &yylval.num)) != ERROR_NONE) {
+		yyerror("Illegal number");
+	} else
+		return INTEGER;
 }
 
 	/* The sequence below (left commented) is for insensitive matching */

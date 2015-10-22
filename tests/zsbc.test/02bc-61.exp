@@ -1,0 +1,76 @@
+# tests/zsbc.test/02bc-61.exp
+
+set timeout 3
+spawn "$ZSBC" --SCM --numlib bc "$TESTDIR/02bc-61.b"
+send_user "***   BC - ibase management hack during function definition\n"
+
+set test "Function with ibase update inside (1)"
+send "f()\n"
+expect {
+	"255" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (2)"
+send "g()\n"
+expect {
+	"2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (3)"
+send "h()\n"
+expect {
+	"65535" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (4)"
+send "i()\n"
+expect {
+	"999" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (5)"
+send "ibase=2*5\nj()+1000\n"
+expect {
+	"1008" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with ibase update inside (6)"
+send "k()+5000\nibase=16\n"
+expect {
+	"5007" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Check simple syntax error does not change ibase"
+send "ibase\na b\n0\n3*ibase\n"
+expect {
+	-re "16\[^0-9\]+.*\[^0-9\]+0\[^0-9\]+48\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function with syntax error"
+send "ibase\n(ibase=2*5)\ndefine z(){a b}\n0\n100+ibase\n"
+expect {
+	-re "16\[^0-9\]+10\[^0-9\]+.*\[^0-9\]+0\[^0-9\]+110\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Function definition with execution error in ibase assignment"
+send "define zz(){ibase=1/0\nreturn 3FF}\n978\nzz()\n879\n"
+expect {
+	-re "978\[^0-9\]+Divide by 0\[^0-9\]+879\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

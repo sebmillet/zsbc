@@ -130,7 +130,8 @@ static const char *table_errors[] = {
 	"Parameter type mismatch",			/* ERROR_ARGTYPE_MISMATCH */
 	"Illegal value",					/* ERROR_ILLEGAL_VALUE */
 	"Square root of a negative number",	/* ERROR_SQRT_OF_NEG */
-	"Array index out of bounds"			/* ERROR_ARRAY_OUT_OF_BOUNDS */
+	"Array index out of bounds",		/* ERROR_ARRAY_OUT_OF_BOUNDS */
+	"Invalid number"					/* ERROR_INVALID_NUMBER */
 };
 
 	/*

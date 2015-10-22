@@ -10,10 +10,6 @@ As of August 2015:
   called from (now: can be invoked anywhere, including, outside of a loop or
   function body)
 
-- gmp uses a different way of reading integers (different from bc'),
-  need some checks around (if a wrong int is read, it results in a
-  zero value -> should raise an error).
-
 - Implements management of short options concatenation, as now, short options
   are to be provided separately.
 

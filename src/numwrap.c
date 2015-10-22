@@ -83,7 +83,7 @@ static int num_count_ref = 0;
 static const char* (*Llib_identify_yourself)();
 static numptr (*Lconstruct)();
 static numptr (*Lconstruct_from_num)(const numptr num);
-static numptr (*Lconstruct_from_str)(const char *str);
+static int (*Lconstruct_from_str)(const char *str, numptr *pnum);
 static numptr (*Lconstruct_from_int)(int n);
 static void (*Ldestruct)(numptr *pnum);
 static void (*Lprint)(const numptr num);
@@ -343,11 +343,11 @@ numptr num_construct_from_num(const numptr num)
 	return r;
 }
 
-numptr num_construct_from_str(const char *str)
+int num_construct_from_str(const char *str, numptr *pnum)
 {
 	out_dbg("Constructing one number from a string\n");
-	numptr r = Lconstruct_from_str(str);
-	if (r != NULL)
+	int r = Lconstruct_from_str(str, pnum);
+	if (r == ERROR_NONE)
 		++num_count_ref;
 	return r;
 }
@@ -511,7 +511,7 @@ static void gmp_terminate();
 static const char *gmp_lib_identify_yourself();
 static numptr gmp_construct();
 static numptr gmp_construct_from_num(const numptr num);
-static numptr gmp_construct_from_str(const char *str);
+static int gmp_construct_from_str(const char *str, numptr *pnum);
 static numptr gmp_construct_from_int(int n);
 static void gmp_destruct(numptr *num);
 static void gmp_print(const numptr num);
@@ -673,11 +673,43 @@ static numptr gmp_construct_from_num(const numptr num)
 	return (numptr)mp;
 }
 
-static numptr gmp_construct_from_str(const char *str)
+static int gmp_construct_from_str(const char *str, numptr *pnum)
 {
 	mpz_t *mp = (mpz_t *)malloc(sizeof(mpz_t));
-	mpz_init_set_str(*mp, str, gmp_ibase);
-	return (numptr)mp;
+	if (strlen(str) == 1) {
+			/*
+			 * The bc way: a unique character number is read in the max base, allowing
+			 * to write
+			 *   ibase=A
+			 * to have ibase set to 10 (10 decimal) whatever ibase is.
+			 * */
+		mpz_init_set_str(*mp, str, GMP_MAX_IBASE);
+	} else {
+		int code;
+		const char *p = str;
+		if (*p == '+' || *p == '-')
+			++p;
+		for (; *p != '\0'; ++p) {
+			if (isdigit(*p)) {
+				code = *p - '0';
+			} else if (*p >= 'A' && *p <= 'Z') {
+				code = *p - 'A' + 10;
+			} else if (*p >= 'a' && *p <= 'z') {
+				code = *p - 'a' + 36;
+			} else {
+				goto myerror;
+			}
+			if (code >= gmp_ibase)
+				goto myerror;
+		}
+		mpz_init_set_str(*mp, str, gmp_ibase);
+	}
+	*pnum = (numptr)mp;
+	return ERROR_NONE;
+
+myerror:
+	free(mp);
+	return ERROR_INVALID_NUMBER;
 }
 
 static numptr gmp_construct_from_int(int n)
@@ -901,7 +933,7 @@ static void libbc_terminate();
 static const char *libbc_lib_identify_yourself();
 static numptr libbc_construct();
 static numptr libbc_construct_from_num(const numptr num);
-static numptr libbc_construct_from_str(const char *str);
+static int libbc_construct_from_str(const char *str, numptr *pnum);
 static numptr libbc_construct_from_int(int n);
 static void libbc_destruct(numptr *pnum);
 static void libbc_print(const numptr num);
@@ -1244,12 +1276,28 @@ int in_char()
 	 * of in_char() as called by push_constant().
 	 *
 	 * */
-static numptr libbc_construct_from_str(const char *str)
+static int libbc_construct_from_str(const char *str, numptr *pnum)
 {
+	const char *p = str;
+	if (*p == '+' || *p == '-')
+		++p;
+	int seen_point = FALSE;
+	for (; *p != '\0'; ++p) {
+		if (*p >= '0' && *p <= '9')
+			continue;
+		if (*p >= 'A' && *p <= 'F')
+			continue;
+		if (*p == '.' && !seen_point) {
+			seen_point = TRUE;
+			continue;
+		}
+		return ERROR_INVALID_NUMBER;
+	}
 	in_char_current = str;
 	bc_num bcn = NULL;
 	push_constant(&bcn, in_char, libbc_ibase);
-	return (numptr)bcn;
+	*pnum = (numptr)bcn;
+	return ERROR_NONE;
 }
 
 static numptr libbc_construct_from_int(int n)

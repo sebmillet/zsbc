@@ -1,0 +1,55 @@
+# tests/zsbc.test/01gmp-70.exp
+
+set timeout 3
+spawn "$ZSBC" --SCM
+send_user "***   GMP - Invalid numbers\n"
+
+set test "Correct number (1)"
+send "9\nA\nF\nG\nZ\na\n1111\n"
+expect {
+	-re "9\[^0-9\]+10\[^0-9\]+15\[^0-9\]+16\[^0-9\]+35\[^0-9\]+0\[^0-9\]+1111\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Correct number (2)"
+send "99\n"
+expect {
+	-re "99\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Invalid number (1)"
+send "1212\n0A\n1213\n"
+expect {
+	-re "1212\[^0-9\]+.*Illegal number\[^0-9\]+1213\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Invalid number (2)"
+send "1214\nibase=16\nF\nG\n0F\n0G\n2^(2^4)-1\n"
+expect {
+	-re "1214\[^0-9\]+15\[^0-9\]+16\[^0-9\]+15\[^0-9\]+.*Illegal number\[^0-9\]+65535\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Correct number (3)"
+send "ibase=A\n0\n10000+4^2-6\nibase=62\n0z\n0zz\n0zzz\n1z0zz\nibase=A\n10*10+1\n0\n"
+expect {
+	-re "0\[^0-9\]+10010\[^0-9\]+61\[^0-9\]+3843\[^0-9\]+238327\[^0-9\]+29318187\[^0-9\]+101\[^0-9\]+0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Invalid number (3)"
+send "1216\n1.2\n1217\n"
+expect {
+	-re "1216\[^0-9\]+.*Illegal number\[^0-9\]+1217" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

@@ -69,7 +69,8 @@ const char *VAR_LAST;
 #define ERROR_ILLEGAL_VALUE				9
 #define ERROR_SQRT_OF_NEG				10
 #define ERROR_ARRAY_OUT_OF_BOUNDS		11
-#define ERROR_LAST						11
+#define ERROR_INVALID_NUMBER			12
+#define ERROR_LAST						12
 
 #define L_ENFORCE	(-1)
 #define L_ERROR		0
