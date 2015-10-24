@@ -52,10 +52,12 @@ void program_gather_defargs(defargs_t **pdefargs, program_t **pprogram);
 
 void program_destruct(program_t *p);
 
-int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err);
+int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx);
 program_t *program_chain(program_t *base, program_t *append);
 
 void program_notify_is_part_of_print(program_t *program);
+
+void program_check(program_t *p, exec_ctx_t *pexec_ctx, check_t *check);
 
 #endif	/* PROGRAM_H */
 

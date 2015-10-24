@@ -50,9 +50,13 @@ void context_switch(context_t *c);
 
 enum {FTYPE_USER, FTYPE_BUILTIN};
 
+struct function_t;
+typedef struct function_t function_t;
+
 typedef struct function_t {
 	int is_void;
 	int ftype;
+	int check_id;
 	defargs_t *defargs;
 	defargs_t *autolist;
 	program_t *program;
@@ -105,7 +109,9 @@ defargs_t *defargs_construct(defarg_type_t type, const char *name);
 void defargs_destruct(defargs_t *arg);
 
 void vars_user_function_construct(char *name, defargs_t *args, program_t *program, int is_void, const code_location_t loc);
-void register_builtin_function(const char *name, int nb_args, void *f);
+void register_builtin_function(const char *name, int nb_args, void *f, int is_void);
+
+void check_functions();
 
 #endif	/* VARS_H */
 

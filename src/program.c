@@ -80,6 +80,13 @@ program_t *program_construct_expr(expr_t *e, int is_assignment, const code_locat
 	return p;
 }
 
+	/*
+	 * *NOTE*
+	 *
+	 *   e can be NULL, in the case of a simple statement
+	 *     return
+	 *   without argument.
+	 */
 program_t *program_construct_return(expr_t *e, const code_location_t loc)
 {
 	program_t *p = program_construct(TINSTR_EXPR_RETURN, &loc);
@@ -232,13 +239,13 @@ void program_destruct(program_t *p)
 	 *     displaying an error.
 	 *
 	 * */
-int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
+int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 {
 	out_dbg("Entering program_execute for %lu\n", p);
 	int r = ERROR_NONE;
 	while (p != NULL && r == ERROR_NONE) {
 		out_dbg("Executing one instruction, type: %d, address: %lu\n", p->type, p);
-		pexec_err->ploc = &p->loc;
+		pexec_ctx->ploc = &p->loc;
 		numptr num;
 		program_loop_t *loop;
 		program_ifseq_t *ifseq;
@@ -252,7 +259,7 @@ int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
 			case TINSTR_EXPR_RETURN:
 				print_result = (p->type == TINSTR_EXPR_EXPR || (p->is_part_of_print && p->type == TINSTR_EXPR_ASSIGN_EXPR));
 				num = num_undefvalue();
-				if ((r = expr_eval(p->expr, &num, pexec_err)) != ERROR_NONE) {
+				if ((r = expr_eval(p->expr, &num, pexec_ctx)) != ERROR_NONE) {
 					out_dbg("Expression produced return value %d\n", r);
 					break;
 				} else if (print_result && !num_is_not_initialized(num)) {
@@ -285,7 +292,7 @@ int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
 
 					/* First term of 3-term for() */
 				num = num_undefvalue();
-				if ((r = expr_eval(loop->exprbefore, &num, pexec_err)) != ERROR_NONE)
+				if ((r = expr_eval(loop->exprbefore, &num, pexec_ctx)) != ERROR_NONE)
 					break;
 				num_destruct(&num);
 
@@ -294,7 +301,7 @@ int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
 						/* Second term of a 3-term for() or test part of a while() */
 					if (loop->testbefore != NULL) {
 						num = num_undefvalue();
-						if ((r = expr_eval(loop->testbefore, &num, pexec_err)) != ERROR_NONE)
+						if ((r = expr_eval(loop->testbefore, &num, pexec_ctx)) != ERROR_NONE)
 							break;
 						b = num_is_zero(num);
 						num_destruct(&num);
@@ -303,7 +310,7 @@ int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
 					}
 
 						/* The content of the loop being executed, for every loops realms */
-					r = program_execute(loop->core, pval, pexec_err);
+					r = program_execute(loop->core, pval, pexec_ctx);
 					if (r == ERROR_BREAK) {
 						r = ERROR_NONE;
 						break;
@@ -318,7 +325,7 @@ int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
 						/* Test part of a do ... while() */
 					if (loop->testafter != NULL) {
 						num = num_undefvalue();
-						if ((r = expr_eval(loop->testafter, &num, pexec_err)) != ERROR_NONE)
+						if ((r = expr_eval(loop->testafter, &num, pexec_ctx)) != ERROR_NONE)
 							break;
 						b = num_is_zero(num);
 						num_destruct(&num);
@@ -328,7 +335,7 @@ int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
 
 						/* Third term of a 3-term for() */
 					num = num_undefvalue();
-					if ((r = expr_eval(loop->exprafter, &num, pexec_err)) != ERROR_NONE)
+					if ((r = expr_eval(loop->exprafter, &num, pexec_ctx)) != ERROR_NONE)
 						break;
 					num_destruct(&num);
 
@@ -348,16 +355,16 @@ int program_execute(program_t *p, numptr *pval, exec_err_t *pexec_err)
 					/* PART 1 - TEST */
 
 				num = num_undefvalue();
-				if ((r = expr_eval(ifseq->expr, &num, pexec_err)) != ERROR_NONE)
+				if ((r = expr_eval(ifseq->expr, &num, pexec_ctx)) != ERROR_NONE)
 					break;
 				b = num_is_zero(num);
 				num_destruct(&num);
 
 					/* PART 2 - IF or ELSE execution*/
 				if (!b)
-					r = program_execute(ifseq->pif, pval, pexec_err);
+					r = program_execute(ifseq->pif, pval, pexec_ctx);
 				else
-					r = program_execute(ifseq->pelse, pval, pexec_err);
+					r = program_execute(ifseq->pelse, pval, pexec_ctx);
 
 				break;
 			default:
@@ -390,5 +397,109 @@ program_t *program_chain(program_t *base, program_t *append)
 void program_notify_is_part_of_print(program_t *program)
 {
 	program->is_part_of_print = TRUE;
+}
+
+	/*
+	 * Detect inconsistencies like:
+	 *   - continue or break out of a loop
+	 *   - void functions returning a value (return statement with a return value)
+	 *   - non-void functions non returning a value (return without statement or no return statement)
+	 *   - check function calls ->
+	 *       function existence
+	 *       number and type of arguments
+	 *
+	 * *IMPORTANT*
+	 *   No program is executed here.
+	 *   However an exec_ctx_t *pexec_ctx is passed to hold error information if need be.
+	 *
+	 * *NOTE*
+	 *   No return code because the goal is first to display warning messages not error messages.
+	 *
+	 * FIXME
+	 *   Also will have to manage the notion of "want a return value" = a void function
+	 *   should not be called in any expression.
+	 */
+void program_check(program_t *p, exec_ctx_t *pexec_ctx, check_t *check)
+{
+
+	out_dbg("Entering check_program_recursive()\n");
+
+	while (p != NULL) {
+
+		out_dbg("Now checking program %lu\n", p);
+
+		pexec_ctx->ploc = &p->loc;
+
+		check_t save_check = *check;
+
+		switch (p->type) {
+
+			case TINSTR_EXPR_EXPR:
+			case TINSTR_EXPR_ASSIGN_EXPR:
+				check->i_want_a_value = p->is_part_of_print;
+				expr_check(p->expr, pexec_ctx, check);
+				break;
+
+			case TINSTR_STR:
+			case TINSTR_AUTOLIST:
+				break;
+
+			case TINSTR_IFSEQ:
+				check->i_want_a_value = TRUE;
+				expr_check(p->ifseq.expr, pexec_ctx, check);
+				check->i_want_a_value = FALSE;
+				program_check(p->ifseq.pif, pexec_ctx, check);
+				if (p->ifseq.pelse != NULL) {
+					check->i_want_a_value = FALSE;
+					program_check(p->ifseq.pelse, pexec_ctx, check);
+				}
+				break;
+
+			case TINSTR_EXPR_RETURN:
+				if (p->expr == NULL && !check->is_void) {
+					set_exec_error_message(pexec_ctx, "Void return in non void function");
+					outln_exec_error(ERROR_CUSTOM, pexec_ctx, TRUE);
+				} else if (p->expr != NULL && check->is_void) {
+					set_exec_error_message(pexec_ctx, "Non void return in void function");
+					outln_exec_error(ERROR_CUSTOM, pexec_ctx, TRUE);
+				}
+				check->i_want_a_value = TRUE;
+				expr_check(p->expr, pexec_ctx, check);
+				break;
+
+			case TINSTR_LOOP:
+				check->is_inside_loop = TRUE;
+				check->i_want_a_value = FALSE;
+				expr_check(p->loop.exprbefore, pexec_ctx, check);
+				check->i_want_a_value = TRUE;
+				expr_check(p->loop.testbefore, pexec_ctx, check);
+				check->i_want_a_value = FALSE;
+				program_check(p->loop.core, pexec_ctx, check);
+				check->i_want_a_value = TRUE;
+				expr_check(p->loop.testafter, pexec_ctx, check);
+				check->i_want_a_value = FALSE;
+				expr_check(p->loop.exprafter, pexec_ctx, check);
+				break;
+
+			case TINSTR_BREAK:
+				if (!check->is_inside_loop) {
+					set_exec_error_message(pexec_ctx, "Illegal break statement outside of a loop");
+					outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
+				}
+				break;
+
+			case TINSTR_CONTINUE:
+				if (!check->is_inside_loop) {
+					set_exec_error_message(pexec_ctx, "Illegal continue statement outside of a loop");
+					outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
+				}
+				break;
+
+			default:
+				FATAL_ERROR("Unknown program type: %d, program address: %lu", p->type, p);
+		}
+		*check = save_check;
+		p = p->next;
+	}
 }
 

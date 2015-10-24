@@ -129,10 +129,10 @@ input:
 
 program:
 	instruction_list {
-		exec_err_t exec_err = construct_exec_err_t();
-		int r = program_execute($1, NULL, &exec_err);
+		exec_ctx_t exec_ctx = construct_exec_ctx_t();
+		int r = program_execute($1, NULL, &exec_ctx);
 		if (r != ERROR_NONE) {
-			outln_exec_error(r, &exec_err, TRUE);
+			outln_exec_error(r, &exec_ctx, TRUE);
 		}
 		program_destruct($1);
 	}
@@ -468,8 +468,8 @@ void hackbc_check(const char *name, expr_t *e)
 	}
 
 	numptr num = num_undefvalue();
-	exec_err_t exec_err = construct_exec_err_t();
-	int r = expr_eval(e, &num, &exec_err);
+	exec_ctx_t exec_ctx = construct_exec_ctx_t();
+	int r = expr_eval(e, &num, &exec_ctx);
 		/*
 		 * We just ignore cases when an error occurs (ex. with an
 		 * instruction like "ibase = 1 / 0", and also cases where

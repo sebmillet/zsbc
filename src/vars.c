@@ -25,6 +25,9 @@
 
 #include "uthash.h"
 
+	/* BEWARE OF SIDE EFFECTS! */
+int global_check_id = 0;
+
 extern defargs_t *defarg_t_badarg;
 
 const char *type_names[] = {
@@ -139,6 +142,7 @@ static vars_t *vars_t_construct(const char *name, int type, int ftype)
 		v->value.array = NULL;
 	} else if (type == TYPE_FCNT) {
 		v->value.fcnt.ftype = ftype;
+		v->value.fcnt.check_id = -1;
 		if (ftype == FTYPE_USER) {
 			v->value.fcnt.defargs = NULL;
 			v->value.fcnt.autolist = NULL;
@@ -380,20 +384,20 @@ void vars_display_all()
 	}
 
 	vars_t *w;
-	for(w = ctx->container.heads[TYPE_NUM]; w != NULL; w = w->hh.next) {
+	for (w = ctx->container.heads[TYPE_NUM]; w != NULL; w = w->hh.next) {
 		outstring(w->name, FALSE);
 		outstring("=", FALSE);
 		num_print(w->value.num);
 		outstring("", TRUE);
 	}
-	for(w = ctx->container.heads[TYPE_ARRAY]; w != NULL; w = w->hh.next) {
+	for (w = ctx->container.heads[TYPE_ARRAY]; w != NULL; w = w->hh.next) {
 		size_t l = strlen(w->name) + 50;
 		char *buf = malloc(l);
 		snprintf(buf, l, "%s[]: %li element(s)", w->name, array_count(w->value.array));
 		outstring(buf, TRUE);
 		free(buf);
 	}
-	for(w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
+	for (w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
 		outstring(w->name, FALSE);
 		outstring("(", FALSE);
 		function_t *f = &w->value.fcnt;
@@ -606,20 +610,20 @@ defargs_t *defargs_chain(defargs_t *base, defargs_t *append)
 	/*
 	 *   *WARNING*
 	 *
-	 * pexec_err CAN BE NULL
+	 * pexec_ctx CAN BE NULL
 	 * ... as is the case when called from register_builtin_function()
 	 *
 	 * */
-static void destruct_function_if_defined(const char *name, exec_err_t *pexec_err)
+static void destruct_function_if_defined(const char *name, exec_ctx_t *pexec_ctx)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
 	vars_t *w;
 	if ((w = find_var(name, TYPE_FCNT)) != NULL) {
 		vars_t_destruct(w);
-		if (pexec_err != NULL) {
-			set_exec_error_message(pexec_err, "Redefinition of function %s", name);
-			outln_exec_error(ERROR_NONE, pexec_err, TRUE);
+		if (pexec_ctx != NULL) {
+			set_exec_error_message(pexec_ctx, "Redefinition of function %s", name);
+			outln_exec_error(ERROR_CUSTOM, pexec_ctx, TRUE);
 		} else {
 			outln_warning("Redefinition of function %s", name);
 		}
@@ -630,20 +634,20 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
-	exec_err_t exec_err = construct_exec_err_t();
-	exec_err.ploc = &loc;
+	exec_ctx_t exec_ctx = construct_exec_ctx_t();
+	exec_ctx.ploc = &loc;
 
 	if (defargs == defarg_t_badarg) {
 
-		set_exec_error_message(&exec_err, "Function %s not created: duplicate parameter names", name);
-		outln_exec_error(ERROR_NONE, &exec_err, FALSE);
+		set_exec_error_message(&exec_ctx, "Function %s not created: duplicate parameter names", name);
+		outln_exec_error(ERROR_CUSTOM, &exec_ctx, FALSE);
 
 		program_destruct(program);
 		free(name);
 		return;
 	}
 
-	destruct_function_if_defined(name, &exec_err);
+	destruct_function_if_defined(name, &exec_ctx);
 
 	vars_t *f = vars_t_construct(name, TYPE_FCNT, FTYPE_USER);
 
@@ -657,8 +661,8 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 		while (param != NULL) {
 			if (darg_type_is_of_same_namespace(param->type, al->type) && !varname_cmp(param->name, al->name)) {
 
-				set_exec_error_message(&exec_err, "Function %s not created: duplicate names between parameters and autolist", name);
-				outln_exec_error(ERROR_NONE, &exec_err, FALSE);
+				set_exec_error_message(&exec_ctx, "Function %s not created: duplicate names between parameters and autolist", name);
+				outln_exec_error(ERROR_CUSTOM, &exec_ctx, FALSE);
 
 				vars_t_destruct(f);
 				return;
@@ -671,13 +675,14 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->value.fcnt.defargs, f->value.fcnt.autolist, f->value.fcnt.program);
 }
 
-void register_builtin_function(const char *name, int nb_args, void *f)
+void register_builtin_function(const char *name, int nb_args, void *f, int is_void)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
 	destruct_function_if_defined(name, NULL);
 
 	vars_t *v = vars_t_construct(name, TYPE_FCNT, FTYPE_BUILTIN);
+	v->value.fcnt.is_void = is_void;
 	v->value.fcnt.builtin_nb_args = nb_args;
 	if (nb_args == 0)
 		v->value.fcnt.builtin0arg = f;
@@ -709,5 +714,25 @@ static void function_destruct(function_t f)
 			f.program = NULL;
 		}
 	}
+}
+
+void check_functions()
+{
+	out_dbg("check_functions execution\n");
+	exec_ctx_t exec_ctx = construct_exec_ctx_t();
+	vars_t *w;
+	check_t check;
+	check.id = global_check_id;
+	for (w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
+		out_dbg("Will now check the function %s\n", w->name);
+		function_t *f = &w->value.fcnt;
+		exec_ctx.function_name = w->name;
+		check.is_void = f->is_void;
+		check.is_inside_loop = FALSE;
+		check.i_want_a_value = FALSE;
+		program_check(f->program, &exec_ctx, &check);
+		f->check_id = check.id;
+	}
+	++global_check_id;
 }
 

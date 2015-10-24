@@ -131,7 +131,8 @@ static const char *table_errors[] = {
 	"Illegal value",					/* ERROR_ILLEGAL_VALUE */
 	"Square root of a negative number",	/* ERROR_SQRT_OF_NEG */
 	"Array index out of bounds",		/* ERROR_ARRAY_OUT_OF_BOUNDS */
-	"Invalid number"					/* ERROR_INVALID_NUMBER */
+	"Invalid number",					/* ERROR_INVALID_NUMBER */
+	NULL								/* ERROR_CUSTOM */
 };
 
 	/*
@@ -329,13 +330,13 @@ int outln_warning(const char *fmt, ...)
 	return r;
 }
 
-exec_err_t construct_exec_err_t()
+exec_ctx_t construct_exec_ctx_t()
 {
-	exec_err_t exec_err;
-	exec_err.function_name = NULL;
-	exec_err.ploc = NULL;
-	exec_err.error_message = NULL;
-	return exec_err;
+	exec_ctx_t exec_ctx;
+	exec_ctx.function_name = NULL;
+	exec_ctx.ploc = NULL;
+	exec_ctx.error_message = NULL;
+	return exec_ctx;
 }
 
 code_location_t construct_unset_code_location_t()
@@ -350,20 +351,38 @@ code_location_t construct_unset_code_location_t()
 	return loc;
 }
 
-void set_exec_error_message(exec_err_t *exec_err, const char *fmt, ...)
+void set_exec_error_message(exec_ctx_t *exec_ctx, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
 
-		/* FIXME */
-	size_t len = strlen(fmt) + 500;
+		/*
+		 * FIXME
+		 *
+		 *   Calculation of buffer length is not satisfactory.
+		 *   vasnprintf would be best but doesn't compile under msvc.
+		 *
+		 *   Implement home made "a" *printf functions?
+		 *   To be thought about...
+		 */
+	size_t len = strlen(fmt) + 200;
 
-	exec_err->error_message = (char *)malloc(sizeof(char) * len);
-	vsnprintf(exec_err->error_message, len, fmt, args);
+		/*
+		 * FIXME?
+		 *
+		 *   Stop program if an error was already set?
+		 *   For the time being, I prefer to silently remove it.
+		 *
+		 * */
+	if (exec_ctx->error_message != NULL)
+		free(exec_ctx->error_message);
+	exec_ctx->error_message = (char *)malloc(sizeof(char) * len);
+
+	vsnprintf(exec_ctx->error_message, len, fmt, args);
 	va_end(args);
 }
 
-void outln_exec_error(int e, exec_err_t *exec_err, int is_warning)
+void outln_exec_error(int e, exec_ctx_t *exec_ctx, int is_warning)
 {
 	if (is_warning)
 		fprintf(stderr, "Warning: ");
@@ -371,7 +390,7 @@ void outln_exec_error(int e, exec_err_t *exec_err, int is_warning)
 		fprintf(stderr, "Error: ");
 
 	const char *builtin_error_message = NULL;
-	if (exec_err->error_message == NULL) {
+	if (exec_ctx->error_message == NULL) {
 		if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
 			builtin_error_message = table_errors[e];
 			if (builtin_error_message == NULL) {
@@ -385,28 +404,30 @@ void outln_exec_error(int e, exec_err_t *exec_err, int is_warning)
 				 * */
 			FATAL_ERROR("Error code %d unknown!", e);
 		}
+	} else if (e != ERROR_CUSTOM) {
+		FATAL_ERROR("Custom error message while error code != ERROR_CUSTOM, e = %d", e);
 	}
 
-	const char *error_message = exec_err->error_message != NULL ? exec_err->error_message : builtin_error_message;
+	const char *error_message = exec_ctx->error_message != NULL ? exec_ctx->error_message : builtin_error_message;
 
-	if (exec_err->ploc != NULL && exec_err->ploc->is_set) {
-		if (exec_err->ploc->file_name != NULL)
-			fprintf(stderr, "%s: ", exec_err->ploc->file_name);
-		if (!opt_SCM && exec_err->ploc->first_line >= 1 && exec_err->ploc->first_column >= 1 &&
-				exec_err->ploc->last_line >= 1 && exec_err->ploc->last_column >= 1)
-			fprintf(stderr, "%d.%d-%d.%d: ", exec_err->ploc->first_line, exec_err->ploc->first_column,
-				exec_err->ploc->last_line, exec_err->ploc->last_column);
+	if (exec_ctx->ploc != NULL && exec_ctx->ploc->is_set) {
+		if (exec_ctx->ploc->file_name != NULL)
+			fprintf(stderr, "%s: ", exec_ctx->ploc->file_name);
+		if (!opt_SCM && exec_ctx->ploc->first_line >= 1 && exec_ctx->ploc->first_column >= 1 &&
+				exec_ctx->ploc->last_line >= 1 && exec_ctx->ploc->last_column >= 1)
+			fprintf(stderr, "%d.%d-%d.%d: ", exec_ctx->ploc->first_line, exec_ctx->ploc->first_column,
+				exec_ctx->ploc->last_line, exec_ctx->ploc->last_column);
 	}
 
-	if (exec_err != NULL)
-		if (exec_err->function_name != NULL)
-			fprintf(stderr, "%s(): ", exec_err->function_name);
+	if (exec_ctx != NULL)
+		if (exec_ctx->function_name != NULL)
+			fprintf(stderr, "%s(): ", exec_ctx->function_name);
 
 	fprintf(stderr, "%s\n", error_message);
 
-	if (exec_err->error_message != NULL) {
-		free (exec_err->error_message);
-		exec_err->error_message = NULL;
+	if (exec_ctx->error_message != NULL) {
+		free(exec_ctx->error_message);
+		exec_ctx->error_message = NULL;
 	}
 }
 
@@ -907,6 +928,7 @@ FILE *input_get_next()
 		input_name = "";
 		input_FILE = stdin;
 		out_dbg("input_get_next(): stdin is the next yyin-to-be\n");
+		check_functions();
 	} else {
 
 /* Inputs terminated... */

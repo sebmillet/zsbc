@@ -64,7 +64,7 @@ const char *input_get_name();
 number			([A-Z0-9])([A-Za-z0-9]|\\\n)*(\.([A-Za-z0-9]|\\\n)*)?|\.([A-Za-z0-9]|\\\n)+
 /*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
 /*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
-identifier		[a-z][[:alnum:]]*|\.
+identifier		[a-z_][[:alnum:]_]*|\.
 string			\"[^\"]*\"
 
 %%

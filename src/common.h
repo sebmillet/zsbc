@@ -70,7 +70,8 @@ const char *VAR_LAST;
 #define ERROR_SQRT_OF_NEG				10
 #define ERROR_ARRAY_OUT_OF_BOUNDS		11
 #define ERROR_INVALID_NUMBER			12
-#define ERROR_LAST						12
+#define ERROR_CUSTOM					13	/* Error string defined at runtime */
+#define ERROR_LAST						13
 
 #define L_ENFORCE	(-1)
 #define L_ERROR		0
@@ -122,17 +123,27 @@ typedef struct code_location_t {
 
 code_location_t construct_unset_code_location_t();
 
-typedef struct exec_err_t {
+typedef struct exec_ctx_t {
 	const char *function_name;
 	const code_location_t *ploc;
 	char *error_message;
-} exec_err_t;
+} exec_ctx_t;
 
-exec_err_t construct_exec_err_t();
-void set_exec_error_message(exec_err_t *exec_err, const char *fmt, ...);
-void outln_exec_error(int e, exec_err_t *exec_err, int is_warning);
+exec_ctx_t construct_exec_ctx_t();
+void set_exec_error_message(exec_ctx_t *exec_ctx, const char *fmt, ...);
+void outln_exec_error(int e, exec_ctx_t *exec_ctx, int is_warning);
 
 void loc_reset();
+
+struct function_t;
+typedef struct function_t function_t;
+typedef struct check_t {
+	int id;
+	int is_void;
+	int is_inside_loop;
+	int i_want_a_value;
+} check_t;
+void check_functions();
 
 #endif /* COMMON_H */
 

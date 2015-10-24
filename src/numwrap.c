@@ -236,6 +236,18 @@ static void lib_register(const libinfo_t li, void (*libfirsttimeinit)(), void (*
 		li.id, li.description, li.libname, li.version, li.number_set, lib->reg_number);
 }
 
+static int shared_function_check_functions(numptr *pr)
+{
+	assert(num_is_not_initialized(*pr));
+	check_functions();
+	return ERROR_NONE;
+}
+
+static void shared_libfirsttimeinit_run_on_every_libs()
+{
+	register_builtin_function("check_functions", 0, shared_function_check_functions, TRUE);
+}
+
 static void libswitch(lib_t *l, int quiet)
 {
 
@@ -307,6 +319,8 @@ static void libswitch(lib_t *l, int quiet)
 	if (!l->has_done_first_time_init) {
 		out_dbg("Library activation done. Now executing %s:libfirsttimeinit()\n", l->libinfo.libname);
 		l->libfirsttimeinit();
+		out_dbg("Now calling shared_libfirsttimeinit_run_on_every_libs() (run once on each lib, after libfirsttimeinit())\n", l->libinfo.libname);
+		shared_libfirsttimeinit_run_on_every_libs();
 		l->has_done_first_time_init = TRUE;
 	}
 }
@@ -615,7 +629,7 @@ static void gmp_firsttimeinit()
 	vars_set_value("obase", num_construct_from_int(GMP_DEFAULT_OBASE), &ppvarnum);
 	assert(gmp_obase == GMP_DEFAULT_OBASE);
 
-	register_builtin_function("gmpversion", 0, gmp_function_get_version);
+	register_builtin_function("gmpversion", 0, gmp_function_get_version, FALSE);
 }
 
 static void gmp_activate()
@@ -1092,10 +1106,10 @@ static void libbc_firsttimeinit()
 	vars_set_value("obase", num_construct_from_int(LIBBC_DEFAULT_OBASE), &ppvarnum);
 	assert(libbc_obase == LIBBC_DEFAULT_OBASE);
 
-	register_builtin_function("bcversion", 0, libbc_function_get_version);
-	register_builtin_function("sqrt", 1, libbc_sqrt);
-	register_builtin_function("scale", 1, libbc_function_scale);
-	register_builtin_function("length", 1, libbc_function_length);
+	register_builtin_function("bcversion", 0, libbc_function_get_version, FALSE);
+	register_builtin_function("sqrt", 1, libbc_sqrt, FALSE);
+	register_builtin_function("scale", 1, libbc_function_scale, FALSE);
+	register_builtin_function("length", 1, libbc_function_length, FALSE);
 }
 
 static void libbc_activate()

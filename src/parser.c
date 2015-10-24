@@ -1793,10 +1793,10 @@ yyreduce:
   case 6:
 #line 131 "parser.y" /* yacc.c:1646  */
     {
-		exec_err_t exec_err = construct_exec_err_t();
-		int r = program_execute((yyvsp[0].prog), NULL, &exec_err);
+		exec_ctx_t exec_ctx = construct_exec_ctx_t();
+		int r = program_execute((yyvsp[0].prog), NULL, &exec_ctx);
 		if (r != ERROR_NONE) {
-			outln_exec_error(r, &exec_err, TRUE);
+			outln_exec_error(r, &exec_ctx, TRUE);
 		}
 		program_destruct((yyvsp[0].prog));
 	}
@@ -2598,8 +2598,8 @@ void hackbc_check(const char *name, expr_t *e)
 	}
 
 	numptr num = num_undefvalue();
-	exec_err_t exec_err = construct_exec_err_t();
-	int r = expr_eval(e, &num, &exec_err);
+	exec_ctx_t exec_ctx = construct_exec_ctx_t();
+	int r = expr_eval(e, &num, &exec_ctx);
 		/*
 		 * We just ignore cases when an error occurs (ex. with an
 		 * instruction like "ibase = 1 / 0", and also cases where
