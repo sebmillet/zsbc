@@ -105,6 +105,7 @@ static int (*Lcmpne)(numptr *pr, const numptr a, const numptr b);
 static int (*Land)(numptr *pr, const numptr a, const numptr b);
 static int (*Lor)(numptr *pr, const numptr a, const numptr b);
 static int (*Lnot)(numptr *pr, const numptr a);
+static int (*Lread)(numptr *pr);
 
 
 /*-----------------------------------------------------------------------------
@@ -236,16 +237,39 @@ static void lib_register(const libinfo_t li, void (*libfirsttimeinit)(), void (*
 		li.id, li.description, li.libname, li.version, li.number_set, lib->reg_number);
 }
 
-static int shared_function_check_functions(numptr *pr)
+static int shared_functions_check_functions(numptr *pr)
 {
 	assert(num_is_not_initialized(*pr));
 	check_functions();
 	return ERROR_NONE;
 }
 
+static int lread_getchar()
+{
+	return getchar();
+}
+
+	/*
+	 * This function is different from num_construct_from_str():
+	 *   While num_construct_from_str takes a complete string, most likely
+	 *   provided by the lexer, this one will pull characters one by one
+	 *   (from lread_getchar()) and stop reading as soon as a character
+	 *   is encountered that can't be in the number.
+	 *
+	 * It is library-specific as only the library knows how to best parse
+	 * a number (with or without a period, depending on ibase etc.)
+	 *
+	 * */
+static int shared_functions_read(numptr *pr)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lread(pr);
+}
+
 static void shared_libfirsttimeinit_run_on_every_libs()
 {
-	register_builtin_function("check_functions", 0, shared_function_check_functions, TRUE);
+	register_builtin_function("check_functions", 0, shared_functions_check_functions, TRUE);
+	register_builtin_function("read", 0, shared_functions_read, TRUE);
 }
 
 static void libswitch(lib_t *l, int quiet)
@@ -282,6 +306,7 @@ static void libswitch(lib_t *l, int quiet)
 	Land = NULL;
 	Lor = NULL;
 	Lnot = NULL;
+	Lread = NULL;
 
 	libcurrent = l;
 	libcurrent->libactivate();
@@ -312,6 +337,7 @@ static void libswitch(lib_t *l, int quiet)
 	assert(Land != NULL);
 	assert(Lor != NULL);
 	assert(Lnot != NULL);
+	assert(Lread != NULL);
 
 	if (!quiet)
 		outln(L_VERBOSE, "%s", Llib_identify_yourself());
@@ -547,6 +573,7 @@ static int gmp_cmpne(numptr *pr, const numptr a, const numptr b);
 static int gmp_and(numptr *pr, const numptr a, const numptr b);
 static int gmp_or(numptr *pr, const numptr a, const numptr b);
 static int gmp_not(numptr *pr, const numptr a);
+static int gmp_read(numptr *pr);
 
 static void gmp_register()
 {
@@ -659,6 +686,7 @@ static void gmp_activate()
 	Land = gmp_and;
 	Lor = gmp_or;
 	Lnot = gmp_not;
+	Lread = gmp_read;
 
 	outstring_set_line_length(-1);
 }
@@ -907,6 +935,55 @@ static int gmp_not(numptr *pr, const numptr a)
 	return ERROR_NONE;
 }
 
+static int gmp_read(numptr *pr)
+{
+const int INITIAL_BUF_LENGTH = 2;
+const int INCREASE_FACTOR = 2;
+
+	int len = INITIAL_BUF_LENGTH;
+	char *buf = (char *)malloc(sizeof(char) * len);
+	char *write_head = buf;
+
+	int nb_bytes = 0;
+	int has_seen_sign = FALSE;
+	int code;
+
+	int c;
+	while (TRUE) {
+		c = lread_getchar();
+		if (++nb_bytes > len) {
+			len *= INCREASE_FACTOR;
+			buf = (char *)realloc(buf, sizeof(char) * len);
+		}
+		if (c == EOF)
+			break;
+
+		if (!has_seen_sign && (c == '+' || c == '-')) {
+			has_seen_sign = TRUE;
+		} else {
+			if (isdigit(c)) {
+				code = c - '0';
+			} else if (c >= 'A' && c <= 'Z') {
+				code = c - 'A' + 10;
+			} else if (c >= 'a' && c <= 'z') {
+				code = c - 'a' + 36;
+			} else {
+				break;
+			}
+			if (code >= gmp_ibase)
+				break;
+		}
+
+		*write_head = (char)c;
+		++write_head;
+	};
+	*write_head = '\0';
+
+	int r = num_construct_from_str(buf, pr);
+	free(buf);
+	return r;
+}
+
 #endif
 
 
@@ -969,6 +1046,7 @@ static int libbc_cmpne(numptr *pr, const numptr a, const numptr b);
 static int libbc_and(numptr *pr, const numptr a, const numptr b);
 static int libbc_or(numptr *pr, const numptr a, const numptr b);
 static int libbc_not(numptr *pr, const numptr a);
+static int libbc_read(numptr *pr);
 
 static void libbc_register()
 {
@@ -1139,6 +1217,7 @@ static void libbc_activate()
 	Land = libbc_and;
 	Lor = libbc_or;
 	Lnot = libbc_not;
+	Lread = libbc_read;
 
 	outstring_set_line_length(libbc_bc_line_length);
 }
@@ -1476,6 +1555,49 @@ static int libbc_not(numptr *pr, const numptr a)
 	long int logical_a = bc_num2long((bc_num)a);
 	*pr = libbc_construct_from_int(!logical_a);
 	return ERROR_NONE;
+}
+
+static int libbc_read(numptr *pr)
+{
+const int INITIAL_BUF_LENGTH = 2;
+const int INCREASE_FACTOR = 2;
+
+	int len = INITIAL_BUF_LENGTH;
+	char *buf = (char *)malloc(sizeof(char) * len);
+	char *write_head = buf;
+
+	int nb_bytes = 0;
+	int has_seen_sign = FALSE;
+	int has_seen_period = FALSE;
+
+	int c;
+	while (TRUE) {
+		c = lread_getchar();
+		if (++nb_bytes > len) {
+			len *= INCREASE_FACTOR;
+			buf = (char *)realloc(buf, sizeof(char) * len);
+		}
+		if (c == EOF)
+			break;
+
+		if (!has_seen_sign && (c == '+' || c == '-')) {
+			has_seen_sign = TRUE;
+		} else if (!has_seen_period && c == '.') {
+			has_seen_period = TRUE;
+		} else {
+			if (!isdigit(c) && (c < 'A' || c > 'F')) {
+				break;
+			}
+		}
+
+		*write_head = (char)c;
+		++write_head;
+	};
+	*write_head = '\0';
+
+	int r = num_construct_from_str(buf, pr);
+	free(buf);
+	return r;
 }
 
 #endif

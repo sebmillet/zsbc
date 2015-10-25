@@ -2,7 +2,7 @@
 
 set timeout 3
 spawn "$ZSBC" --SCM
-send_user "***   GMP - Invalid numbers\n"
+send_user "***   GMP - Numbers input\n"
 
 set test "Correct number (1)"
 send "9\nA\nF\nG\nZ\na\n1111\n"
@@ -43,6 +43,13 @@ set test "Invalid number (3)"
 send "1216\n1.2\n1217\n"
 expect {
 	-re "1216\[^0-9\]+.*Illegal number\[^0-9\]+1217" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Input one number"
+send "aa=read()\n150A1\n5771\naa^2\n5772\n"
+expect {
+	-re "5771\[^0-9\]+22500\[^0-9\]+5772" { pass "$test" }
 	default { fail "$test" }
 }
 
