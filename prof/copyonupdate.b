@@ -17,8 +17,8 @@ define void prep(n) {
 	fill(alpha[], n)
 }
 
-l = 100
-n = 500000
+l = 12
+n = 2000000
 print "Filling array with ", n, " element(s)\n"
 prep(n);
 print "Now calling recursive function - READ ONLY\n"

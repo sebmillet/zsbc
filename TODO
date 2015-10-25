@@ -1,8 +1,7 @@
 TODO file of zsbc
 =================
 
-As of October 2015:
+Last update: October 2015
 
-- Implements management of short options concatenation, as now, short options
-  are to be provided separately.
+- Implements readline input
 

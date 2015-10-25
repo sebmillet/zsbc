@@ -441,8 +441,8 @@ static void usage()
 	fprintf(stderr, "  -V  --verbose  verbose output\n");
 	fprintf(stderr, "  -q  --quiet    don't print initial banner\n");
 	fprintf(stderr, "  -v  --version  print version information and exit\n");
-	fprintf(stderr, "      --numlib   (also -lib) defines number library to start with\n");
-	fprintf(stderr, "      --liblist  lists number libraries available and exit\n");
+	fprintf(stderr, "  -n  --numlib   (also -lib) defines number library to start with\n");
+	fprintf(stderr, "  -t  --liblist  lists number libraries available and exit\n");
 	fprintf(stderr, "  --             end of parameters, next options are file names\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "%s will also read environment variable %s to parse options from,\n", PACKAGE_NAME, ENV_ARGS);
@@ -541,16 +541,57 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 		int *opt_liblist, const char **nlib_tostartwith, const char **dbg_fname, int *o_SCM, int *o_COPYONUPDATE, int *isintrctv,
 		int *mathlib)
 {
+#define OPT_WITH_VALUE_CHECK \
+if (shortopt_nb >= 1 && shortopt_i < shortopt_nb - 1) { \
+	missing_option_value = argv_a_short + 1; \
+	a = -1; \
+	break; \
+} \
+if (++a >= argc) { \
+	missing_option_value = argv[a - 1] + 1; \
+	a = -1; \
+	break; \
+}
+
 	char *missing_option_value = NULL;
 
 	int a = 1;
+	char *argv_a_short;
+	char shortopt[3];
+	int shortopt_nb = 0;
+	int shortopt_i = -1;
 	while (a < argc) {
-		if (!strcmp(argv[a], "--help") || !strcmp(argv[a], "-h")) {
+		if (shortopt_nb == 0) {
+			if (strlen(argv[a]) >= 2 && argv[a][0] == '-' && argv[a][1] != '-') {
+				shortopt_nb = strlen(argv[a]) - 1;
+				shortopt_i = 0;
+			}
+		}
+		if (shortopt_nb >= 1) {
+
+#ifdef ZZDEBUGOPTS
+			fprintf(stderr, "A - shortopt_i = %d, shortopt_nb = %d\n", shortopt_i, shortopt_nb);
+#endif
+
+			assert(shortopt_i <= shortopt_nb);
+			shortopt[0] = '-';
+			shortopt[1] = argv[a][shortopt_i + 1];
+			shortopt[2] = '\0';
+			argv_a_short = shortopt;
+		} else {
+			argv_a_short = argv[a];
+		}
+
+#ifdef ZZDEBUGOPTS
+		fprintf(stderr, "argv_a_short = '%s'\n", argv_a_short);
+#endif
+
+		if (!strcmp(argv[a], "--help") || !strcmp(argv_a_short, "-h")) {
 			usage();
-		} else if (!strcmp(argv[a], "--version") || !strcmp(argv[a], "-v")) {
+		} else if (!strcmp(argv[a], "--version") || !strcmp(argv_a_short, "-v")) {
 			version();
 			exit(0);
-		} else if (!strcmp(argv[a], "--verbose") || !strcmp(argv[a], "-V")) {
+		} else if (!strcmp(argv[a], "--verbose") || !strcmp(argv_a_short, "-V")) {
 			opt_check(0, argv[a]);
 			*optset_verbose = TRUE;
 			out_level = L_VERBOSE;
@@ -562,39 +603,31 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 			opt_check(8, argv[a]);
 			*o_COPYONUPDATE = TRUE;
 			out_level = L_VERBOSE;
-		} else if (!strcmp(argv[a], "--interactive") || !strcmp(argv[a], "-i")) {
+		} else if (!strcmp(argv[a], "--interactive") || !strcmp(argv_a_short, "-i")) {
 			opt_check(6, argv[a]);
 			*isintrctv = TRUE;
-		} else if (!strcmp(argv[a], "--mathlib") || !strcmp(argv[a], "-l")) {
+		} else if (!strcmp(argv[a], "--mathlib") || !strcmp(argv_a_short, "-l")) {
 			opt_check(7, argv[a]);
 			*mathlib = TRUE;
-		} else if (!strcmp(argv[a], "--quiet") || !strcmp(argv[a], "-q")) {
+		} else if (!strcmp(argv[a], "--quiet") || !strcmp(argv_a_short, "-q")) {
 			opt_check(1, argv[a]);
 			*optset_quiet = TRUE;
 			out_level = L_QUIET;
-		} else if (!strcmp(argv[a], "--debug") || !strcmp(argv[a], "-d")) {
+		} else if (!strcmp(argv[a], "--debug") || !strcmp(argv_a_short, "-d")) {
 			opt_check(2, argv[a]);
 			*optset_debug = TRUE;
 			out_level = L_DEBUG;
-		} else if (!strcmp(argv[a], "--debugfile") || !strcmp(argv[a], "-D")) {
+		} else if (!strcmp(argv[a], "--debugfile") || !strcmp(argv_a_short, "-D")) {
 			opt_check(4, argv[a]);
 			*optset_debug = TRUE;
 			out_level = L_DEBUG;
-			if (++a >= argc) {
-				missing_option_value = argv[a - 1] + 1;
-				a = -1;
-				break;
-			}
+			OPT_WITH_VALUE_CHECK
 			*dbg_fname = argv[a];
-		} else if (!strcmp(argv[a], "--liblist")) {
+		} else if (!strcmp(argv[a], "--liblist") || !strcmp(argv_a_short, "-t")) {
 			*opt_liblist = TRUE;
-		} else if (!strcmp(argv[a], "--lib") || !strcmp(argv[a], "--numlib")) {
+		} else if (!strcmp(argv[a], "--lib") || !strcmp(argv[a], "--numlib") || !strcmp(argv_a_short, "-n")) {
 			opt_check(3, argv[a]);
-			if (++a >= argc) {
-				missing_option_value = argv[a - 1] + 1;
-				a = -1;
-				break;
-			}
+			OPT_WITH_VALUE_CHECK
 			*nlib_tostartwith = argv[a];
 		} else if (argv[a][0] == '-') {
 			if (strcmp(argv[a], "--")) {
@@ -608,7 +641,18 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 		} else {
 			input_register(IT_FILE, argv[a], NULL, -1, TRUE);
 		}
-		++a;
+#ifdef ZZDEBUGOPTS
+			fprintf(stderr, "B - shortopt_i = %d, shortopt_nb = %d\n", shortopt_i, shortopt_nb);
+#endif
+		if (shortopt_nb >= 1) {
+			if (++shortopt_i >= shortopt_nb)
+				shortopt_nb = 0;
+		}
+		if (shortopt_nb == 0)
+			++a;
+#ifdef ZZDEBUGOPTS
+			fprintf(stderr, "C - shortopt_i = %d, shortopt_nb = %d\n", shortopt_i, shortopt_nb);
+#endif
 	}
 	while (a >= 1 && a < argc) {
 		input_register(IT_FILE, argv[a], NULL, -1, TRUE);
