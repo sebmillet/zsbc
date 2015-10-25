@@ -1796,7 +1796,7 @@ yyreduce:
 		exec_ctx_t exec_ctx = construct_exec_ctx_t();
 		int r = program_execute((yyvsp[0].prog), NULL, &exec_ctx);
 		if (r != ERROR_NONE) {
-			outln_exec_error(r, &exec_ctx, TRUE);
+			outln_exec_error(r, &exec_ctx, FALSE);
 		}
 		program_destruct((yyvsp[0].prog));
 	}

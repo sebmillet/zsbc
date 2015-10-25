@@ -21,7 +21,7 @@ expect {
 set test "Input one number (2)"
 send "aa=read()\n150.18.123\n5773\naa^2\n5774\n"
 expect {
-	-re "5773\[^0-9\]+22554.03\[^0-9\]+5774" { pass "$test" }
+	-re "5773\[^0-9\]+22554\.03\[^0-9\]+5774" { pass "$test" }
 	default { fail "$test" }
 }
 

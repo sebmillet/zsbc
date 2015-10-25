@@ -29,6 +29,8 @@
 #define TREE_MASK					0x00FF		/* Equals TREE_NB_DESCENDANTS_BY_NODE - 1 */
 #define TREE_SHIFTBITS_BY_LEVEL		8
 
+extern int opt_COPYONUPDATE;
+
 typedef struct node_t {
 	union {
 		struct node_t *subnode;
@@ -38,7 +40,15 @@ typedef struct node_t {
 
 struct array_t {
 	node_t *nodes;
+
+		/* To implement "last minute" copy of attays (passed by value) */
+	int copyonupdate_remote_copy;
+	array_t *copyonupdate_remote_copy_mate;
+	int copyonupdate_self_copy;
+	array_t *copyonupdate_self_copy_mate;
 };
+
+void copyonupdate_manage_copy(array_t *a, int for_destruct);
 
 static void node_tree_destruct(node_t *nodes, int level)
 {
@@ -63,6 +73,7 @@ static void node_tree_destruct(node_t *nodes, int level)
 void array_destruct(array_t *a)
 {
 	if (a != NULL) {
+		copyonupdate_manage_copy(a, TRUE);
 		if (a->nodes != NULL)
 			node_tree_destruct(a->nodes, 0);
 		free(a);
@@ -182,21 +193,6 @@ static void node_tree_copy(node_t **dest, const node_t *src, int level)
 	}
 }
 
-array_t *array_t_copy(const array_t *src)
-{
-	if (src == NULL)
-		return NULL;
-
-	array_t *copy = (array_t *)malloc(sizeof(array_t));
-	copy->nodes = NULL;
-	if (src->nodes != NULL)
-		node_tree_copy(&copy->nodes, src->nodes, 0);
-
-	out_dbg("\tCopied array from %lu to %lu\n", src, copy);
-
-	return copy;
-}
-
 const numptr *array_get_value(array_t *a, long int index)
 {
 	numptr *pnum = find_index(a, index, FALSE);
@@ -209,17 +205,64 @@ const numptr *array_get_value(array_t *a, long int index)
 	}
 }
 
+void copyonupdate_manage_copy(array_t *a, int for_destruct)
+{
+	if (a->copyonupdate_self_copy) {
+		if (a->nodes != NULL) {
+			if (for_destruct) {
+				if (opt_COPYONUPDATE)
+					outln(L_ENFORCE, "copyonupdate: soft array destruction of %lu", a);
+				a->nodes = NULL;
+			} else {
+				if (opt_COPYONUPDATE)
+					outln(L_ENFORCE, "copyonupdate: copying array %lu", a);
+				node_tree_copy(&a->nodes, a->nodes, 0);
+			}
+		}
+		a->copyonupdate_self_copy = FALSE;
+		a->copyonupdate_self_copy_mate->copyonupdate_remote_copy = FALSE;
+	}
+	if (a->copyonupdate_remote_copy) {
+		copyonupdate_manage_copy(a->copyonupdate_remote_copy_mate, FALSE);
+	}
+}
+
+static array_t *array_construct()
+{
+	array_t *a = (array_t *)malloc(sizeof(array_t));
+	a->nodes = NULL;
+	a->copyonupdate_self_copy = FALSE;
+	a->copyonupdate_remote_copy = FALSE;
+	return a;
+}
+
+array_t *array_t_get_a_copy(array_t *src)
+{
+	array_t *copy = array_construct();
+	copy->nodes = src->nodes;
+
+		/* copy is the "mate" to copy on first update */
+	copy->copyonupdate_self_copy = TRUE;
+	copy->copyonupdate_self_copy_mate = src;
+
+		/* src is the origin, NOT to copy when an update occurs */
+	src->copyonupdate_remote_copy = TRUE;
+	src->copyonupdate_remote_copy_mate = copy;
+
+	return copy;
+}
+
 void array_set_value(array_t **pa, long int index, const numptr new_value, const numptr **ppvarnum)
 {
-	if (*pa == NULL) {
-		*pa = (array_t *)malloc(sizeof(array_t));
-		(*pa)->nodes = NULL;
-	}
+	if (*pa == NULL)
+		*pa = array_construct();
+
+	copyonupdate_manage_copy(*pa, FALSE);
+
 	numptr *pnum = find_index(*pa, index, TRUE);
 
 	*pnum = new_value;
 	*ppvarnum = pnum;
-
 }
 
 int array_check_index(long int index)

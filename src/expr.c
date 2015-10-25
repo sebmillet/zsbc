@@ -502,7 +502,7 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 	if (self->type == ENODE_FUNCTION_CALL) {
 		if ((f = vars_get_function(self->var.name)) == NULL) {
 			set_exec_error_message(pexec_ctx, "Function %s not defined", self->var.name);
-			return ERROR_FUNCTION_NOT_DEFINED;
+			return ERROR_CUSTOM;
 		}
 		if (f->ftype == FTYPE_USER) {
 			pexec_ctx->function_name = self->var.name;

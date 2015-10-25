@@ -56,7 +56,10 @@ extern const size_t libbc_libmath_len;
 int yywrap();
 
 static int out_level = L_NORMAL;
-static int opt_SCM = FALSE;		/* SCM = Special Check Mode, used for 'make check' checks */
+	/* SCM = Special Check Mode, used for 'make check' checks */
+int opt_SCM = FALSE;		
+	/* To check that arrays are copied only at the last minute, when an update occurs */
+int opt_COPYONUPDATE = FALSE;
 
 static int is_interactive = FALSE;
 static int bc_mathlib = FALSE;
@@ -514,7 +517,7 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 	 * */
 static void opt_check(int n, const char *opt)
 {
-	static int defined_options[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+	static int defined_options[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 	if (n == -1) {
 		assert(opt == NULL);
@@ -535,7 +538,7 @@ static void opt_check(int n, const char *opt)
 }
 
 static void parse_options(int argc, char *argv[], int *optset_verbose, int *optset_quiet, int *optset_debug,
-		int *opt_liblist, const char **nlib_tostartwith, const char **dbg_fname, int *o_SCM, int *isintrctv,
+		int *opt_liblist, const char **nlib_tostartwith, const char **dbg_fname, int *o_SCM, int *o_COPYONUPDATE, int *isintrctv,
 		int *mathlib)
 {
 	char *missing_option_value = NULL;
@@ -554,6 +557,10 @@ static void parse_options(int argc, char *argv[], int *optset_verbose, int *opts
 		} else if (!strcmp(argv[a], "--SCM")) {
 			opt_check(5, argv[a]);
 			*o_SCM = TRUE;
+			out_level = L_VERBOSE;
+		} else if (!strcmp(argv[a], "--COPYONUPDATE")) {
+			opt_check(8, argv[a]);
+			*o_COPYONUPDATE = TRUE;
 			out_level = L_VERBOSE;
 		} else if (!strcmp(argv[a], "--interactive") || !strcmp(argv[a], "-i")) {
 			opt_check(6, argv[a]);
@@ -711,12 +718,12 @@ int main(int argc, char *argv[])
 	char *alloc_env;
 	cut_env_options(&env_argc, &env_argv, &alloc_env, &orig_env);
 	parse_options(env_argc, env_argv, &optset_verbose, &optset_quiet, &optset_debug,
-		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive, &bc_mathlib);
+		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &opt_COPYONUPDATE, &is_interactive, &bc_mathlib);
 	optset_verbose = FALSE;
 	optset_quiet = FALSE;
 	optset_debug = FALSE;
 	parse_options(argc, argv, &optset_verbose, &optset_quiet, &optset_debug,
-		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &is_interactive, &bc_mathlib);
+		&optset_liblist, &numlib_to_start_with, &debug_filenames, &opt_SCM, &opt_COPYONUPDATE, &is_interactive, &bc_mathlib);
 
 	if (optset_verbose && optset_quiet)
 		out_level = L_NORMAL;

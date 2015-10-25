@@ -266,7 +266,7 @@ array_t *vars_array_copy(const char *name)
 	vars_t *w = find_var(name, TYPE_ARRAY);
 	if (w == NULL)
 		return NULL;
-	return array_t_copy(w->value.array);
+	return array_t_get_a_copy(w->value.array);
 }
 
 function_t *vars_get_function(const char *name)
@@ -730,8 +730,15 @@ void check_functions()
 		check.is_void = f->is_void;
 		check.is_inside_loop = FALSE;
 		check.i_want_a_value = FALSE;
-		program_check(f->program, &exec_ctx, &check);
+
+			/*
+			 * Assign check_id *before* call to program_check() to avoid a duplicate warning or error message
+			 * in case it occurs in a recursive function.
+			 *
+			 * */
 		f->check_id = check.id;
+
+		program_check(f->program, &exec_ctx, &check);
 	}
 	++global_check_id;
 }
