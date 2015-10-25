@@ -566,23 +566,28 @@ static int getindex(expr_t *index, long int *pidxval, exec_ctx_t *pexec_ctx)
 	return r;
 }
 
-static void getvar_core(const char *varname, int has_index, long int idxval, const numptr **ppval)
+static void getvar_core(const char *varname, int has_index, long int idxval, const numptr **ppval, int is_becoming_lvalue)
 {
 	if (has_index) {
-		*ppval = vars_array_get_value(varname, idxval);
+		*ppval = vars_array_get_value(varname, idxval, is_becoming_lvalue);
 	} else {
 		*ppval = vars_get_value(varname);
 	}
 
 }
 
-static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create_if_missing, exec_ctx_t *pexec_ctx)
+	/*
+	 * The lvalue parameter is passed to launch an "array copy" - if not done, the return of
+	 * lvalue could be followed by a copyonupdate that'll update everything in the array
+	 *
+	 */
+static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create_if_missing, exec_ctx_t *pexec_ctx, int is_becoming_lvalue)
 {
 	long int idxval;
 	int r;
 	if ((r = getindex(self->var.index, &idxval, pexec_ctx)) != ERROR_NONE)
 		return r;
-	getvar_core(self->var.name, self->var.index != NULL, idxval, ppval);
+	getvar_core(self->var.name, self->var.index != NULL, idxval, ppval, is_becoming_lvalue);
 
 	if (!*ppval && create_if_missing) {
 		if (self->var.index != NULL) {
@@ -602,7 +607,7 @@ static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pva
 
 	int r;
 	const numptr *pnum;
-	if ((r = eval_getvar_core(self, &pnum, FALSE, pexec_ctx)) != ERROR_NONE)
+	if ((r = eval_getvar_core(self, &pnum, FALSE, pexec_ctx, FALSE)) != ERROR_NONE)
 		return r;
 
 	if (pnum == NULL)
@@ -613,7 +618,8 @@ static int eval_getvar(const expr_t *self, const numptr *value_args, numptr *pva
 	return ERROR_NONE;
 }
 
-static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr *pval, const numptr **ppvarnum, exec_ctx_t *pexec_ctx)
+static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr *pval, const numptr **ppvarnum,
+		exec_ctx_t *pexec_ctx, int is_becoming_lvalue)
 {
 	int is_postfix = (self->type == ENODE_SETVAR_POSTFIX);
 	assert((self->type == ENODE_SETVAR || self->type == ENODE_SETVAR_POSTFIX) && self->nb_args == 1 && value_args != NULL);
@@ -644,7 +650,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 
 	else {
 		const numptr *pnum;
-		getvar_core(self->var.name, has_index, idxval, &pnum);
+		getvar_core(self->var.name, has_index, idxval, &pnum, is_becoming_lvalue);
 		if (pnum == NULL)
 			val = num_construct();
 		else
@@ -704,7 +710,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 static int eval_setvar(const expr_t *self, const numptr *value_args, numptr *pval, exec_ctx_t *pexec_ctx)
 {
 	const numptr *pvarnum;
-	return eval_setvar_core(self, value_args, pval, &pvarnum, pexec_ctx);
+	return eval_setvar_core(self, value_args, pval, &pvarnum, pexec_ctx, FALSE);
 }
 
 static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr *pval, exec_ctx_t *pexec_ctx)
@@ -810,7 +816,7 @@ static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum, exe
 
 		assert(self->nb_args == 0);
 
-		if ((r = eval_getvar_core(self, ppvarnum, TRUE, pexec_ctx)) != ERROR_NONE)
+		if ((r = eval_getvar_core(self, ppvarnum, TRUE, pexec_ctx, TRUE)) != ERROR_NONE)
 			return r;
 
 		return ERROR_NONE;
@@ -822,7 +828,7 @@ static int expr_eval_left_value(const expr_t *self, const numptr **ppvarnum, exe
 		if ((r = myeval(self->cargs[0].e, &arg1, pexec_ctx)) != ERROR_NONE)
 			return r;
 		numptr val = num_undefvalue();
-		if ((r = eval_setvar_core(self, &arg1, &val, ppvarnum, pexec_ctx)) != ERROR_NONE)
+		if ((r = eval_setvar_core(self, &arg1, &val, ppvarnum, pexec_ctx, TRUE)) != ERROR_NONE)
 			return r;
 		num_destruct(&arg1);
 		num_destruct(&val);

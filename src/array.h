@@ -33,5 +33,7 @@ long int array_count(const array_t *a);
 
 int array_check_index(long int index);
 
+void copyonupdate_manage_copy(array_t *a, int for_destruct);
+
 #endif
 

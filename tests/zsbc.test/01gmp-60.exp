@@ -85,7 +85,7 @@ expect {
 set test "Check symbols created"
 send "symbols\n"
 expect {
-	-re "ibase=10.*obase=10.*autoko1().*autoko2\\(\\).*autook1\\(a\\).*autook2\\(a\\\[\\\]\\).*autook3\\(\\*a\\).*autook4\\(\\*a\\\[\\\]\\).*gmpversion\\(\\).*ok1\\(a, b\\).*ok2\\(a, a\\\[\\\]).*ok3\\(\\*a, a\\\[\\\]\\).*ok4\\(a, \\*a\\\[\\\]).*ok5\\(\\*a, \\*a\\\[\\\]\\).*ok6\\(a\\\[\\\], a\\).*ok7\\(\\*a\\\[\\\], a\\).*ok8\\(a\\\[\\\], \\*a\\).*ok9\\(\\*a\\\[\\\], \\*a\\)" { pass "$test" }
+	-re "ibase=10.*obase=10.*autoko1\\(\\).*autoko2\\(\\).*autook1\\(a\\).*autook2\\(a\\\[\\\]\\).*autook3\\(\\*a\\).*autook4\\(\\*a\\\[\\\]\\).*gmpversion\\(\\).*ok1\\(a, b\\).*ok2\\(a, a\\\[\\\]\\).*ok3\\(\\*a, a\\\[\\\]\\).*ok4\\(a, \\*a\\\[\\\]\\).*ok5\\(\\*a, \\*a\\\[\\\]\\).*ok6\\(a\\\[\\\], a\\).*ok7\\(\\*a\\\[\\\], a\\).*ok8\\(a\\\[\\\], \\*a\\).*ok9\\(\\*a\\\[\\\], \\*a\\)" { pass "$test" }
 	default { fail "$test" }
 }
 

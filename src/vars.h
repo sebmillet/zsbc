@@ -90,7 +90,7 @@ typedef struct vars_t vars_t;
 void vars_display_all();
 
 const numptr *vars_get_value(const char *name);
-const numptr *vars_array_get_value(const char *name, long int index);
+const numptr *vars_array_get_value(const char *name, long int index, int is_becoming_lvalue);
 int vars_set_value(const char *name, numptr new_value, const numptr **ppvarnum);
 void vars_set_update_callback(const char *name, int (*update_callback)(const char *name, numptr *pnum));
 void vars_array_set_value(const char *name, long int index, const numptr new_value, const numptr **ppvarnum);

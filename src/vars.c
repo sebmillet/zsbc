@@ -232,7 +232,7 @@ const numptr *vars_get_value(const char *name)
 	return NULL;
 }
 
-const numptr *vars_array_get_value(const char *name, long int index)
+const numptr *vars_array_get_value(const char *name, long int index, int is_becoming_lvalue)
 {
 
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
@@ -243,6 +243,9 @@ const numptr *vars_array_get_value(const char *name, long int index)
 	if (w != NULL) {
 
 		out_dbg("\t%s[] is %s\n", name, w->value.array_ref ? "a reference" : "regular");
+
+		if (is_becoming_lvalue)
+			copyonupdate_manage_copy(w->value.array_ref ? *w->value.array_ref : w->value.array, FALSE);
 
 		return array_get_value(w->value.array_ref ? *w->value.array_ref : w->value.array, index);
 

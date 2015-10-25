@@ -3,8 +3,6 @@ TODO file of zsbc
 
 As of October 2015:
 
-- Implements last minute array copy when passed in value
-
 - Implements management of short options concatenation, as now, short options
   are to be provided separately.
 

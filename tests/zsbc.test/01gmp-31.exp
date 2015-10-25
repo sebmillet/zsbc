@@ -22,6 +22,12 @@ expect {
 	default { fail "$test" }
 }
 
+set test "Check copyonupdate feature (4)"
+expect {
+	-re "30\[^0-9\]+Before myfunc call\[^0-9\]+copyonupdate: copying array .*\[^0-9\]+After myfunc call\[^0-9\]+20\[^0-9\]+30" { pass "$test" }
+	default { fail "$test" }
+}
+
 set test "Checking object count ref is null"
 send "quit\n"
 expect {
