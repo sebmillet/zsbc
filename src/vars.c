@@ -143,17 +143,15 @@ static vars_t *vars_t_construct(const char *name, int type, int ftype)
 	} else if (type == TYPE_FCNT) {
 		v->value.fcnt.ftype = ftype;
 		v->value.fcnt.check_id = -1;
-		if (ftype == FTYPE_USER) {
-			v->value.fcnt.defargs = NULL;
-			v->value.fcnt.autolist = NULL;
-			v->value.fcnt.program = NULL;
-		} else if (ftype == FTYPE_BUILTIN) {
-			v->value.fcnt.builtin_nb_args = -1;
-			v->value.fcnt.builtin1arg = NULL;
-			v->value.fcnt.builtin2arg = NULL;
-		} else {
-			FATAL_ERROR("Unknown ftype: %d", ftype);
-		}
+		if (ftype != FTYPE_USER && ftype != FTYPE_BUILTIN)
+			FATAL_ERROR("vars_t_construct(): unknown ftype: %d", ftype);
+		v->value.fcnt.defargs = NULL;
+		v->value.fcnt.autolist = NULL;
+		v->value.fcnt.program = NULL;
+		v->value.fcnt.builtin_nb_args = -1;
+		v->value.fcnt.builtin0arg = NULL;
+		v->value.fcnt.builtin1arg = NULL;
+		v->value.fcnt.builtin2arg = NULL;
 	} else {
 		FATAL_ERROR("Unknown symbol type: %d", type);
 	}
@@ -727,21 +725,23 @@ void check_functions()
 	check_t check;
 	check.id = global_check_id;
 	for (w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
-		out_dbg("Will now check the function %s\n", w->name);
-		function_t *f = &w->value.fcnt;
-		exec_ctx.function_name = w->name;
-		check.is_void = f->is_void;
-		check.is_inside_loop = FALSE;
-		check.i_want_a_value = FALSE;
+		if (w->value.fcnt.ftype == FTYPE_USER) {
+			out_dbg("Will now check the function %s\n", w->name);
+			function_t *f = &w->value.fcnt;
+			exec_ctx.function_name = w->name;
+			check.is_void = f->is_void;
+			check.is_inside_loop = FALSE;
+			check.i_want_a_value = FALSE;
 
-			/*
-			 * Assign check_id *before* call to program_check() to avoid a duplicate warning or error message
-			 * in case it occurs in a recursive function.
-			 *
-			 * */
-		f->check_id = check.id;
+				/*
+				 * Assign check_id *before* call to program_check() to avoid a duplicate warning or error message
+				 * in case it occurs in a recursive function.
+				 *
+				 * */
+			f->check_id = check.id;
 
-		program_check(f->program, &exec_ctx, &check);
+			program_check(f->program, &exec_ctx, &check);
+		}
 	}
 	++global_check_id;
 }

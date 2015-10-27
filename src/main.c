@@ -963,12 +963,16 @@ FILE *input_get_next()
 
 /* 1st category -> 2nd flavor of input: builtin data */
 
+/* Commented... (does not compile with msvc)
+
 			if ((input_FILE = fmemopen((void *)inp->data, inp->data_size, "r")) == NULL) {
 				outln_error("Builtin data '%s' is unavailable!!! This program executable has serious issues!", input_name);
 				exit(-999);
 			} else {
 				out_dbg("input_get_next(): opened builtin data '%s', it is the next yyin-to-be\n", input_name);
 			}
+*/
+			FATAL_ERROR("%s", "IT_BUILTIN_DATA not available");
 
 		} else
 			FATAL_ERROR("Unknown input_t type, entry: %d, type: %d", input_cursor, inp->itype);
