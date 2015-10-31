@@ -611,8 +611,11 @@ char *yytext;
 #include <unistd.h>
 #endif
 
-#define YY_NO_INPUT
-#define YY_NO_UNISTD_H
+#include <readline/readline.h>
+#include <readline/history.h>
+
+/*#define YY_NO_INPUT*/
+/*#define YY_NO_UNISTD_H*/
 
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
@@ -628,9 +631,79 @@ const char *input_get_name();
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
 
+extern int opt_SCM;
+extern int is_interactive;
+
+/* Code below taken as is (besides indentation and the like) from bc source in bc/scan.l */
+
+/* Support for the readline and history libraries.  This allows
+   nicer input on the interactive part of input. */
+
+/* Have input call the following function. */
+#undef  YY_INPUT
+#define YY_INPUT(buf,result,max_size) \
+		rl_input((char *)buf, &result, max_size)
+
+/* Variables to help interface readline with bc. */
+static char *rl_line = NULL;
+static char *rl_start = NULL;
+static int rl_len = 0;
+
+/* Definitions for readline access. */
+extern FILE *rl_instream;
+
+/* rl_input puts upto MAX characters into BUF with the number put in
+   BUF placed in *RESULT.  If the yy input file is the same as
+   rl_instream (stdin), use readline.  Otherwise, just read it.
+*/
+
+static void rl_input(char *buf, int *result, int max)
+{
+	if (yyin != rl_instream || !is_interactive || opt_SCM) {
+		while ((*result = read(fileno(yyin), buf, max)) < 0 )
+			if (errno != EINTR) {
+				yyerror("read() in flex scanner failed" );
+				exit(1);
+			}
+		return;
+	}
+
+		/* Do we need a new string? */
+	if (rl_len == 0) {
+		if (rl_start)
+			free(rl_start);
+		rl_start = readline("");
+		if (rl_start == NULL) {
+				/* end of file */
+			*result = 0;
+			rl_len = 0;
+			return;
+		}
+		rl_line = rl_start;
+		rl_len = strlen(rl_line)+1;
+		if (rl_len != 1)
+			add_history (rl_line); 
+		rl_line[rl_len-1] = '\n';
+		fflush(stdout);
+		if (ferror(stdout))
+			FATAL_ERROR("%s", "Fatal error writing to stdout");
+	}
+
+	if (rl_len <= max) {
+		strncpy(buf, rl_line, rl_len);
+		*result = rl_len;
+		rl_len = 0;
+	} else {
+		strncpy(buf, rl_line, max);
+		*result = max;
+		rl_line += max;
+		rl_len -= max;
+	}
+}
+
 /*unicodeAny	[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEF][\x80-\xBF][\x80-\xBF]*/
 /*identifier	([_[:alpha:]]|{unicodeAny})([[:alnum:]]|{unicodeAny})**/
-#line 634 "lexer.c"
+#line 707 "lexer.c"
 
 #define INITIAL 0
 
@@ -842,7 +915,7 @@ YY_DECL
 		}
 
 	{
-#line 70 "lexer.l"
+#line 143 "lexer.l"
 
 
 	/*
@@ -851,7 +924,7 @@ YY_DECL
 	   BUT this approach avoids opening the hood of input file stream
 	   reading code. It just relies on regex management of flex.
 	*/
-#line 855 "lexer.c"
+#line 928 "lexer.c"
 
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
@@ -921,7 +994,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 78 "lexer.l"
+#line 151 "lexer.l"
 {
 /*    int i;*/
 /*    for (i = 0; yytext[i] != '\0'; ++i) {*/
@@ -935,18 +1008,18 @@ YY_RULE_SETUP
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 89 "lexer.l"
+#line 162 "lexer.l"
 { }
 	YY_BREAK
 case 3:
 /* rule 3 can match eol */
 YY_RULE_SETUP
-#line 91 "lexer.l"
+#line 164 "lexer.l"
 { }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 93 "lexer.l"
+#line 166 "lexer.l"
 {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return OP_AND_ASSIGN;
@@ -954,47 +1027,47 @@ YY_RULE_SETUP
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 97 "lexer.l"
+#line 170 "lexer.l"
 return '+';
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 98 "lexer.l"
+#line 171 "lexer.l"
 return '-';
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 99 "lexer.l"
+#line 172 "lexer.l"
 return '*';
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 100 "lexer.l"
+#line 173 "lexer.l"
 return '/';
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 101 "lexer.l"
+#line 174 "lexer.l"
 return '(';
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 102 "lexer.l"
+#line 175 "lexer.l"
 return ')';
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 103 "lexer.l"
+#line 176 "lexer.l"
 return '^';
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 104 "lexer.l"
+#line 177 "lexer.l"
 return '%';
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 105 "lexer.l"
+#line 178 "lexer.l"
 {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return PLUSPLUS_MINMIN;
@@ -1002,52 +1075,52 @@ YY_RULE_SETUP
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 109 "lexer.l"
+#line 182 "lexer.l"
 return ';';
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 110 "lexer.l"
+#line 183 "lexer.l"
 return ',';
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 111 "lexer.l"
+#line 184 "lexer.l"
 return '[';
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 112 "lexer.l"
+#line 185 "lexer.l"
 return ']';
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 113 "lexer.l"
+#line 186 "lexer.l"
 return '{';
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 114 "lexer.l"
+#line 187 "lexer.l"
 return '}';
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 115 "lexer.l"
+#line 188 "lexer.l"
 return LOGIC_OR;
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 116 "lexer.l"
+#line 189 "lexer.l"
 return LOGIC_AND;
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 117 "lexer.l"
+#line 190 "lexer.l"
 return LOGIC_NOT;
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 118 "lexer.l"
+#line 191 "lexer.l"
 {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return COMPARISON;
@@ -1056,7 +1129,7 @@ YY_RULE_SETUP
 case 24:
 /* rule 24 can match eol */
 YY_RULE_SETUP
-#line 123 "lexer.l"
+#line 196 "lexer.l"
 {
 	cleanup_inputnumber(yytext);
 	int r;
@@ -1070,82 +1143,82 @@ YY_RULE_SETUP
 /* (?i:quit)		return QUIT;	*/
 case 25:
 YY_RULE_SETUP
-#line 135 "lexer.l"
+#line 208 "lexer.l"
 return QUIT;
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 136 "lexer.l"
+#line 209 "lexer.l"
 return LIBSWITCH;
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 137 "lexer.l"
+#line 210 "lexer.l"
 return LIBLIST;
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 138 "lexer.l"
+#line 211 "lexer.l"
 return SYMBOLS;
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 139 "lexer.l"
+#line 212 "lexer.l"
 return WHILE;
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 140 "lexer.l"
+#line 213 "lexer.l"
 return FOR;
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 141 "lexer.l"
+#line 214 "lexer.l"
 return DEFINE;
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 142 "lexer.l"
+#line 215 "lexer.l"
 return VOID;
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 143 "lexer.l"
+#line 216 "lexer.l"
 return RETURN;
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 144 "lexer.l"
+#line 217 "lexer.l"
 return BREAK;
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 145 "lexer.l"
+#line 218 "lexer.l"
 return CONTINUE;
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 146 "lexer.l"
+#line 219 "lexer.l"
 return IF;
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 147 "lexer.l"
+#line 220 "lexer.l"
 return ELSE;
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 148 "lexer.l"
+#line 221 "lexer.l"
 return AUTOLIST;
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 149 "lexer.l"
+#line 222 "lexer.l"
 return PRINT;
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 151 "lexer.l"
+#line 224 "lexer.l"
 {
 	const char *what = yytext;
 	if (!strcmp(yytext, "."))
@@ -1158,7 +1231,7 @@ YY_RULE_SETUP
 case 41:
 /* rule 41 can match eol */
 YY_RULE_SETUP
-#line 160 "lexer.l"
+#line 233 "lexer.l"
 {
 	unsigned int len = strlen(yytext);
 	assert(yytext[len - 1] == '"');
@@ -1177,12 +1250,12 @@ YY_RULE_SETUP
 case 42:
 /* rule 42 can match eol */
 YY_RULE_SETUP
-#line 175 "lexer.l"
+#line 248 "lexer.l"
 { yycolumn = 1; return NEWLINE; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 177 "lexer.l"
+#line 250 "lexer.l"
 {
 		/* The code below is taken from bc source, with some minor variations */
 	char c = yytext[0];
@@ -1196,10 +1269,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 188 "lexer.l"
+#line 261 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1203 "lexer.c"
+#line 1276 "lexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2165,7 +2238,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 187 "lexer.l"
+#line 260 "lexer.l"
 
 
 

@@ -53,6 +53,7 @@ extern char libbc_libmath[];
 extern const size_t libbc_libmath_len;
 #endif
 
+FILE *rl_instream = NULL;
 int yywrap();
 
 static int out_level = L_NORMAL;
@@ -61,7 +62,7 @@ int opt_SCM = FALSE;
 	/* To check that arrays are copied only at the last minute, when an update occurs */
 int opt_COPYONUPDATE = FALSE;
 
-static int is_interactive = FALSE;
+int is_interactive = FALSE;
 static int bc_mathlib = FALSE;
 
 	/* When debug activated, name of files to display the debug of (NULL: display all) */
@@ -725,6 +726,8 @@ static void cut_env_options(int *env_argc, char ***env_argv, char **alloc_env, c
 
 int main(int argc, char *argv[])
 {
+	rl_instream = stdin;
+
 		/* done to have a non NULL defarg_t_badarg pointer (any address would be fine) */
 	defarg_t_badarg = (defargs_t *)VAR_LAST;
 
