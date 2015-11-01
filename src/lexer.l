@@ -37,6 +37,8 @@
 #include <unistd.h>
 #endif
 
+#define YY_NO_UNISTD_H
+
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
 
