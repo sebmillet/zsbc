@@ -1,6 +1,72 @@
 Notes about zsbc programming
+============================
 
-1) ibase management
+
+1) General links between bc and zsbc
+
+zsbc stands for "Zero-Scale BC".
+It was meant to do calculations around cryptography, using the syntax and
+function definition standard of bc.
+
+The default number library of zsbc is integers of gmp, the GNU
+Multi Precision library.
+GMP homepage:
+    https://gmplib.org
+These "integers of gmp" are the "mpz_t" provided by GMP.
+
+    Note
+Under Windows, the mpir library is used as a replacement for gmp.
+MPIR homepage:
+    http://mpir.org/
+
+In order to ease the compatibility checks between zsbc and bc, zsbc can also
+work with "libbc", the number library of bc. This library is fairly different
+from GMP as it can manage numbers with arbitrary long decimals, tuned by the
+"scale" variable.
+This is why, when working with GMP, zsbc is equivalent to bc when used with
+scale=0. Thus, the name of zsbc: "Zero-Scale BC".
+
+zsbc can switch from one number library to another during execution using the
+command libswitch. Example
+    libswitch "bc"
+will switch to the libbc number library.
+    libswitch "gmp"
+will switch to the gmp number library.
+zsbc can be executed with the -n option (or --numlib) to start with a given
+number library, as in
+    zsbc --numlib bc
+to start with libbc.
+
+    Note
+Each number library uses a symbol space of its own, therefore all variables
+(simple and arrays) and functions are visible only when using the number
+library they were defined in.
+
+
+2) Code take aways from bc
+
+- Obviously, the libbc source code.
+  Inside zsbc source, it corresponds to the folders
+    h
+    lib
+
+- The libmath.b library, so that, similarly to bc, zsbc can be invoked with
+  the -l option, thus providing predefined math routines.
+  Inside zsbc source, it corresponds to the folder
+    src/bc
+
+- The push_constant function. It allows to read a number with any value of
+  ibase, while the bc_str2num (that belongs to libbc) can manage only string
+  to number conversion in 10-base.
+  Inside zsbc source, it corresponds to the function
+    src/numwrap.c -> push_constant
+
+- The readline library "wrapper" function rl_input.
+  Inside zsbc source, it corresponds to the function
+    src/main.c -> rl_input (and a few associated variables)
+
+
+3) ibase management
 ===================
 
 bc keeps numbers as strings and will take into account ibase at the very last
@@ -54,7 +120,7 @@ zsbc is not meant to be identical to bc internally.
 
 By the way zsbc uses gmp as the default number library, not bc's. It must be
 run with the option
-  -numlib bc
+  --numlib bc
 to use bc numbers library instead.
 
 Also note in real life I have never found a case where ibase assignment occurs

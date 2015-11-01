@@ -1,7 +1,7 @@
    zsbc, a portable integer calculator using gmp
    =============================================
 
-Date: 2015-07-23 23:49 +0200
+Date: 2015-11-01 18:55 +0100
 
 Contents:
 
@@ -18,20 +18,29 @@ It is a calculator supporting simple arithmetic along with big integers, as
 provided by the GNU MP library.
 It is similar to bc and one goal of this program is to be compatible with bc
 scripts.
-zsbc stands for "Zero Scale bc": the focus is not on real number management
+zsbc stands for "Zero Scale BC": the focus is not on real number management
 but on integers.
 
 Because the author of these lines wanted bc tests to be applicable to zsbc,
-zsbc got compiled with bc number library.
+zsbc got compiled with the bc number library, in addition to gmp.
 By default zsbc starts with gmp integers (mpz_t) but if provided with the
 command-line argument
-	-lib bc
+    --numlib bc
 or if during execution you enter the statement
-	lib "bc"
-then bc number library will be used (instead of gmp' mpz_t) and decimal
-numbers will be managed as per bc standard = among other things, taking into
+    libswitch "bc"
+then the bc number library will be used (instead of gmp' mpz_t) and decimal
+numbers will be managed as per bc standard => among other things, taking into
 account the value of the "scale" variable, that defines the number of decimals
 to keep after the comma.
+
+As with bc program, the bc number library provides the sqrt function (square
+root). Also when invoked with --numlib bc, zsbc can be provided the -l option,
+that'll the load bc mathlib library, defining the functions a (arc tangent), c
+(cosine), s (sine), e (exponent), l (natural logarithm) and j (Bessel
+function).
+
+Please read the file "FAQ" provided with zsbc to have more details about the
+links between bc and zsbc.
 
 
 
@@ -78,7 +87,7 @@ zsbc in all cases, including Linux and Windows/mingw.
 
 2) Linux build
 
-2.1) Making GMP development library available
+2.1) Making the GMP development library available
 
 As written above, while MPIR is certainly suitable for Linux compilation, GMP
 was tested and documented.
@@ -90,10 +99,24 @@ system, it is recommended to install the package source.
 The deb package name is libgmp-dev.
 The rpm package name is libgmp-devel.
 
-The GMP library homepage is
-	https://gmplib.org
+The GNU Multiple Precision Arithmetic Library homepage is
+    https://gmplib.org
 
-2.2) Compilation
+2.2) Making the readline development library available
+
+The readline library is necessary to compile zsbc under Linux (unless the
+--disable-readline option is used in the configure script).
+
+The deb package name is libreadline-dev.
+The rpm package name is readline-devel.
+
+The GNU Readline Library homepage is
+    https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
+
+    Note
+The readline library is not used in Windows.
+
+2.3) Compilation
 
 The file of name INSTALL, distributed with zsbc source files, gives
 instructions to compile and install the program, using the usual
@@ -127,17 +150,20 @@ and build it with mingw.
 Build needs be done from an msys terminal, using mingw gcc compiler.
 
 The GMP library homepage:
-	https://gmplib.org
+    https://gmplib.org
 
 3.3) Update makefile.mingw
 
 You have to tune makefile.mingw depending on how you built the GMP library, to
 designate the correct locations of GMP's include and lib files. After libgmp
 build, look for the files
-	gmp.h
-	libgmp.a
+    gmp.h
+    libgmp.a
 
 3.4) Build zsbc.exe
+
+    Reminder
+Under windows, zsbc does not use the readline library.
 
 For a "release" build, enter top source directory and run
     mingw32-make.exe -f makefile.mingw
@@ -155,25 +181,28 @@ for msvc build, see notes above) and zsbc is Microsoft Studio Community 2015,
 available for free.
 
 URL:
-	https://www.visualstudio.com
+    https://www.visualstudio.com
 
 4.2) Get and compile libmpir
 
-- As of September 2015, downloading and extracting archive content will produce
+As of September 2015, downloading and extracting archive content will produce
 a ready-to-compile source tree under the directory
-	mpir-2.7.0
+    mpir-2.7.0
 
-- Open the file (whatever)\mpir-2.7.0\build.vc14\mpir.sln with MSVC and
+Open the file (whatever)\mpir-2.7.0\build.vc14\mpir.sln with MSVC and
 generate the project, after selection of the proper generation type, win32
 versus x64 and release versus debug.
+
+The MPIR homepage:
+    http://mpir.org
 
 4.3) Update makefile.vc
 
 You have to tune makefile.vc depending on how you built the MPIR library, to
 designate the correct locations of MPIR's include and lib files. After libmpir
 build, look for the files
-	gmp.h
-	mpir.lib
+    gmp.h
+    mpir.lib
 
 gmp.h above is not a typo. gmp.h and mpir.h are 100% identical and illustrate
 to which extent MPIR can substitute to GMP: only the compilation needs be
