@@ -84,6 +84,7 @@ bin_PROGRAMS = zsbc$(EXEEXT)
 check_PROGRAMS = zsbc$(EXEEXT)
 @WITH_GMP_TRUE@am__append_1 = -lgmp
 @WITH_LIBBC_TRUE@am__append_2 = bc/libmath.c bc/libmath.b
+@WITH_READLINE_TRUE@am__append_3 = -lreadline
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am parser.h \
 	parser.c lexer.c $(top_srcdir)/admin/depcomp \
@@ -291,7 +292,7 @@ AM_YFLAGS = -d
 zsbc_SOURCES = main.c expr.c expr.h vars.c vars.h array.c array.h \
 	numwrap.c numwrap.h program.c program.h parser.y lexer.l \
 	common.h uthash.h $(am__append_2)
-zsbc_LDFLAGS = $(am__append_1)
+zsbc_LDFLAGS = $(am__append_1) $(am__append_3)
 LIBBC = ../lib/libbc.a
 @WITH_LIBBC_TRUE@zsbc_LDADD = $(LIBBC)
 BUILT_SOURCES = parser.h

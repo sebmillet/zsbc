@@ -38,6 +38,13 @@
 #include <unistd.h>
 #endif
 
+#ifdef HAS_LIB_READLINE
+#include <readline/readline.h>
+#include <readline/history.h>
+#endif
+
+#include <errno.h>
+
 #define LINE_LENGTH_ENV "ZSBC_LINE_LENGTH"
 #define DEFAULT_LINE_LENGTH 0
 static int rt_line_length = DEFAULT_LINE_LENGTH;
@@ -724,9 +731,92 @@ static void cut_env_options(int *env_argc, char ***env_argv, char **alloc_env, c
 	}
 }
 
-int main(int argc, char *argv[])
+/* Code below taken as is (besides some indentation and move to main.c) from bc source in bc/scan.l */
+
+/*
+ * Support for the readline and history libraries.  This allows
+ * nicer input on the interactive part of input.
+ */
+
+	/* Variables to help interface readline with bc */
+static char *rl_line = NULL;
+static char *rl_start = NULL;
+static int rl_len = 0;
+
+	/* Definitions for readline access */
+extern FILE *rl_instream;
+extern FILE *yyin;
+void yyerror(char *s, ...);
+
+/*
+ * rl_input puts upto MAX characters into BUF with the number put in
+ * BUF placed in *RESULT.  If the yy input file is the same as
+ * rl_instream (stdin), use readline.  Otherwise, just read it.
+ */
+
+void rl_input(char *buf, int *result, int max)
+{
+#ifdef HAS_LIB_READLINE
+	if (yyin != rl_instream || !is_interactive || opt_SCM) {
+#endif
+		while ((*result = read(fileno(yyin), buf, max)) < 0 )
+			if (errno != EINTR) {
+				yyerror("read() in flex scanner failed" );
+				exit(1);
+			}
+		return;
+#ifdef HAS_LIB_READLINE
+	}
+#endif
+
+#ifdef HAS_LIB_READLINE
+		/* Do we need a new string? */
+	if (rl_len == 0) {
+		if (rl_start)
+			free(rl_start);
+		rl_start = readline("");
+		if (rl_start == NULL) {
+				/* End of file */
+			*result = 0;
+			rl_len = 0;
+			return;
+		}
+		rl_line = rl_start;
+		rl_len = strlen(rl_line)+1;
+		if (rl_len != 1)
+			add_history (rl_line); 
+		rl_line[rl_len-1] = '\n';
+/*        fflush(stdout);*/
+/*        if (ferror(stdout))*/
+/*            FATAL_ERROR("%s", "Fatal error writing to stdout");*/
+	}
+
+	if (rl_len <= max) {
+		strncpy(buf, rl_line, rl_len);
+		*result = rl_len;
+		rl_len = 0;
+	} else {
+		strncpy(buf, rl_line, max);
+		*result = max;
+		rl_line += max;
+		rl_len -= max;
+	}
+#endif
+
+}
+
+#ifdef HAS_LIB_READLINE
+void init_readline()
 {
 	rl_instream = stdin;
+}
+#else
+#define init_readline()
+#endif
+
+int main(int argc, char *argv[])
+{
+	init_readline();
 
 		/* done to have a non NULL defarg_t_badarg pointer (any address would be fine) */
 	defarg_t_badarg = (defargs_t *)VAR_LAST;

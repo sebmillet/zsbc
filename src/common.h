@@ -16,14 +16,14 @@
  */
 
 
+#ifndef COMMON_H
+#define COMMON_H
+
 #if defined(_WIN32) || defined(_WIN64)
 #define MY_WINDOWS
 #else
 #define MY_LINUX
 #endif
-
-#ifndef COMMON_H
-#define COMMON_H
 
 #include <stdlib.h>
 #include <assert.h>

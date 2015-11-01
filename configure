@@ -626,6 +626,8 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+WITH_READLINE_FALSE
+WITH_READLINE_TRUE
 WITH_LIBBC_FALSE
 WITH_LIBBC_TRUE
 WITH_GMP_FALSE
@@ -746,6 +748,7 @@ enable_bison_debug
 enable_flex_debug
 enable_gmp
 enable_libbc
+enable_readline
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1390,6 +1393,7 @@ Optional Features:
   --enable-flex-debug           enable debugging information for flex
   --disable-gmp                 compile without the GNU Multi Precision library (gmp)
   --disable-libbc               compile without the bc/dc number library (libbc)
+  --disable-readline                 compile without the readline library
 
 Some influential environment variables:
   CC          C compiler command
@@ -5035,7 +5039,7 @@ fi
 done
 
 
-for ac_header in inttypes.h libintl.h malloc.h stddef.h stdlib.h string.h unistd.h lib.h gmp.h
+for ac_header in inttypes.h libintl.h malloc.h stddef.h stdlib.h string.h unistd.h lib.h gmp.h readline.h history.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -5173,6 +5177,63 @@ else
 fi
 
 
+# Check whether --enable-readline was given.
+if test "${enable_readline+set}" = set; then :
+  enableval=$enable_readline;
+fi
+
+test -z "$enable_readline" && enable_readline="yes"
+if test "${enable_readline}" = yes ; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for readline in -lreadline" >&5
+$as_echo_n "checking for readline in -lreadline... " >&6; }
+if ${ac_cv_lib_readline_readline+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lreadline  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char readline ();
+int
+main ()
+{
+return readline ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_readline_readline=yes
+else
+  ac_cv_lib_readline_readline=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_readline_readline" >&5
+$as_echo "$ac_cv_lib_readline_readline" >&6; }
+if test "x$ac_cv_lib_readline_readline" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBREADLINE 1
+_ACEOF
+
+  LIBS="-lreadline $LIBS"
+
+else
+  as_fn_error $? "readline not found, use --disable-readline option if you wish to compile without readline" "$LINENO" 5
+fi
+
+	CPPFLAGS="$CPPFLAGS -DHAS_LIB_READLINE"
+fi
+
  if  test "${enable_gmp}" = yes ; then
   WITH_GMP_TRUE=
   WITH_GMP_FALSE='#'
@@ -5187,6 +5248,14 @@ fi
 else
   WITH_LIBBC_TRUE='#'
   WITH_LIBBC_FALSE=
+fi
+
+ if  test "${enable_readline}" = yes ; then
+  WITH_READLINE_TRUE=
+  WITH_READLINE_FALSE='#'
+else
+  WITH_READLINE_TRUE='#'
+  WITH_READLINE_FALSE=
 fi
 
 
@@ -5576,6 +5645,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WITH_LIBBC_TRUE}" && test -z "${WITH_LIBBC_FALSE}"; then
   as_fn_error $? "conditional \"WITH_LIBBC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WITH_READLINE_TRUE}" && test -z "${WITH_READLINE_FALSE}"; then
+  as_fn_error $? "conditional \"WITH_READLINE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

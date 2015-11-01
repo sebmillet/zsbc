@@ -1,7 +1,9 @@
 TODO file of zsbc
 =================
 
-Last update: October 2015
+Last update: November 2015
 
-- Implements readline input
+- Implements gettext support
+
+- Write manual
 

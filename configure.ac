@@ -26,7 +26,7 @@ AC_PROG_RANLIB
 # Checks for header files.
 AC_FUNC_ALLOCA
 AC_FUNC_VPRINTF
-AC_CHECK_HEADERS([inttypes.h libintl.h malloc.h stddef.h stdlib.h string.h unistd.h lib.h gmp.h])
+AC_CHECK_HEADERS([inttypes.h libintl.h malloc.h stddef.h stdlib.h string.h unistd.h lib.h gmp.h readline.h history.h])
 
 dnl ==================== Options ====================================
 
@@ -82,8 +82,17 @@ if test "${enable_flex_debug}" = yes ; then
 fi
 AM_CONDITIONAL(DEBUG_FLEX, test $debug_flex = yes)
 
+AC_ARG_ENABLE(readline,
+		[  --disable-readline                 compile without the readline library])
+test -z "$enable_readline" && enable_readline="yes"
+if test "${enable_readline}" = yes ; then
+	AC_CHECK_LIB(readline, readline, , [AC_MSG_ERROR([readline not found, use --disable-readline option if you wish to compile without readline])])
+	CPPFLAGS="$CPPFLAGS -DHAS_LIB_READLINE"
+fi
+
 AM_CONDITIONAL(WITH_GMP, [ test "${enable_gmp}" = yes ])
 AM_CONDITIONAL(WITH_LIBBC, [ test "${enable_libbc}" = yes ])
+AM_CONDITIONAL(WITH_READLINE, [ test "${enable_readline}" = yes ])
 
 if test "${has_one_numlib}" = no ; then
 	AC_MSG_ERROR([You have to compile with at least one num library])

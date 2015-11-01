@@ -37,17 +37,13 @@
 #include <unistd.h>
 #endif
 
-#include <readline/readline.h>
-#include <readline/history.h>
-
-/*#define YY_NO_INPUT*/
-/*#define YY_NO_UNISTD_H*/
-
 int yycolumn = 1;
 void cleanup_inputnumber(char *s);
 
 	/* Defined in this file */
 void yyerror(char *s, ...);
+
+void rl_input(char *buf, int *result, int max);
 
 	/* the 2 below are defined in main.c */
 FILE *input_get_next();
@@ -57,75 +53,10 @@ const char *input_get_name();
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
 
-extern int opt_SCM;
-extern int is_interactive;
-
-/* Code below taken as is (besides indentation and the like) from bc source in bc/scan.l */
-
-/* Support for the readline and history libraries.  This allows
-   nicer input on the interactive part of input. */
-
-/* Have input call the following function. */
+	/* Have input call the following function */
 #undef  YY_INPUT
 #define YY_INPUT(buf,result,max_size) \
 		rl_input((char *)buf, &result, max_size)
-
-/* Variables to help interface readline with bc. */
-static char *rl_line = NULL;
-static char *rl_start = NULL;
-static int rl_len = 0;
-
-/* Definitions for readline access. */
-extern FILE *rl_instream;
-
-/* rl_input puts upto MAX characters into BUF with the number put in
-   BUF placed in *RESULT.  If the yy input file is the same as
-   rl_instream (stdin), use readline.  Otherwise, just read it.
-*/
-
-static void rl_input(char *buf, int *result, int max)
-{
-	if (yyin != rl_instream || !is_interactive || opt_SCM) {
-		while ((*result = read(fileno(yyin), buf, max)) < 0 )
-			if (errno != EINTR) {
-				yyerror("read() in flex scanner failed" );
-				exit(1);
-			}
-		return;
-	}
-
-		/* Do we need a new string? */
-	if (rl_len == 0) {
-		if (rl_start)
-			free(rl_start);
-		rl_start = readline("");
-		if (rl_start == NULL) {
-				/* end of file */
-			*result = 0;
-			rl_len = 0;
-			return;
-		}
-		rl_line = rl_start;
-		rl_len = strlen(rl_line)+1;
-		if (rl_len != 1)
-			add_history (rl_line); 
-		rl_line[rl_len-1] = '\n';
-		fflush(stdout);
-		if (ferror(stdout))
-			FATAL_ERROR("%s", "Fatal error writing to stdout");
-	}
-
-	if (rl_len <= max) {
-		strncpy(buf, rl_line, rl_len);
-		*result = rl_len;
-		rl_len = 0;
-	} else {
-		strncpy(buf, rl_line, max);
-		*result = max;
-		rl_line += max;
-		rl_len -= max;
-	}
-}
 
 %}
 

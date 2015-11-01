@@ -30,6 +30,10 @@ zsbc_SOURCES += bc/libmath.c bc/libmath.b
 zsbc_LDADD = $(LIBBC)
 endif
 
+if WITH_READLINE
+zsbc_LDFLAGS += -lreadline
+endif
+
 BUILT_SOURCES = parser.h
 
 MAINTAINERCLEANFILES = lexer.c parser.c parser.h
