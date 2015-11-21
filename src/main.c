@@ -143,6 +143,7 @@ static const char *table_errors[] = {
 	"Square root of a negative number",	/* ERROR_SQRT_OF_NEG */
 	"Array index out of bounds",		/* ERROR_ARRAY_OUT_OF_BOUNDS */
 	"Invalid number",					/* ERROR_INVALID_NUMBER */
+	"Function not implemented",			/* ERROR_FUNCTION_NOT_IMPLEMENTED */
 	NULL								/* ERROR_CUSTOM */
 };
 
@@ -347,6 +348,7 @@ exec_ctx_t construct_exec_ctx_t()
 	exec_ctx.function_name = NULL;
 	exec_ctx.ploc = NULL;
 	exec_ctx.error_message = NULL;
+	exec_ctx.modulo = num_undefvalue();
 	return exec_ctx;
 }
 
@@ -491,10 +493,11 @@ void rt_error(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	fprintf(stderr, "'bc number' runtime error (will stop immediately): ");
+	fprintf(stderr, "'bc number' runtime error: ");
 	vfprintf(stderr, fmt, args);
+	fprintf(stderr, "\n");
 	va_end(args);
-	exit(1);
+/*    exit(1);*/
 }
 
 	/* Needed by the bc library */
@@ -755,7 +758,7 @@ void yyerror(char *s, ...);
  * rl_instream (stdin), use readline.  Otherwise, just read it.
  */
 
-void rl_input(char *buf, int *result, int max)
+void rl_input(char *buf, long unsigned int *result, int max)
 {
 #ifdef HAS_LIB_READLINE
 	if (yyin != rl_instream || !is_interactive || opt_SCM) {
@@ -912,6 +915,7 @@ int main(int argc, char *argv[])
 	}
 
 	input_cursor = -1;
+
 	if (bc_mathlib) {
 #ifdef HAS_LIB_LIBBC
 

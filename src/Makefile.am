@@ -39,5 +39,5 @@ BUILT_SOURCES = parser.h
 MAINTAINERCLEANFILES = lexer.c parser.c parser.h
 
 bc/libmath.c: bc/libmath.b
-	bc/mkreslib.sh $<
+	./prepb.sh "libbc_libmath" $<
 

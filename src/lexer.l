@@ -45,7 +45,7 @@ void cleanup_inputnumber(char *s);
 	/* Defined in this file */
 void yyerror(char *s, ...);
 
-void rl_input(char *buf, int *result, int max);
+void rl_input(char *buf, long unsigned int *result, int max);
 
 	/* the 2 below are defined in main.c */
 FILE *input_get_next();

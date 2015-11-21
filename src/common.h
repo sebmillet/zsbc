@@ -70,8 +70,9 @@ const char *VAR_LAST;
 #define ERROR_SQRT_OF_NEG				10
 #define ERROR_ARRAY_OUT_OF_BOUNDS		11
 #define ERROR_INVALID_NUMBER			12
-#define ERROR_CUSTOM					13	/* Error string defined at runtime */
-#define ERROR_LAST						13
+#define ERROR_FUNCTION_NOT_IMPLEMENTED	13
+#define ERROR_CUSTOM					14	/* Error string defined at runtime */
+#define ERROR_LAST						14
 
 #define L_ENFORCE	(-1)
 #define L_ERROR		0
@@ -123,11 +124,8 @@ typedef struct code_location_t {
 
 code_location_t construct_unset_code_location_t();
 
-typedef struct exec_ctx_t {
-	const char *function_name;
-	const code_location_t *ploc;
-	char *error_message;
-} exec_ctx_t;
+struct exec_ctx_t;
+typedef struct exec_ctx_t exec_ctx_t;
 
 exec_ctx_t construct_exec_ctx_t();
 void set_exec_error_message(exec_ctx_t *exec_ctx, const char *fmt, ...);

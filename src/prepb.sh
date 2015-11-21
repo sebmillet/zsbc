@@ -2,16 +2,21 @@
 
 # Script to be used for zsbc compilation
 
-VAR="libbc_libmath"
-S=$1
+# Takes one argument (the source .b file) and create a .c
+# file, ready to be compiled and used as a data source inside
+# zsbc.
+
+VAR=$1
+S=$2
 T=`echo $S | sed 's/\.b$/.c/'`
 
 if [ -z "$S" ]; then
-	echo "Usage: mkreslib.sh FILE"
+	echo "Usage: prepb.sh VARNAME FILE"
+	echo "  Example: prepb.sh ""libbc_libmath"" bc/libmath.b"
 	exit
 fi
 
-echo "/* Created by mkreslib.sh */" >$T
+echo "/* Created by prepb.sh */" >$T
 echo "/* DO NOT UPDATE MANUALLY */" >> $T
 echo >> $T
 echo "#include <stdlib.h>" >> $T

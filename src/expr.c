@@ -495,18 +495,26 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 
 	int nbargs = self->nb_args;
 
-	out_dbg("Evaluating expression, type: %s, #args: %d\n", ENODE_TYPES[self->type], nbargs);
+	out_dbg("Evaluating expression, type: %s, #args: %d, %s\n", ENODE_TYPES[self->type], nbargs,
+				num_is_not_initialized(pexec_ctx->modulo) ? "no modulo" : "has modulo");
+
+	exec_ctx_t exec_ctx_without_modulo = *pexec_ctx;
+	exec_ctx_without_modulo.modulo = num_undefvalue();
 
 	int is_builtin_function_call = FALSE;
-	function_t *f;
+
+		/* Useless NULL assignment for code execution, done to avoid a warning ('f' may be used uninitialized) */
+	function_t *f = NULL;
+
 	if (self->type == ENODE_FUNCTION_CALL) {
 		if ((f = vars_get_function(self->var.name)) == NULL) {
 			set_exec_error_message(pexec_ctx, "Function %s not defined", self->var.name);
 			return ERROR_CUSTOM;
 		}
 		if (f->ftype == FTYPE_USER) {
+			exec_ctx_without_modulo.function_name = self->var.name;
 			pexec_ctx->function_name = self->var.name;
-			return eval_function_call(self, f, pval, pexec_ctx);
+			return eval_function_call(self, f, pval, &exec_ctx_without_modulo);
 		} else if (f->ftype == FTYPE_BUILTIN) {
 			is_builtin_function_call = TRUE;
 			if (f->builtin_nb_args != nbargs)
@@ -518,12 +526,40 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 	numptr *value_args = NULL;
 	if (nbargs >= 1)
 		value_args = malloc(sizeof(numptr) * (unsigned)nbargs);
-	int i;
+	int ii;
 	int r = ERROR_NONE;
-	for (i = 0; i < nbargs; ++i) {
-		callargs_t *ca = &self->cargs[i];
+
+	int is_modulo_op = (self->type == ENODE_BUILTIN_OP && self->builtin == FN_MOD);
+	int is_pow_op = (self->type == ENODE_BUILTIN_OP && self->builtin == FN_POW);
+
+	for (ii = 0; ii < nbargs; ++ii) {
+
+		int idx = ii;
+		if (is_modulo_op) {
+				/*
+				 * Modulo op must be managed differently.
+				 *
+				 * Indeed the modulo value must be calculated first, so that
+				 * the "modulo'd" operand inherit the modulo value *while*
+				 * being calculated.
+				 *
+				 * */
+			idx = nbargs - 1 - ii;
+		}
+
+		callargs_t *ca = &self->cargs[idx];
 		if (ca->type == CARG_EXPR) {
-			if ((r = myeval(ca->e, &value_args[i], pexec_ctx)) != ERROR_NONE)
+			if (!is_modulo_op && self->type == ENODE_BUILTIN_OP && (!is_pow_op || ii == 0)) {
+				r = myeval(ca->e, &value_args[idx], pexec_ctx);
+			} else if (is_modulo_op && ii == 1) {
+				exec_ctx_t exec_ctx_with_new_modulo = *pexec_ctx;
+				exec_ctx_with_new_modulo.modulo = num_construct_from_num(value_args[1]);
+				r = myeval(ca->e, &value_args[idx], &exec_ctx_with_new_modulo);
+				num_destruct(&exec_ctx_with_new_modulo.modulo);
+			} else {
+				r = myeval(ca->e, &value_args[idx], &exec_ctx_without_modulo);
+			}
+			if (r != ERROR_NONE)
 				break;
 		} else if (ca->type == CARG_ARRAY) {
 			r = ERROR_ARGTYPE_MISMATCH;
@@ -531,12 +567,14 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 		} else
 			FATAL_ERROR("Unknown call argument type: %d", ca->type);
 	}
+
 	if (r == ERROR_NONE) {
 		if (is_builtin_function_call)
 			r = eval_builtin_function_call(self, f, (const numptr *)value_args, pval, pexec_ctx);
 		else
 			r = (table_eval[self->type])(self, (const numptr *)value_args, pval, pexec_ctx);
 	}
+	int i;
 	for (i = 0; i < nbargs; ++i)
 		num_destruct(&value_args[i]);
 	if (value_args != NULL)
@@ -719,6 +757,7 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 	assert(num_is_not_initialized(*pval));
 
 	numptr numone;
+	numptr inv;
 	int r;
 	switch (self->builtin) {
 		case FN_ADD:
@@ -732,17 +771,28 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 			return num_mul(pval, value_args[0], value_args[1]);
 		case FN_DIV:
 			assert(self->nb_args == 2 && value_args != NULL);
-			return num_div(pval, value_args[0], value_args[1]);
+			if (num_is_not_initialized(pexec_ctx->modulo))
+				return num_div(pval, value_args[0], value_args[1]);
+			else {
+				inv = num_undefvalue();
+				if ((r = num_invmod(&inv, value_args[1], pexec_ctx->modulo)) != ERROR_NONE)
+					return r;
+				r = num_mul(pval, inv, value_args[0]);
+				num_destruct(&inv);
+				return r;
+			}
 		case FN_POW:
 			assert(self->nb_args == 2 && value_args != NULL);
-			return num_pow(pval, value_args[0], value_args[1]);
+			if (num_is_not_initialized(pexec_ctx->modulo))
+				return num_pow(pval, value_args[0], value_args[1]);
+			else
+				return num_powmod(pval, value_args[0], value_args[1], pexec_ctx->modulo);
 		case FN_MOD:
 			assert(self->nb_args == 2 && value_args != NULL);
 			return num_mod(pval, value_args[0], value_args[1]);
 		case FN_NEG:
 			assert(self->nb_args == 1 && value_args != NULL);
 			return num_neg(pval, value_args[0]);
-
 		case FN_CMPLT:
 			assert(self->nb_args == 2 && value_args != NULL);
 			return num_cmplt(pval, value_args[0], value_args[1]);
@@ -802,6 +852,8 @@ static int eval_builtin_function_call(const expr_t *self, const function_t *f, c
 		return f->builtin1arg(pval, value_args[0]);
 	else if (n == 2)
 		return f->builtin2arg(pval, value_args[0], value_args[1]);
+	else if (n == 3)
+		return f->builtin3arg(pval, value_args[0], value_args[1], value_args[2]);
 	else
 		FATAL_ERROR("Number of arguments not implemented (%d) for function %s", n, self->var.name);
 

@@ -152,6 +152,7 @@ static vars_t *vars_t_construct(const char *name, int type, int ftype)
 		v->value.fcnt.builtin0arg = NULL;
 		v->value.fcnt.builtin1arg = NULL;
 		v->value.fcnt.builtin2arg = NULL;
+		v->value.fcnt.builtin3arg = NULL;
 	} else {
 		FATAL_ERROR("Unknown symbol type: %d", type);
 	}
@@ -691,7 +692,9 @@ void register_builtin_function(const char *name, int nb_args, void *f, int is_vo
 		v->value.fcnt.builtin1arg = f;
 	else if (nb_args == 2)
 		v->value.fcnt.builtin2arg = f;
-	else if (nb_args >= 3)
+	else if (nb_args == 3)
+		v->value.fcnt.builtin3arg = f;
+	else if (nb_args > 3)
 		FATAL_ERROR("Builtin functions with %d arguments is not supported (maximum: 3)", nb_args);
 	out_dbg("Constructed function: %lu, name: %s, nb args: %d, function: %lu\n", v, v->name, nb_args, f);
 }

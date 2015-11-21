@@ -1,4 +1,4 @@
-/* Created by mkreslib.sh */
+/* Created by prepb.sh */
 /* DO NOT UPDATE MANUALLY */
 
 #include <stdlib.h>

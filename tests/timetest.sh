@@ -11,6 +11,6 @@ do
 for prog in "$SYSBC" "$BC" $OTHERBC
 do
 echo Timing $file with $prog
-time $prog -l $file
+time $prog -l $file | egrep CPU
 done
 done

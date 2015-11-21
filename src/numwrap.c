@@ -94,7 +94,9 @@ static int (*Lsub)(numptr *pr, const numptr a, const numptr b);
 static int (*Lmul)(numptr *pr, const numptr a, const numptr b);
 static int (*Ldiv)(numptr *pr, const numptr a, const numptr b);
 static int (*Lpow)(numptr *pr, const numptr a, const numptr b);
+static int (*Lpowmod)(numptr *pr, const numptr a, const numptr b, const numptr c);
 static int (*Lmod)(numptr *pr, const numptr a, const numptr b);
+static int (*Linvmod)(numptr *pr, const numptr a, const numptr b);
 static int (*Lneg)(numptr *pr, const numptr a);
 static int (*Lcmplt)(numptr *pr, const numptr a, const numptr b);
 static int (*Lcmple)(numptr *pr, const numptr a, const numptr b);
@@ -295,7 +297,9 @@ static void libswitch(lib_t *l, int quiet)
 	Lmul = NULL;
 	Ldiv = NULL;
 	Lpow = NULL;
+	Lpowmod = NULL;
 	Lmod = NULL;
+	Linvmod = NULL;
 	Lneg = NULL;
 	Lcmplt = NULL;
 	Lcmple = NULL;
@@ -326,7 +330,9 @@ static void libswitch(lib_t *l, int quiet)
 	assert(Lmul != NULL);
 	assert(Ldiv != NULL);
 	assert(Lpow != NULL);
+	assert(Lpowmod != NULL);
 	assert(Lmod != NULL);
+	assert(Linvmod != NULL);
 	assert(Lneg != NULL);
 	assert(Lcmplt != NULL);
 	assert(Lcmple != NULL);
@@ -455,12 +461,26 @@ int num_pow(numptr *pr, const numptr a, const numptr b)
 	return Lpow(pr, a, b);
 }
 
+int num_powmod(numptr *pr, const numptr a, const numptr b, const numptr c)
+{
+	assert(num_is_not_initialized(*pr));
+	return Lpowmod(pr, a, b, c);
+}
+
 int num_mod(numptr *pr, const numptr a, const numptr b)
 {
 	assert(num_is_not_initialized(*pr));
 	if (num_is_zero(b))
 		return ERROR_DIV0;
 	return Lmod(pr, a, b);
+}
+
+int num_invmod(numptr *pr, const numptr a, const numptr b)
+{
+	assert(num_is_not_initialized(*pr));
+	if (num_is_zero(b))
+		return ERROR_DIV0;
+	return Linvmod(pr, a, b);
 }
 
 int num_neg(numptr *pr, const numptr a)
@@ -562,7 +582,9 @@ static int gmp_sub(numptr *pr, const numptr a, const numptr b);
 static int gmp_mul(numptr *pr, const numptr a, const numptr b);
 static int gmp_div(numptr *pr, const numptr a, const numptr b);
 static int gmp_pow(numptr *pr, const numptr a, const numptr b);
+static int gmp_powmod(numptr *pr, const numptr a, const numptr b, const numptr c);
 static int gmp_mod(numptr *pr, const numptr a, const numptr b);
+static int gmp_invmod(numptr *pr, const numptr a, const numptr b);
 static int gmp_neg(numptr *pr, const numptr a);
 static int gmp_cmplt(numptr *pr, const numptr a, const numptr b);
 static int gmp_cmple(numptr *pr, const numptr a, const numptr b);
@@ -657,6 +679,8 @@ static void gmp_firsttimeinit()
 	assert(gmp_obase == GMP_DEFAULT_OBASE);
 
 	register_builtin_function("gmpversion", 0, gmp_function_get_version, FALSE);
+	register_builtin_function("powmod", 3, gmp_powmod, FALSE);
+	register_builtin_function("invmod", 2, gmp_invmod, FALSE);
 }
 
 static void gmp_activate()
@@ -675,7 +699,9 @@ static void gmp_activate()
 	Lmul = gmp_mul;
 	Ldiv = gmp_div;
 	Lpow = gmp_pow;
+	Lpowmod = gmp_powmod;
 	Lmod = gmp_mod;
+	Linvmod = gmp_invmod;
 	Lneg = gmp_neg;
 	Lcmplt = gmp_cmplt;
 	Lcmple = gmp_cmple;
@@ -838,11 +864,24 @@ static int gmp_div(numptr *pr, const numptr a, const numptr b)
 
 static int gmp_pow(numptr *pr, const numptr a, const numptr b)
 {
-	signed long int exp = mpz_get_si(*(mpz_t *)b);
+
+	out_dbg("Call to gmp_pow\n");
+
+	long int exp = gmp_getlongint(b);
 	if (exp < 0)
 		return ERROR_NEGATIVE_EXP;
 	*pr = num_construct();
 	mpz_pow_ui(*(mpz_t *)*pr, *(const mpz_t *)a, exp);
+	return ERROR_NONE;
+}
+
+static int gmp_powmod(numptr *pr, const numptr a, const numptr b, const numptr c)
+{
+
+	out_dbg("Call to gmp_powmod\n");
+
+	*pr = num_construct();
+	mpz_powm(*(mpz_t *)*pr, *(const mpz_t *)a, *(const mpz_t *)b, *(const mpz_t *)c);
 	return ERROR_NONE;
 }
 
@@ -851,6 +890,14 @@ static int gmp_mod(numptr *pr, const numptr a, const numptr b)
 	*pr = num_construct();
 		/*  The calling function, num_mod, has checked whether or not b is null */
 	mpz_mod(*(mpz_t *)*pr, *(const mpz_t *)a, *(const mpz_t *)b);
+	return ERROR_NONE;
+}
+
+static int gmp_invmod(numptr *pr, const numptr a, const numptr b)
+{
+	*pr = num_construct();
+		/*  The calling function, num_mod, has checked whether or not b is null */
+	mpz_invert(*(mpz_t *)*pr, *(const mpz_t *)a, *(const mpz_t *)b);
 	return ERROR_NONE;
 }
 
@@ -1035,7 +1082,9 @@ static int libbc_sub(numptr *pr, const numptr a, const numptr b);
 static int libbc_mul(numptr *pr, const numptr a, const numptr b);
 static int libbc_div(numptr *pr, const numptr a, const numptr b);
 static int libbc_pow(numptr *pr, const numptr a, const numptr b);
+static int libbc_powmod(numptr *pr, const numptr a, const numptr b, const numptr c);
 static int libbc_mod(numptr *pr, const numptr a, const numptr b);
+static int libbc_invmod(numptr *pr, const numptr a, const numptr b);
 static int libbc_neg(numptr *pr, const numptr a);
 static int libbc_cmplt(numptr *pr, const numptr a, const numptr b);
 static int libbc_cmple(numptr *pr, const numptr a, const numptr b);
@@ -1188,6 +1237,7 @@ static void libbc_firsttimeinit()
 	register_builtin_function("sqrt", 1, libbc_sqrt, FALSE);
 	register_builtin_function("scale", 1, libbc_function_scale, FALSE);
 	register_builtin_function("length", 1, libbc_function_length, FALSE);
+	register_builtin_function("powmod", 3, libbc_powmod, FALSE);
 }
 
 static void libbc_activate()
@@ -1206,7 +1256,9 @@ static void libbc_activate()
 	Lmul = libbc_mul;
 	Ldiv = libbc_div;
 	Lpow = libbc_pow;
+	Lpowmod = libbc_powmod;
 	Lmod = libbc_mod;
+	Linvmod = libbc_invmod;
 	Lneg = libbc_neg;
 	Lcmplt = libbc_cmplt;
 	Lcmple = libbc_cmple;
@@ -1468,11 +1520,23 @@ static int libbc_pow(numptr *pr, const numptr a, const numptr b)
 	return ERROR_NONE;
 }
 
+static int libbc_powmod(numptr *pr, const numptr a, const numptr b, const numptr c)
+{
+	*pr = num_construct();
+	bc_raisemod((bc_num)a, (bc_num)b, (bc_num)c, (bc_num *)pr, libbc_scale);
+	return ERROR_NONE;
+}
+
 static int libbc_mod(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
 	bc_modulo((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_scale);
 	return ERROR_NONE;
+}
+
+static int libbc_invmod(numptr *pr, const numptr a, const numptr b)
+{
+	return ERROR_FUNCTION_NOT_IMPLEMENTED;
 }
 
 static int libbc_neg(numptr *pr, const numptr a)

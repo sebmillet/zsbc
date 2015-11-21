@@ -64,6 +64,7 @@ typedef struct function_t {
 	int (*builtin0arg)(numptr *pr);
 	int (*builtin1arg)(numptr *pr, const numptr a);
 	int (*builtin2arg)(numptr *pr, const numptr a, const numptr b);
+	int (*builtin3arg)(numptr *pr, const numptr a, const numptr b, const numptr c);
 } function_t;
 
 typedef struct vars_value_t {

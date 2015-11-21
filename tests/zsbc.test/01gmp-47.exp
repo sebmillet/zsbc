@@ -1,0 +1,34 @@
+# tests/zsbc.test/01gmp-47.exp
+
+set timeout 3
+spawn "$ZSBC" --SCM
+send_user "***   GMP - implicit powmod and divmod\n"
+
+set test "powmod (1)"
+send "print 123,\"-\",2^10^100%97,\"-\",124,\"\n\"\n"
+expect {
+	"123-61-124" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "powmod (2)"
+send "print 125,\":\",powmod(2, 10^100, 97),\":\",126,\"\n\"\n"
+expect {
+	"125:61:126" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "powmod (3)"
+send "print 127,\"::\",powmod(2, 10^100, 97)%50,\"::\",128,\"\n\"\n"
+expect {
+	"127::11::128" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

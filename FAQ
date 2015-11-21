@@ -15,8 +15,9 @@ GMP homepage:
 These "integers of gmp" are the "mpz_t" provided by GMP.
 
     Note
-Under Windows, the mpir library is used as a replacement for gmp.
-MPIR homepage:
+Under Windows and when compiled with msvc (Windows binaries are generated with
+msvc by default, while generation can be done with mingw, too), the mpir
+library is used as a replacement for gmp.  MPIR homepage:
     http://mpir.org/
 
 In order to ease the compatibility checks between zsbc and bc, zsbc can also
@@ -51,7 +52,7 @@ library they were defined in.
     lib
 
 - The libmath.b library, so that, similarly to bc, zsbc can be invoked with
-  the -l option, thus providing predefined math routines.
+  the -l option, providing predefined math routines.
   Inside zsbc source, it corresponds to the folder
     src/bc
 
@@ -60,6 +61,15 @@ library they were defined in.
   to number conversion in 10-base.
   Inside zsbc source, it corresponds to the function
     src/numwrap.c -> push_constant
+  Using the push_constant function "as is" was important to produce the exact
+  same results with math routines (-l option). In particular, executing the
+  following:
+    scale=2
+    pi=3.1416
+  will produce a 4-digit (scale = 4) number, although the scale is equal to 2.
+  This way of working (as opposed to cutting a litteral number' scale to the
+  "scale" variable value) is essential to the correct execution of the
+  mathlib.
 
 - The readline library "wrapper" function rl_input.
   Inside zsbc source, it corresponds to the function

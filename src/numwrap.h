@@ -24,6 +24,13 @@
 struct ToBeOrNotToBeAStructThatIsTheQuestion;
 typedef struct ToBeOrNotToBeAStructThatIsTheQuestion* numptr;
 
+struct exec_ctx_t {
+	const char *function_name;
+	const code_location_t *ploc;
+	char *error_message;
+	numptr modulo;
+};
+
 typedef struct libinfo_t {
 	const char *id;
 	const char *description;
@@ -60,7 +67,9 @@ int num_sub(numptr *pr, const numptr a, const numptr b);
 int num_mul(numptr *pr, const numptr a, const numptr b);
 int num_div(numptr *pr, const numptr a, const numptr b);
 int num_pow(numptr *pr, const numptr a, const numptr b);
+int num_powmod(numptr *pr, const numptr a, const numptr b, const numptr c);
 int num_mod(numptr *pr, const numptr a, const numptr b);
+int num_invmod(numptr *pr, const numptr a, const numptr b);
 int num_neg(numptr *pr, const numptr a);
 int num_cmplt(numptr *pr, const numptr a, const numptr b);
 int num_cmple(numptr *pr, const numptr a, const numptr b);
