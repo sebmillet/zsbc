@@ -1,3 +1,4 @@
+	/* Calculate the invert of a mod n */
 define _invmod(a, n) {
 	auto aa, bb, r, t, anc_t, nou_t
 	aa = n
@@ -33,5 +34,18 @@ define _invmod(a, n) {
 	} else {
 		return t
 	}
+}
+
+	/* Calculate 'a^e mod n' */
+define _powmod(a, e, m) {
+	auto factor, r
+	r = 1
+	factor = a
+	while (e > 0) {
+		if (e % 2) r = (r * factor) % m
+		factor = (factor * factor) % m
+		e /= 2
+	}
+	return r
 }
 

@@ -1,27 +1,69 @@
 # tests/zsbc.test/01gmp-47.exp
 
 set timeout 3
-spawn "$ZSBC" --SCM
-send_user "***   GMP - implicit powmod and divmod\n"
+spawn "$ZSBC" --SCM "$TESTDIR/01gmp-47.b"
+send_user "***   GMP - powmod and invmod\n"
 
-set test "powmod (1)"
+set test "powmod (implicit)"
 send "print 123,\"-\",2^10^100%97,\"-\",124,\"\n\"\n"
 expect {
 	"123-61-124" { pass "$test" }
 	default { fail "$test" }
 }
 
-set test "powmod (2)"
+set test "powmod (explicit, lib function)"
 send "print 125,\":\",powmod(2, 10^100, 97),\":\",126,\"\n\"\n"
 expect {
 	"125:61:126" { pass "$test" }
 	default { fail "$test" }
 }
 
-set test "powmod (3)"
+set test "powmod (explicit, lib function) (2)"
 send "print 127,\"::\",powmod(2, 10^100, 97)%50,\"::\",128,\"\n\"\n"
 expect {
 	"127::11::128" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "_powmod (explicit, from .b source file)"
+send "print 129,\":\",_powmod(2, 10^100, 97),\":\",130,\"\n\"\n"
+expect {
+	"129:61:130" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "_powmod (explicit, from .b source file) (2)"
+send "print 131,\"::\",_powmod(2, 10^100, 97)%50,\"::\",132,\"\n\"\n"
+expect {
+	"131::11::132" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "invmod (implicit)"
+send "print 200,\"-\",1/98%997,\"-\",800,\"\n\"\n"
+expect {
+	"200-234-800" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "invmod (implicit) - when no invert exists"
+send "201\n1/10%20\n801\n0\n"
+expect {
+	-re "201\[^0-9\]+Error.*Divide by 0.*\[^0-9\]+801\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "invmod (explicit, from .b source file)"
+send "print 204,\";\",_invmod(98, 997),\";\",804,\"\n\"\n"
+expect {
+	"204;234;804" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "invmod (explicit, from .b source file) - when no invert exists"
+send "205\n_invmod(10, 20)\n805\n"
+expect {
+	-re "205\[^0-9\]+Error.*Divide by 0.*\[^0-9\]+805\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 

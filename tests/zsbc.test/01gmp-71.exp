@@ -1,0 +1,27 @@
+# tests/zsbc.test/01gmp-71.exp
+
+set timeout 3
+spawn "$ZSBC" --SCM
+send_user "***   GMP - lib invmod function\n"
+
+set test "invmod"
+send "print 202,\";\",invmod(98, 997),\";\",802,\"\n\"\n"
+expect {
+	"202;234;802" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "invmod - when no invert exists"
+send "203\ninvmod(10, 20)\n803\n"
+expect {
+	-re "203\[^0-9\]+Error.*Divide by 0.*\[^0-9\]+803\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

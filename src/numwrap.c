@@ -330,9 +330,15 @@ static void libswitch(lib_t *l, int quiet)
 	assert(Lmul != NULL);
 	assert(Ldiv != NULL);
 	assert(Lpow != NULL);
-	assert(Lpowmod != NULL);
+
+		/* Providing powmod is not necessary... */
+/*    assert(Lpowmod != NULL);*/
+
 	assert(Lmod != NULL);
-	assert(Linvmod != NULL);
+
+		/* Providing invmod is not necessary... */
+/*    assert(Linvmod != NULL);*/
+
 	assert(Lneg != NULL);
 	assert(Lcmplt != NULL);
 	assert(Lcmple != NULL);
@@ -461,10 +467,36 @@ int num_pow(numptr *pr, const numptr a, const numptr b)
 	return Lpow(pr, a, b);
 }
 
-int num_powmod(numptr *pr, const numptr a, const numptr b, const numptr c)
+int num_powmod(numptr *pr, const numptr a, const numptr e, const numptr m)
 {
 	assert(num_is_not_initialized(*pr));
-	return Lpowmod(pr, a, b, c);
+	if (Lpowmod != NULL)
+		return Lpowmod(pr, a, e, m);
+
+	numptr ee = num_construct_from_num(e);
+	numptr two = num_construct_from_int(2);
+	numptr result = num_construct_from_int(1);
+	numptr factor = num_construct_from_num(a);
+
+	while (!num_is_zero(ee)) {
+		numptr mod2 = num_undefvalue();
+		num_mod(&mod2, ee, two);
+		if (!num_is_zero(mod2)) {
+			numptr tmp = num_undefvalue();
+			num_mul(&tmp, result, factor);
+			num_destruct(&result); num_mod(&result, tmp, m); num_destruct(&tmp);
+		}
+		num_destruct(&mod2);
+		numptr t = num_undefvalue(); num_mul(&t, factor, factor);
+		num_destruct(&factor); num_mod(&factor, t, m); num_destruct(&t);
+		num_div(&t, ee, two); num_destruct(&ee); ee = num_construct_from_num(t); num_destruct(&t);
+	}
+	*pr = num_construct_from_num(result);
+	num_destruct(&ee);
+	num_destruct(&two);
+	num_destruct(&result);
+	num_destruct(&factor);
+	return ERROR_NONE;
 }
 
 int num_mod(numptr *pr, const numptr a, const numptr b)
@@ -475,12 +507,77 @@ int num_mod(numptr *pr, const numptr a, const numptr b)
 	return Lmod(pr, a, b);
 }
 
-int num_invmod(numptr *pr, const numptr a, const numptr b)
+int num_invmod(numptr *pr, const numptr a, const numptr n)
 {
 	assert(num_is_not_initialized(*pr));
-	if (num_is_zero(b))
+	if (num_is_zero(n))
 		return ERROR_DIV0;
-	return Linvmod(pr, a, b);
+
+	if (Linvmod != NULL)
+		return Linvmod(pr, a, n);
+
+	numptr one = num_construct_from_int(1);
+	numptr zero = num_construct_from_int(0);
+	numptr aa = num_construct_from_num(n);
+	numptr bb = num_construct_from_num(a);
+	numptr r = num_construct_from_int(1);
+	numptr t = num_construct_from_int(1);
+	numptr anc_t = num_construct_from_int(0);
+	while (1) {
+		numptr q = num_undefvalue(); num_div(&q, aa, bb);
+
+		numptr tmp = num_undefvalue(); num_mul(&tmp, bb, q);
+		num_destruct(&r); num_sub(&r, aa, tmp); num_destruct(&tmp);
+
+/*        out(L_ENFORCE, "aa = "); num_print(aa); outln(L_ENFORCE, "");*/
+/*        out(L_ENFORCE, "bb = "); num_print(bb); outln(L_ENFORCE, "");*/
+/*        out(L_ENFORCE, "r = "); num_print(r); outln(L_ENFORCE, "");*/
+/*        out(L_ENFORCE, "t = "); num_print(t); outln(L_ENFORCE, "");*/
+
+		num_mul(&tmp, q, t); numptr nou_t = num_undefvalue(); num_sub(&nou_t, anc_t, tmp); num_destruct(&tmp);
+		num_destruct(&q);
+
+		numptr c = num_undefvalue(); num_cmpge(&c, nou_t, zero);
+		if (!num_is_zero(c)) {
+			num_mod(&tmp, nou_t, n); num_destruct(&nou_t); nou_t = num_construct_from_num(tmp); num_destruct(&tmp);
+		} else {
+			num_sub(&tmp, zero, nou_t); numptr tmp2 = num_undefvalue(); num_mod(&tmp2, tmp, n);
+			num_destruct(&nou_t); num_sub(&nou_t, n, tmp2); num_destruct(&tmp); num_destruct(&tmp2);
+		}
+		num_destruct(&c);
+		num_destruct(&anc_t); anc_t = num_construct_from_num(t);
+		num_destruct(&t); t = num_construct_from_num(nou_t);
+		num_destruct(&nou_t);
+
+		num_destruct(&aa); aa = num_construct_from_num(bb);
+		num_destruct(&bb); bb = num_construct_from_num(r);
+
+		numptr comp = num_undefvalue(); num_cmple(&comp, r, one);
+		int comp_is_zero = num_is_zero(comp);
+		num_destruct(&comp);
+		if (!comp_is_zero)
+			break;
+	}
+
+	int result;
+	numptr compar = num_undefvalue(); 
+	num_cmpeq(&compar, r, one);
+	if (num_is_zero(compar)) {
+		result = ERROR_DIV0;
+	} else {
+		*pr = num_construct_from_num(t);
+		result = ERROR_NONE;
+	}
+	num_destruct(&compar);
+
+	num_destruct(&one);
+	num_destruct(&zero);
+	num_destruct(&aa);
+	num_destruct(&bb);
+	num_destruct(&r);
+	num_destruct(&t);
+	num_destruct(&anc_t);
+	return result;
 }
 
 int num_neg(numptr *pr, const numptr a)
@@ -897,8 +994,12 @@ static int gmp_invmod(numptr *pr, const numptr a, const numptr b)
 {
 	*pr = num_construct();
 		/*  The calling function, num_mod, has checked whether or not b is null */
-	mpz_invert(*(mpz_t *)*pr, *(const mpz_t *)a, *(const mpz_t *)b);
-	return ERROR_NONE;
+	if (mpz_invert(*(mpz_t *)*pr, *(const mpz_t *)a, *(const mpz_t *)b))
+		return ERROR_NONE;
+	else {
+		num_destruct(pr);
+		return ERROR_DIV0;
+	}
 }
 
 static int gmp_neg(numptr *pr, const numptr a)
@@ -1084,7 +1185,6 @@ static int libbc_div(numptr *pr, const numptr a, const numptr b);
 static int libbc_pow(numptr *pr, const numptr a, const numptr b);
 static int libbc_powmod(numptr *pr, const numptr a, const numptr b, const numptr c);
 static int libbc_mod(numptr *pr, const numptr a, const numptr b);
-static int libbc_invmod(numptr *pr, const numptr a, const numptr b);
 static int libbc_neg(numptr *pr, const numptr a);
 static int libbc_cmplt(numptr *pr, const numptr a, const numptr b);
 static int libbc_cmple(numptr *pr, const numptr a, const numptr b);
@@ -1258,7 +1358,7 @@ static void libbc_activate()
 	Lpow = libbc_pow;
 	Lpowmod = libbc_powmod;
 	Lmod = libbc_mod;
-	Linvmod = libbc_invmod;
+/*    Linvmod = ...nothing...;*/
 	Lneg = libbc_neg;
 	Lcmplt = libbc_cmplt;
 	Lcmple = libbc_cmple;
@@ -1532,11 +1632,6 @@ static int libbc_mod(numptr *pr, const numptr a, const numptr b)
 	*pr = num_construct();
 	bc_modulo((bc_num)a, (bc_num)b, (bc_num *)pr, libbc_scale);
 	return ERROR_NONE;
-}
-
-static int libbc_invmod(numptr *pr, const numptr a, const numptr b)
-{
-	return ERROR_FUNCTION_NOT_IMPLEMENTED;
 }
 
 static int libbc_neg(numptr *pr, const numptr a)
