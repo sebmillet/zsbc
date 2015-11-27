@@ -28,6 +28,8 @@
 #include <limits.h>
 #include <ctype.h>
 
+#define NUM_IMPLICIT_DIVMOD_DEFAULT FALSE
+
 char *strcasestr(const char *haystack, const char *needle);
 #ifdef MY_WINDOWS
 #define strcasestr(haystack, needle) strstr(haystack, needle)
@@ -107,6 +109,7 @@ static int (*Lcmpne)(numptr *pr, const numptr a, const numptr b);
 static int (*Land)(numptr *pr, const numptr a, const numptr b);
 static int (*Lor)(numptr *pr, const numptr a, const numptr b);
 static int (*Lnot)(numptr *pr, const numptr a);
+static int (*Limplicit_divmod)();
 static int (*Lread)(numptr *pr);
 
 
@@ -310,6 +313,7 @@ static void libswitch(lib_t *l, int quiet)
 	Land = NULL;
 	Lor = NULL;
 	Lnot = NULL;
+	Limplicit_divmod = NULL;
 	Lread = NULL;
 
 	libcurrent = l;
@@ -349,6 +353,10 @@ static void libswitch(lib_t *l, int quiet)
 	assert(Land != NULL);
 	assert(Lor != NULL);
 	assert(Lnot != NULL);
+
+		/* Providing implicit_divmod is not necessary... */
+/*    assert(Limplicit_divmod != NULL);*/
+
 	assert(Lread != NULL);
 
 	if (!quiet)
@@ -640,6 +648,13 @@ int num_not(numptr *pr, const numptr a)
 	return Lnot(pr, a);
 }
 
+int num_implicit_divmod()
+{
+	if (Limplicit_divmod == NULL)
+		return NUM_IMPLICIT_DIVMOD_DEFAULT;
+	return Limplicit_divmod();
+}
+
 
 #ifdef HAS_LIB_GMP
 
@@ -692,6 +707,7 @@ static int gmp_cmpne(numptr *pr, const numptr a, const numptr b);
 static int gmp_and(numptr *pr, const numptr a, const numptr b);
 static int gmp_or(numptr *pr, const numptr a, const numptr b);
 static int gmp_not(numptr *pr, const numptr a);
+static int gmp_implicit_divmod();
 static int gmp_read(numptr *pr);
 
 static void gmp_register()
@@ -809,6 +825,7 @@ static void gmp_activate()
 	Land = gmp_and;
 	Lor = gmp_or;
 	Lnot = gmp_not;
+	Limplicit_divmod = gmp_implicit_divmod;
 	Lread = gmp_read;
 
 	outstring_set_line_length(-1);
@@ -1081,6 +1098,11 @@ static int gmp_not(numptr *pr, const numptr a)
 	long int logical_a = mpz_get_si(*(mpz_t *)a);
 	mpz_set_si(*(mpz_t *)*pr, logical_a ? 0L : 1L);
 	return ERROR_NONE;
+}
+
+static int gmp_implicit_divmod()
+{
+	return TRUE;
 }
 
 static int gmp_read(numptr *pr)

@@ -4,6 +4,20 @@ set timeout 3
 spawn "$ZSBC" --SCM
 send_user "***   GMP - lib invmod function\n"
 
+set test "invmod (implicit)"
+send "print 200,\"-\",1/98%997,\"-\",800,\"\n\"\n"
+expect {
+	"200-234-800" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "invmod (implicit) - when no invert exists"
+send "201\n1/10%20\n801\n0\n"
+expect {
+	-re "201\[^0-9\]+Error.*Divide by 0.*\[^0-9\]+801\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+
 set test "invmod"
 send "print 202,\";\",invmod(98, 997),\";\",802,\"\n\"\n"
 expect {

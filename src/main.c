@@ -922,7 +922,7 @@ int main(int argc, char *argv[])
 #ifdef DEBUG
 #if 0
 #warning  Are you sure you want to execute this debug code?
-#warning  It is meant to see libbc_libmath content (at it is at load time)
+#warning  It is meant to see libbc_libmath content (as it is at load time)
 #error    in case an error (flex or bison) occurs during loading
 		char *p = libbc_libmath;
 		FILE *F = fopen("internal-image-libmath.b", "w");

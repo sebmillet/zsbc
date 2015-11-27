@@ -771,7 +771,7 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 			return num_mul(pval, value_args[0], value_args[1]);
 		case FN_DIV:
 			assert(self->nb_args == 2 && value_args != NULL);
-			if (num_is_not_initialized(pexec_ctx->modulo))
+			if (num_is_not_initialized(pexec_ctx->modulo) || !num_implicit_divmod())
 				return num_div(pval, value_args[0], value_args[1]);
 			else {
 				inv = num_undefvalue();
