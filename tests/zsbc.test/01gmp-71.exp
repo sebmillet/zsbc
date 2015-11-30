@@ -4,8 +4,15 @@ set timeout 3
 spawn "$ZSBC" --SCM
 send_user "***   GMP - lib invmod function\n"
 
+set test "no autoinvmod (implicit)"
+send "autoinvmod=0\nprint 199,\",\",1/98%997,\",\",799,\"\n\"\n"
+expect {
+	"199,0,799" { pass "$test" }
+	default { fail "$test" }
+}
+
 set test "invmod (implicit)"
-send "print 200,\"-\",1/98%997,\"-\",800,\"\n\"\n"
+send "autoinvmod=1\nprint 200,\"-\",1/98%997,\"-\",800,\"\n\"\n"
 expect {
 	"200-234-800" { pass "$test" }
 	default { fail "$test" }

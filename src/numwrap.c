@@ -28,7 +28,7 @@
 #include <limits.h>
 #include <ctype.h>
 
-#define NUM_IMPLICIT_DIVMOD_DEFAULT FALSE
+#define NUM_IMPLICIT_INVMOD_DEFAULT FALSE
 
 char *strcasestr(const char *haystack, const char *needle);
 #ifdef MY_WINDOWS
@@ -109,7 +109,7 @@ static int (*Lcmpne)(numptr *pr, const numptr a, const numptr b);
 static int (*Land)(numptr *pr, const numptr a, const numptr b);
 static int (*Lor)(numptr *pr, const numptr a, const numptr b);
 static int (*Lnot)(numptr *pr, const numptr a);
-static int (*Limplicit_divmod)();
+static int (*Limplicit_invmod)();
 static int (*Lread)(numptr *pr);
 
 
@@ -313,7 +313,7 @@ static void libswitch(lib_t *l, int quiet)
 	Land = NULL;
 	Lor = NULL;
 	Lnot = NULL;
-	Limplicit_divmod = NULL;
+	Limplicit_invmod = NULL;
 	Lread = NULL;
 
 	libcurrent = l;
@@ -354,8 +354,8 @@ static void libswitch(lib_t *l, int quiet)
 	assert(Lor != NULL);
 	assert(Lnot != NULL);
 
-		/* Providing implicit_divmod is not necessary... */
-/*    assert(Limplicit_divmod != NULL);*/
+		/* Providing implicit_invmod is not necessary... */
+/*    assert(Limplicit_invmod != NULL);*/
 
 	assert(Lread != NULL);
 
@@ -648,11 +648,11 @@ int num_not(numptr *pr, const numptr a)
 	return Lnot(pr, a);
 }
 
-int num_implicit_divmod()
+int num_implicit_invmod()
 {
-	if (Limplicit_divmod == NULL)
-		return NUM_IMPLICIT_DIVMOD_DEFAULT;
-	return Limplicit_divmod();
+	if (Limplicit_invmod == NULL)
+		return NUM_IMPLICIT_INVMOD_DEFAULT;
+	return Limplicit_invmod();
 }
 
 
@@ -674,6 +674,10 @@ static int gmp_ibase;
 #define GMP_MIN_OBASE 2
 #define GMP_MAX_OBASE 62
 static int gmp_obase;
+
+	/*  autoinvmod */
+#define GMP_AUTOINVMOD_DEFAULT 0
+static int gmp_autoinvmod;
 
 char *gmp_identify_yourself = NULL;
 static int gmp_function_get_version(numptr *pr);
@@ -707,7 +711,7 @@ static int gmp_cmpne(numptr *pr, const numptr a, const numptr b);
 static int gmp_and(numptr *pr, const numptr a, const numptr b);
 static int gmp_or(numptr *pr, const numptr a, const numptr b);
 static int gmp_not(numptr *pr, const numptr a);
-static int gmp_implicit_divmod();
+static int gmp_implicit_invmod();
 static int gmp_read(numptr *pr);
 
 static void gmp_register()
@@ -757,6 +761,10 @@ static int gmp_var_update(const char *name, numptr *pnum)
 		if ((r = gmp_enforce_int_and_range(pnum, &gmp_obase, GMP_MIN_OBASE, GMP_MAX_OBASE)) == ERROR_NONE) {
 			out_dbg("obase set to %d\n", gmp_obase);
 		}
+	} else if (!varname_cmp(name, "autoinvmod")) {
+		if ((r = gmp_enforce_int_and_range(pnum, &gmp_autoinvmod, 0, 1)) == ERROR_NONE) {
+			out_dbg("autoinvmod set to %d\n", gmp_autoinvmod);
+		}
 	} else
 		FATAL_ERROR("Unknown variable for update_callback: %s\n", name);
 
@@ -790,6 +798,10 @@ static void gmp_firsttimeinit()
 	vars_set_update_callback("obase", gmp_var_update);
 	vars_set_value("obase", num_construct_from_int(GMP_DEFAULT_OBASE), &ppvarnum);
 	assert(gmp_obase == GMP_DEFAULT_OBASE);
+
+	vars_set_update_callback("autoinvmod", gmp_var_update);
+	vars_set_value("autoinvmod", num_construct_from_int(GMP_AUTOINVMOD_DEFAULT), &ppvarnum);
+	assert(gmp_autoinvmod == GMP_AUTOINVMOD_DEFAULT);
 
 	register_builtin_function("gmpversion", 0, gmp_function_get_version, FALSE);
 	register_builtin_function("powmod", 3, gmp_powmod, FALSE);
@@ -825,7 +837,7 @@ static void gmp_activate()
 	Land = gmp_and;
 	Lor = gmp_or;
 	Lnot = gmp_not;
-	Limplicit_divmod = gmp_implicit_divmod;
+	Limplicit_invmod = gmp_implicit_invmod;
 	Lread = gmp_read;
 
 	outstring_set_line_length(-1);
@@ -1100,9 +1112,9 @@ static int gmp_not(numptr *pr, const numptr a)
 	return ERROR_NONE;
 }
 
-static int gmp_implicit_divmod()
+static int gmp_implicit_invmod()
 {
-	return TRUE;
+	return gmp_autoinvmod;
 }
 
 static int gmp_read(numptr *pr)
