@@ -71,8 +71,9 @@ const char *VAR_LAST;
 #define ERROR_ARRAY_OUT_OF_BOUNDS		11
 #define ERROR_INVALID_NUMBER			12
 #define ERROR_FUNCTION_NOT_IMPLEMENTED	13
-#define ERROR_CUSTOM					14	/* Error string defined at runtime */
-#define ERROR_LAST						14
+#define ERROR_NO_INVMOD					14
+#define ERROR_CUSTOM					15	/* Error string defined at runtime */
+#define ERROR_LAST						15
 
 #define L_ENFORCE	(-1)
 #define L_ERROR		0

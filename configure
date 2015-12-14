@@ -634,6 +634,8 @@ WITH_GMP_FALSE
 WITH_GMP_TRUE
 DEBUG_FLEX_FALSE
 DEBUG_FLEX_TRUE
+BUILD_DOCS_FALSE
+BUILD_DOCS_TRUE
 ALLOCA
 EGREP
 GREP
@@ -5068,6 +5070,21 @@ if test "${enable_debug}" = yes ; then
 	CFLAGS="$CFLAGS -DDEBUG"
 fi
 
+if test "x$USE_MAINTAINER_MODE" = "xyes"; then
+	build_docs=yes
+else
+	build_docs=no
+fi
+
+ if test $build_docs = yes; then
+  BUILD_DOCS_TRUE=
+  BUILD_DOCS_FALSE='#'
+else
+  BUILD_DOCS_TRUE='#'
+  BUILD_DOCS_FALSE=
+fi
+
+
 # Check whether --enable-bison-debug was given.
 if test "${enable_bison_debug+set}" = set; then :
   enableval=$enable_bison_debug; enable_bison_debug="$enableval"
@@ -5162,7 +5179,7 @@ fi
 
 debug_flex=no
 if test "${enable_flex_debug}" = yes ; then
-    CFLAGS="$CFLAGS -DFLEX_DEBUG"
+	CFLAGS="$CFLAGS -DFLEX_DEBUG"
 	debug_flex=yes
 	if test "x$USE_MAINTAINER_MODE" != "xyes"; then
 		as_fn_error $? "Enabling flex debug without --enable-maintainer-mode is useless" "$LINENO" 5
@@ -5496,7 +5513,7 @@ fi
 done
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile lib/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile lib/Makefile doc/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -5633,6 +5650,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${BUILD_DOCS_TRUE}" && test -z "${BUILD_DOCS_FALSE}"; then
+  as_fn_error $? "conditional \"BUILD_DOCS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DEBUG_FLEX_TRUE}" && test -z "${DEBUG_FLEX_FALSE}"; then
@@ -6248,6 +6269,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "lib/Makefile") CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
+    "doc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

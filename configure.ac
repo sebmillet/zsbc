@@ -33,12 +33,20 @@ dnl ==================== Options ====================================
 has_one_numlib="no"
 
 AC_ARG_ENABLE(debug,
-              [  --enable-debug          enable debugging information],
-              enable_debug="$enableval", enable_debug="no")
+			  [  --enable-debug          enable debugging information],
+			  enable_debug="$enableval", enable_debug="no")
 
 if test "${enable_debug}" = yes ; then
 	CFLAGS="$CFLAGS -DDEBUG"
 fi
+
+if test "x$USE_MAINTAINER_MODE" = "xyes"; then
+	build_docs=yes
+else
+	build_docs=no
+fi
+
+AM_CONDITIONAL(BUILD_DOCS, test $build_docs = yes)
 
 AC_ARG_ENABLE(bison-debug,
 		[  --enable-bison-debug          enable debugging information for bison],
@@ -49,7 +57,7 @@ AC_ARG_ENABLE(flex-debug,
 		enable_flex_debug="$enableval",  enable_flex_debug="no")
 
 AC_ARG_ENABLE(gmp,
-		[  --disable-gmp                 compile without the GNU Multi Precision library (gmp)])
+			  [  --disable-gmp                 compile without the GNU Multi Precision library (gmp)])
 test -z "$enable_gmp" && enable_gmp="yes"
 if test "${enable_gmp}" = yes ; then
 	has_one_numlib="yes"
@@ -74,7 +82,7 @@ fi
 
 debug_flex=no
 if test "${enable_flex_debug}" = yes ; then
-    CFLAGS="$CFLAGS -DFLEX_DEBUG"
+	CFLAGS="$CFLAGS -DFLEX_DEBUG"
 	debug_flex=yes
 	if test "x$USE_MAINTAINER_MODE" != "xyes"; then
 		AC_MSG_ERROR([Enabling flex debug without --enable-maintainer-mode is useless])
@@ -83,7 +91,7 @@ fi
 AM_CONDITIONAL(DEBUG_FLEX, test $debug_flex = yes)
 
 AC_ARG_ENABLE(readline,
-		[  --disable-readline                 compile without the readline library])
+			  [  --disable-readline                 compile without the readline library])
 test -z "$enable_readline" && enable_readline="yes"
 if test "${enable_readline}" = yes ; then
 	AC_CHECK_LIB(readline, readline, , [AC_MSG_ERROR([readline not found, use --disable-readline option if you wish to compile without readline])])
@@ -113,7 +121,8 @@ AC_FUNC_REALLOC
 AC_CHECK_FUNCS([memset])
 
 AC_CONFIG_FILES([Makefile
-                 src/Makefile
-				 lib/Makefile])
+				src/Makefile
+				lib/Makefile
+				doc/Makefile])
 AC_OUTPUT
 

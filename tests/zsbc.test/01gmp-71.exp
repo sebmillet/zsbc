@@ -21,7 +21,7 @@ expect {
 set test "invmod (implicit) - when no invert exists"
 send "201\n1/10%20\n801\n0\n"
 expect {
-	-re "201\[^0-9\]+Error.*Divide by 0.*\[^0-9\]+801\[^0-9\]+" { pass "$test" }
+	-re "201\[^0-9\]+Error.*No modulo invert.*\[^0-9\]+801\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 
@@ -35,7 +35,7 @@ expect {
 set test "invmod - when no invert exists"
 send "203\ninvmod(10, 20)\n803\n"
 expect {
-	-re "203\[^0-9\]+Error.*Divide by 0.*\[^0-9\]+803\[^0-9\]+" { pass "$test" }
+	-re "203\[^0-9\]+Error.*No modulo invert.*\[^0-9\]+803\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 

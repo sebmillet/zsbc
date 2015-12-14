@@ -144,6 +144,7 @@ static const char *table_errors[] = {
 	"Array index out of bounds",		/* ERROR_ARRAY_OUT_OF_BOUNDS */
 	"Invalid number",					/* ERROR_INVALID_NUMBER */
 	"Function not implemented",			/* ERROR_FUNCTION_NOT_IMPLEMENTED */
+	"No modulo invert",					/* ERROR_NO_INVMOD */
 	NULL								/* ERROR_CUSTOM */
 };
 
@@ -453,7 +454,7 @@ static void usage()
 	fprintf(stderr, "  -v  --version  print version information and exit\n");
 	fprintf(stderr, "  -n  --numlib   (also -lib) defines number library to start with\n");
 	fprintf(stderr, "  -t  --liblist  lists number libraries available and exit\n");
-	fprintf(stderr, "  -l             use the predefined math routines (same as bc)\n");
+	fprintf(stderr, "  -l  --mathlib  use the predefined math routines (same as bc)\n");
 	fprintf(stderr, "  --             end of parameters, next options are file names\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "%s will also read environment variable %s to parse options from,\n", PACKAGE_NAME, ENV_ARGS);

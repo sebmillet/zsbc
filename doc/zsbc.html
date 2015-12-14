@@ -1,0 +1,277 @@
+Content-type: text/html; charset=UTF-8
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of zsbc</TITLE>
+</HEAD><BODY>
+<H1>zsbc</H1>
+Section: User Commands  (1)<BR>Updated: version 0.1<BR><A HREF="#index">Index</A>
+<A HREF="/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+<P>
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+<DL COMPACT>
+<DT>zsbc - an arbitrary precision calculator for cryptography<DD>
+<P>
+</DL>
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<DL COMPACT>
+<DT><B>zsbc</B> [-n numeric_library] [<I>OPTIONS</I>]...<DD>
+<P>
+</DL>
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<DL COMPACT>
+<DT><B>zsbc</B>
+
+<DD>
+zsbc is a calculator to do arithmetic with arbitrary big integers. One can define functions and manipulate arrays, all using bc language.
+<BR>
+
+By default it deals with relative integers. zsbc is equivalent to bc when used with <B>scale = 0</B>. zsbc stands for <I>Zero-Scale bc</I>.
+<DT><B>bc's mathlib</B>
+
+<DD>
+If started with option <B>-n bc</B>, zsbc uses bc numeric library, providing reals of arbitrary precision.
+When started with <B>-n bc</B>, you can also provide <B>-l</B> option (same as bc), that'll load bc's math library functions.
+</DL>
+<A NAME="lbAE">&nbsp;</A>
+<H2>OPTIONS</H2>
+
+<DL COMPACT>
+<DT><B>-n,&nbsp;--numlib</B>
+
+<DD>
+Select numeric library to use. Default is relative integers of the GNU Multiple Precision Arithmetic Library (gmp or libgmp). As of December 2015, possible values are
+<BR>
+
+<I>gmp</I>
+
+<BR>
+
+<I>bc</I>
+
+<BR>
+
+The &quot;GNU Multiple Precision Arithmetic Library&quot; homepage is <A HREF="https://gmplib.org/">https://gmplib.org/</A>
+<DT><B>-v&nbsp;--version</B>
+
+<DD>
+Display version information and exit.
+<DT><B>-V,&nbsp;--verbose</B>
+
+<DD>
+Be more talkative.
+<DT><B>-q,&nbsp;--quiet</B>
+
+<DD>
+Be less talkative.
+<DT><B>-l,&nbsp;--mathlib</B>
+
+<DD>
+Load bc's math functions library. Can be used only with option <B>-n bc</B> as this option makes sense only wile using bc numeric library.
+<DT><B>-t,&nbsp;--liblist</B>
+
+<DD>
+Display numeric number libraries available and exit.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>INITIALIZATION FILES</H2>
+
+<DL COMPACT>
+<DT>None.<DD>
+</DL>
+<A NAME="lbAG">&nbsp;</A>
+<H2>LANGUAGE</H2>
+
+<DL COMPACT>
+<DT>zsbc language syntax is the one of bc with minor extensions, see below. You can find bc manual here:<DD>
+<BR>
+
+<A HREF="https://www.gnu.org/software/bc/manual/bc.html">https://www.gnu.org/software/bc/manual/bc.html</A>
+<DT><B>bc compatibility</B>
+
+<DD>
+zsbc is fully compatible with bc when started with option <B>-n bc</B>
+<BR>
+
+In this mode, it produces the exact same results as bc when running tests, including bc's mathlib functions (option <I>-l</I>)
+<BR>
+
+By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with <B>scale = 0</B>.
+<DT><B>The scale variable</B>
+
+<DD>
+When used with the default <I>gmp</I> numeric library, zsbc is <I>scale-variable-agnostic</I>. A variable of name <I>scale</I> is just like any other variable and won't change zsbc behavior whatsoever.
+<BR>
+
+Conversely when used with <I>bc</I> numeric library, the <I>scale</I> variable defines the number of decimals of numbers.
+<DT><B>Function argument passed by ref</B>
+
+<DD>
+<DL COMPACT><DT><DD>
+GNU bc allows arrays to be passed by ref, as an extension to original bc. The syntax uses the star, example:
+<PRE>
+<DL COMPACT><DT><DD>define calcavg(*t[], n) { ... }
+</DL>
+</PRE>
+
+zsbc extends this notation to simple variables, to be passed by ref. The syntax consists in prefixing the argument name with a star:
+<PRE>
+<DL COMPACT><DT><DD>*varname
+</DL>
+</PRE>
+
+Example:
+<PRE>
+<DL COMPACT><DT><DD>define void div2(*x) { x/=2 }
+</DL>
+</PRE>
+
+zsbc defines the notion of left-value as a particular case of expression, in the same way as C. To pass a variable by ref, you can use any expression so long as it is a valid left-value, as in
+<PRE>
+<DL COMPACT><DT><DD>div2(x=10)
+</DL>
+</PRE>
+
+or
+<PRE>
+<DL COMPACT><DT><DD>div2(myarray[++i])
+</DL>
+</PRE>
+
+</DL>
+
+<DT><B>Modulo invert function</B>
+
+<DD>
+zsbc provides the <B>invmod</B> function. Calling <I>invmod(a, b)</I> returns the invert of <I>a</I> modulo <I>b</I>. If it does not exist, it produces a <I>No modulo invert</I> error.
+<DT><B>Automatic modulo invert calculation</B>
+
+<DD>
+<DL COMPACT><DT><DD>
+zsbc provides the variable <B>autoinvmod</B> to automatically replace euclidian division by the calculation of the modulo invert. It is zero by default. When set to 1 (the only allowed non zero value), the division operation, if done in a context of modulo, will produce the modulo invert. Examples:
+<PRE>
+<DL COMPACT><DT><DD>autoinvmod=0 /* (default) */
+1/4
+<B>0</B>
+1/4%7
+<B>0</B>
+autoinvmod=1
+1/4
+<B>0</B>
+<I>1/4%7</I>
+<B>2</B>
+</DL>
+</PRE>
+
+</DL>
+
+<DT><B>Modulo power function</B>
+
+<DD>
+zsbc provides the <B>powmod</B> function. Calling <I>powmod(a, b, c)</I> returns <I>a</I> power <I>b</I> mod <I>c</I>.
+<DT><B>Automatic modulo power calculation</B>
+
+<DD>
+<DL COMPACT><DT><DD>
+When calculating a modulo'd expression, zsbc will use it to replace the regular pow function (<B>^</B> sign) with <I>powmod</I>, allowing to calculate powers with a big exponent. Examples:
+<PRE>
+<DL COMPACT><DT><DD>2^10^100%97
+<B>61</B>
+</DL>
+</PRE>
+
+The above is strictly equivalent to this expression:
+<PRE>
+<DL COMPACT><DT><DD>powmod(2, 10^100, 97)
+<B>61</B>
+</DL>
+</PRE>
+
+The above will not work if splitting the expression in two parts:
+<PRE>
+<DL COMPACT><DT><DD>a=2^10^100 /* Error: expression produces too big an integer */
+a%97
+</DL>
+</PRE>
+
+</DL>
+
+</DL>
+<A NAME="lbAH">&nbsp;</A>
+<H2>ENVIRONMENT VARIABLES</H2>
+
+<DL COMPACT>
+<DT><B>ZSBC_ENV_ARGS</B>
+
+<DD>
+Can contain any option normally provided at zsbc invocation.
+<DT><B>ZSBC_LINE_LENGTH</B>
+
+<DD>
+Maximum line length in output. If a number to print is bigger, cut line with a <B>'\'</B> character followed by a newline.
+<BR>
+
+If the variable is not set, take a default value of 0.
+<BR>
+
+A zero value (or if variable is not set) means no line cut.
+</DL>
+<A NAME="lbAI">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<DL COMPACT>
+<DT><I><A HREF="/cgi-bin/man/man2html?1+bc">bc</A></I>(1)<DD>
+</DL>
+<A NAME="lbAJ">&nbsp;</A>
+<H2>AUTHOR</H2>
+
+<DL COMPACT>
+<DT>Written by Sébastien Millet &lt;<A HREF="mailto:milletseb@laposte.net">milletseb@laposte.net</A>&gt;.<DD>
+</DL>
+<A NAME="lbAK">&nbsp;</A>
+<H2>ACKNOWLEDGEMENTS</H2>
+
+<DL COMPACT>
+<DT><B>bc</B>
+
+<DD>
+zsbc re-uses bc language and if started with option <B>-n bc</B>, it passes the same tests as bc and in real life situations it'll produce the exact same results. On the other hand zsbc is not meant as a substitute or fork of bc. zsbc uses code of its own except bc numeric library (taken as is) and some &quot;interface&quot; functions, to work with bc numeric library, that got copied over.
+<BR>
+
+<BR>
+
+The file <I>FAQ</I> provided with zsbc source gives details about the &quot;code take aways&quot; found in zsbc, copied from bc source.
+<BR>
+
+It also goes in depth about the hack to manage <I>ibase</I> &quot;as if&quot; taken into account at execution time, to reflect bc behavior.
+
+<P>
+</DL>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS</A><DD>
+<DT><A HREF="#lbAF">INITIALIZATION FILES</A><DD>
+<DT><A HREF="#lbAG">LANGUAGE</A><DD>
+<DT><A HREF="#lbAH">ENVIRONMENT VARIABLES</A><DD>
+<DT><A HREF="#lbAI">SEE ALSO</A><DD>
+<DT><A HREF="#lbAJ">AUTHOR</A><DD>
+<DT><A HREF="#lbAK">ACKNOWLEDGEMENTS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 08:37:11 GMT, December 14, 2015
+</BODY>
+</HTML>

@@ -1,0 +1,166 @@
+zsbc(1) 		    General Commands Manual		       zsbc(1)
+
+
+
+NAME
+       zsbc - an arbitrary precision calculator for cryptography
+
+
+SYNOPSIS
+       zsbc [-n numeric_library] [OPTIONS]...
+
+
+DESCRIPTION
+       zsbc   zsbc  is	a calculator to do arithmetic with arbitrary big inte‐
+	      gers. One can define functions and manipulate arrays, all  using
+	      bc language.
+	      By  default  it deals with relative integers. zsbc is equivalent
+	      to bc when used with scale = 0. zsbc stands for Zero-Scale bc.
+
+       bc's mathlib
+	      If started with option -n bc, zsbc uses bc numeric library, pro‐
+	      viding  reals  of arbitrary precision.  When started with -n bc,
+	      you can also provide -l option (same as bc), that'll  load  bc's
+	      math library functions.
+
+OPTIONS
+       -n, --numlib
+	      Select  numeric  library to use. Default is relative integers of
+	      the GNU Multiple Precision Arithmetic Library (gmp  or  libgmp).
+	      As of December 2015, possible values are
+	      gmp
+	      bc
+	      The  "GNU  Multiple  Precision  Arithmetic  Library" homepage is
+	      https://gmplib.org/
+
+       -v --version
+	      Display version information and exit.
+
+       -V, --verbose
+	      Be more talkative.
+
+       -q, --quiet
+	      Be less talkative.
+
+       -l, --mathlib
+	      Load bc's math functions library. Can be used only  with	option
+	      -n  bc  as  this	option	makes sense only wile using bc numeric
+	      library.
+
+       -t, --liblist
+	      Display numeric number libraries available and exit.
+
+INITIALIZATION FILES
+       None.
+
+LANGUAGE
+       zsbc language syntax is the one of bc with minor extensions, see below.
+       You can find bc manual here:
+	      https://www.gnu.org/software/bc/manual/bc.html
+
+       bc compatibility
+	      zsbc is fully compatible with bc when started with option -n bc
+	      In this mode, it produces the exact same results as bc when run‐
+	      ning tests, including bc's mathlib functions (option -l)
+	      By default zsbc starts with  gmp	(the  GNU  Multiple  Precision
+	      Arithmetic  Library)  relative  integers	library.  The language
+	      remains compatible with bc but the calculations are the same  as
+	      bc only for bc used with scale = 0.
+
+       The scale variable
+	      When  used  with the default gmp numeric library, zsbc is scale-
+	      variable-agnostic. A variable of name scale  is  just  like  any
+	      other variable and won't change zsbc behavior whatsoever.
+	      Conversely when used with bc numeric library, the scale variable
+	      defines the number of decimals of numbers.
+
+       Function argument passed by ref
+	      GNU bc allows arrays to be passed by ref,  as  an  extension  to
+	      original bc. The syntax uses the star, example:
+		     define calcavg(*t[], n) { ... }
+	      zsbc  extends this notation to simple variables, to be passed by
+	      ref. The syntax consists in prefixing the argument name  with  a
+	      star:
+		     *varname
+	      Example:
+		     define void div2(*x) { x/=2 }
+	      zsbc  defines  the  notion of left-value as a particular case of
+	      expression, in the same way as C. To pass a variable by ref, you
+	      can  use	any expression so long as it is a valid left-value, as
+	      in
+		     div2(x=10)
+	      or
+		     div2(myarray[++i])
+
+       Modulo invert function
+	      zsbc provides the invmod function. Calling invmod(a, b)  returns
+	      the invert of a modulo b. If it does not exist, it produces a No
+	      modulo invert error.
+
+       Automatic modulo invert calculation
+	      zsbc provides the variable autoinvmod to	automatically  replace
+	      euclidian  division  by the calculation of the modulo invert. It
+	      is zero by default. When set to 1 (the  only  allowed  non  zero
+	      value),  the division operation, if done in a context of modulo,
+	      will produce the modulo invert. Examples:
+		     autoinvmod=0 /* (default) */
+		     1/4
+		     0
+		     1/4%7
+		     0
+		     autoinvmod=1
+		     1/4
+		     0
+		     1/4%7
+		     2
+
+       Modulo power function
+	      zsbc provides the  powmod  function.  Calling  powmod(a,	b,  c)
+	      returns a power b mod c.
+
+       Automatic modulo power calculation
+	      When  calculating  a  modulo'd  expression,  zsbc will use it to
+	      replace the regular pow function (^ sign) with powmod,  allowing
+	      to calculate powers with a big exponent. Examples:
+		     2^10^100%97
+		     61
+	      The above is strictly equivalent to this expression:
+		     powmod(2, 10^100, 97)
+		     61
+	      The  above  will	not  work  if  splitting the expression in two
+	      parts:
+		     a=2^10^100 /* Error: expression produces too big an integer */
+		     a%97
+
+ENVIRONMENT VARIABLES
+       ZSBC_ENV_ARGS
+	      Can contain any option normally provided at zsbc invocation.
+
+       ZSBC_LINE_LENGTH
+	      Maximum line length in output. If a number to print  is  bigger,
+	      cut line with a '\' character followed by a newline.
+	      If the variable is not set, take a default value of 0.
+	      A zero value (or if variable is not set) means no line cut.
+
+SEE ALSO
+       bc(1)
+
+AUTHOR
+       Written by Sébastien Millet <milletseb@laposte.net>.
+
+ACKNOWLEDGEMENTS
+       bc     zsbc  re-uses  bc  language and if started with option -n bc, it
+	      passes the same tests as bc and in real  life  situations  it'll
+	      produce  the  exact  same results. On the other hand zsbc is not
+	      meant as a substitute or fork of bc. zsbc uses code of  its  own
+	      except  bc  numeric  library  (taken as is) and some "interface"
+	      functions, to work with bc  numeric  library,  that  got	copied
+	      over.
+	      The  file  FAQ provided with zsbc source gives details about the
+	      "code take aways" found in zsbc, copied from bc source.
+	      It also goes in depth about the hack to  manage  ibase  "as  if"
+	      taken into account at execution time, to reflect bc behavior.
+
+
+
+December 2015			  version 0.1			       zsbc(1)

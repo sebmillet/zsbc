@@ -519,7 +519,7 @@ int num_invmod(numptr *pr, const numptr a, const numptr n)
 {
 	assert(num_is_not_initialized(*pr));
 	if (num_is_zero(n))
-		return ERROR_DIV0;
+		return ERROR_NO_INVMOD;
 
 	if (Linvmod != NULL)
 		return Linvmod(pr, a, n);
@@ -571,7 +571,7 @@ int num_invmod(numptr *pr, const numptr a, const numptr n)
 	numptr compar = num_undefvalue(); 
 	num_cmpeq(&compar, r, one);
 	if (num_is_zero(compar)) {
-		result = ERROR_DIV0;
+		result = ERROR_NO_INVMOD;
 	} else {
 		*pr = num_construct_from_num(t);
 		result = ERROR_NONE;
@@ -725,7 +725,7 @@ static void gmp_register()
 	li.description = "GNU MP integers library";
 	li.libname = "libgmp";
 	li.version = gmp_version;
-	li.number_set = "Integers";
+	li.number_set = "Relative integers";
 	lib_register(li, gmp_firsttimeinit, gmp_activate, gmp_terminate);
 }
 
@@ -1027,7 +1027,7 @@ static int gmp_invmod(numptr *pr, const numptr a, const numptr b)
 		return ERROR_NONE;
 	else {
 		num_destruct(pr);
-		return ERROR_DIV0;
+		return ERROR_NO_INVMOD;
 	}
 }
 
@@ -1244,7 +1244,7 @@ static void libbc_register()
 	li.description = "GNU BC library";
 	li.libname = "libbc";
 	li.version = BC_VERSION;
-	li.number_set = "Reals";
+	li.number_set = "POSIX reals";
 	lib_register(li, libbc_firsttimeinit, libbc_activate, libbc_terminate);
 
 	char *env;

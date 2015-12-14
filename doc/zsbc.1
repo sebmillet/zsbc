@@ -1,0 +1,178 @@
+.\" Written by Sébastien Millet
+.\"
+.TH zsbc 1 "version 0.1" "December 2015"
+
+.SH NAME
+.TP
+zsbc \- an arbitrary precision calculator for cryptography
+
+.SH SYNOPSIS
+.TP
+\fBzsbc\fP [-n numeric_library] [\fIOPTIONS\fP]...
+
+.SH DESCRIPTION
+.TP
+.B zsbc
+zsbc is a calculator to do arithmetic with arbitrary big integers. One can define functions and manipulate arrays, all using bc language.
+.br
+By default it deals with relative integers. zsbc is equivalent to bc when used with \fBscale = 0\fP. zsbc stands for \fIZero-Scale bc\fP.
+.TP
+.B bc's mathlib
+If started with option \fB-n bc\fP, zsbc uses bc numeric library, providing reals of arbitrary precision.
+When started with \fB-n bc\fP, you can also provide \fB-l\fP option (same as bc), that'll load bc's math library functions.
+.SH OPTIONS
+.TP
+.B \-n,\ \-\-numlib
+Select numeric library to use. Default is relative integers of the GNU Multiple Precision Arithmetic Library (gmp or libgmp). As of December 2015, possible values are
+.br
+.I gmp
+.br
+.I bc
+.br
+The "GNU Multiple Precision Arithmetic Library" homepage is https://gmplib.org/
+.TP
+.B \-v\ \-\-version
+Display version information and exit.
+.TP
+.B \-V,\ \-\-verbose
+Be more talkative.
+.TP
+.B \-q,\ \-\-quiet
+Be less talkative.
+.TP
+.B \-l,\ \-\-mathlib
+Load bc's math functions library. Can be used only with option \fB-n bc\fP as this option makes sense only wile using bc numeric library.
+.TP
+.B \-t,\ \-\-liblist
+Display numeric number libraries available and exit.
+.SH INITIALIZATION FILES
+.TP
+None.
+.SH LANGUAGE
+.TP
+zsbc language syntax is the one of bc with minor extensions, see below. You can find bc manual here:
+.br
+https://www.gnu.org/software/bc/manual/bc.html
+.TP
+.B bc compatibility
+zsbc is fully compatible with bc when started with option \fB-n bc\fP
+.br
+In this mode, it produces the exact same results as bc when running tests, including bc's mathlib functions (option \fI-l\fP)
+.br
+By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with \fBscale = 0\fP.
+.TP
+.B The scale variable
+When used with the default \fIgmp\fP numeric library, zsbc is \fIscale-variable-agnostic\fP. A variable of name \fIscale\fP is just like any other variable and won't change zsbc behavior whatsoever.
+.br
+Conversely when used with \fIbc\fP numeric library, the \fIscale\fP variable defines the number of decimals of numbers.
+.TP
+.B Function argument passed by ref
+.RS
+GNU bc allows arrays to be passed by ref, as an extension to original bc. The syntax uses the star, example:
+.nf
+.RS
+define calcavg(*t[], n) { ... }
+.RE
+.fi
+zsbc extends this notation to simple variables, to be passed by ref. The syntax consists in prefixing the argument name with a star:
+.nf
+.RS
+*varname
+.RE
+.fi
+Example:
+.nf
+.RS
+define void div2(*x) { x/=2 }
+.RE
+.fi
+zsbc defines the notion of left-value as a particular case of expression, in the same way as C. To pass a variable by ref, you can use any expression so long as it is a valid left-value, as in
+.nf
+.RS
+div2(x=10)
+.RE
+.fi
+or
+.nf
+.RS
+div2(myarray[++i])
+.RE
+.fi
+.RE
+.TP
+.B Modulo invert function
+zsbc provides the \fBinvmod\fP function. Calling \fIinvmod(a, b)\fP returns the invert of \fIa\fP modulo \fIb\fP. If it does not exist, it produces a \fINo modulo invert\fP error.
+.TP
+.B Automatic modulo invert calculation
+.RS
+zsbc provides the variable \fBautoinvmod\fP to automatically replace euclidian division by the calculation of the modulo invert. It is zero by default. When set to 1 (the only allowed non zero value), the division operation, if done in a context of modulo, will produce the modulo invert. Examples:
+.nf
+.RS
+autoinvmod=0 /* (default) */
+1/4
+.B 0
+1/4%7
+.B 0
+autoinvmod=1
+1/4
+.B 0
+\fI1/4%7\fP
+.B 2
+.RE
+.fi
+.RE
+.TP
+.B Modulo power function
+zsbc provides the \fBpowmod\fP function. Calling \fIpowmod(a, b, c)\fP returns \fIa\fP power \fIb\fP mod \fIc\fP.
+.TP
+.B Automatic modulo power calculation
+.RS
+When calculating a modulo'd expression, zsbc will use it to replace the regular pow function (\fB^\fP sign) with \fIpowmod\fP, allowing to calculate powers with a big exponent. Examples:
+.nf
+.RS
+2^10^100%97
+.B 61
+.RE
+.fi
+The above is strictly equivalent to this expression:
+.nf
+.RS
+powmod(2, 10^100, 97)
+.B 61
+.RE
+.fi
+The above will not work if splitting the expression in two parts:
+.nf
+.RS
+a=2^10^100 /* Error: expression produces too big an integer */
+a%97
+.RE
+.fi
+.RE
+.SH ENVIRONMENT VARIABLES
+.TP
+.B ZSBC_ENV_ARGS
+Can contain any option normally provided at zsbc invocation.
+.TP
+.B ZSBC_LINE_LENGTH
+Maximum line length in output. If a number to print is bigger, cut line with a \fB'\\'\fP character followed by a newline.
+.br
+If the variable is not set, take a default value of 0.
+.br
+A zero value (or if variable is not set) means no line cut.
+.SH SEE ALSO
+.TP
+\fIbc\fP(1)
+.SH AUTHOR
+.TP
+Written by Sébastien Millet <milletseb@laposte.net>.
+.SH ACKNOWLEDGEMENTS
+.TP
+.B bc
+zsbc re-uses bc language and if started with option \fB-n bc\fP, it passes the same tests as bc and in real life situations it'll produce the exact same results. On the other hand zsbc is not meant as a substitute or fork of bc. zsbc uses code of its own except bc numeric library (taken as is) and some "interface" functions, to work with bc numeric library, that got copied over.
+.br
+.br
+The file \fIFAQ\fP provided with zsbc source gives details about the "code take aways" found in zsbc, copied from bc source.
+.br
+It also goes in depth about the hack to manage \fIibase\fP "as if" taken into account at execution time, to reflect bc behavior.
+.RE
