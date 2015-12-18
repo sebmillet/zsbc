@@ -573,7 +573,7 @@ int num_invmod(numptr *pr, const numptr a, const numptr n)
 	}
 
 	int result;
-	numptr compar = num_undefvalue(); 
+	numptr compar = num_undefvalue();
 	num_cmpeq(&compar, r, one);
 	if (num_is_zero(compar)) {
 		result = ERROR_NO_INVMOD;
@@ -685,6 +685,16 @@ static int gmp_ibase;
 #define GMP_DEFAULT_OBASE 10
 #define GMP_MIN_OBASE 2
 #define GMP_MAX_OBASE 62
+	/*
+	 * gmp itself tends to use lower case alphabetic characters, for obase >= 10.
+	 * It'll use upper case only when the output base is >= 37.
+	 * The constant below changes this behavior and enforces gmp to output uppercase
+	 * alphabetic characters for an output base <= 36.
+	 * This is done to stay consistent with input: even while using libgmp, numbers
+	 * are input using uppercase letters.
+	 *
+	 * */
+#define GMP_USE_UPPERCASE_UP_TO 36
 static int gmp_obase;
 
 	/*  autoinvmod */
@@ -972,6 +982,11 @@ static void gmp_print(const numptr num)
 {
 	char *buf = mpz_get_str(NULL, gmp_obase, *(const mpz_t *)num);
 	char *p = buf;
+	while (*p != '\0') {
+		if (gmp_obase <= GMP_USE_UPPERCASE_UP_TO && islower(*p))
+			*p = toupper(*p);
+		++p;
+	}
 
 		/*
 		 * The below is done so that any string output by gmp_print
@@ -981,7 +996,8 @@ static void gmp_print(const numptr num)
 		 * it, it is just a matter of consistency.
 		 *
 		 * */
-	if (isalpha(*p))
+	p = buf;
+	if (isalpha(*p) && islower(*p))
 		outstring_1char('0');
 
 	while (*p != '\0') {
