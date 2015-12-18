@@ -154,18 +154,26 @@ zsbc provides the <B>invmod</B> function. Calling <I>invmod(a, b)</I> returns th
 
 <DD>
 <DL COMPACT><DT><DD>
-zsbc provides the variable <B>autoinvmod</B> to automatically replace euclidian division by the calculation of the modulo invert. It is zero by default. When set to 1 (the only allowed non zero value), the division operation, if done in a context of modulo, will produce the modulo invert. Examples:
+zsbc provides the variable <B>autoinvmod</B> to automatically replace euclidian division by the calculation of the modulo invert. It is zero by default. When set to 1 (the only allowed non zero value), the division operation, if done in a context of modulo, will produce the modulo invert. If you need a real euclidian division while autoinvmod = 1, use the ':' operator instead of '/'. Examples:
 <PRE>
 <DL COMPACT><DT><DD>autoinvmod=0 /* (default) */
-1/4
-<B>0</B>
-1/4%7
-<B>0</B>
+5/4
+<B>1</B>
+5/4%7
+<B>1</B>
+5:4
+<B>1</B>
+5:4%7
+<B>1</B>
 autoinvmod=1
-1/4
-<B>0</B>
-<I>1/4%7</I>
-<B>2</B>
+5/4
+<B>1</B>
+5/4%7
+<B>3</B>
+5:4
+<B>1</B>
+5:4%7
+<B>1</B>
 </DL>
 </PRE>
 
@@ -202,8 +210,30 @@ a%97
 
 </DL>
 
+<DT><B>Automatic modulo (gmp only)</B>
+
+<DD>
+<DL COMPACT><DT><DD>
+zsbc provides the variable <B>automod</B> to apply a modulo on each operation. An assignment to zero removes it. The default value is zero, meaning, no application of a modulo. Examples:
+<PRE>
+<DL COMPACT><DT><DD>automod=10
+2^11 /* Calculation of (2^11)%10 not (2^(11%10)%10) */
+<B>8</B>
+2^10^100
+<B>6</B>
+9/4
+<B>2</B>
+9:4
+<B>2</B>
+autoinvmod=1
+9/4
+<B>Error: ...: No modulo invert</B>
+9:4
+<B>2</B>
 </DL>
-<A NAME="lbAH">&nbsp;</A>
+</DL>
+</DL>
+</PRE><A NAME="lbAH">&nbsp;</A>
 <H2>ENVIRONMENT VARIABLES</H2>
 
 <DL COMPACT>
@@ -272,6 +302,6 @@ It also goes in depth about the hack to manage <I>ibase</I> &quot;as if&quot; ta
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 08:37:11 GMT, December 14, 2015
+Time: 20:58:14 GMT, December 18, 2015
 </BODY>
 </HTML>

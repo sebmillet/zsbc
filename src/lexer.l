@@ -96,7 +96,7 @@ string			\"[^\"]*\"
 
 \\\n		{ }
 
-"="|"+="|"-="|"*="|"/="|"^="|"%=" {
+"="|"+="|"-="|"*="|"/="|":="|"^="|"%=" {
 	s_alloc_and_copy(&yylval.str, yytext);
 	return OP_AND_ASSIGN;
 }
@@ -104,6 +104,7 @@ string			\"[^\"]*\"
 "-"			return '-';
 "*"			return '*';
 "/"			return '/';
+":"			return ':';
 "("			return '(';
 ")"			return ')';
 "^"			return '^';

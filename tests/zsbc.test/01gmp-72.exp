@@ -1,0 +1,132 @@
+# tests/zsbc.test/01gmp-72.exp
+
+set timeout 3
+spawn "$ZSBC" --SCM
+send_user "***   GMP - automod\n"
+
+set test "no autoinvmod (1)"
+send "autoinvmod=0\nautomod=10\nprint \";001;\",2^12,\";\n\"\n"
+expect {
+	";001;6;" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "no autoinvmod (2)"
+send "autoinvmod=0\nautomod=12\nprint \";002;\",2^10^100,\";\n\"\n"
+expect {
+	";002;4;" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "no autoinvmod (3)"
+send "autoinvmod=0\nautomod=12\nprint \";003;\",1/12,\";\n\"\n"
+expect {
+	"Divide by 0" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "with autoinvmod (1)"
+send "autoinvmod=1\nautomod=10\nprint \";004;\",1/3,\";\n\"\n"
+expect {
+	";004;7;" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "with autoinvmod (2)"
+send "autoinvmod=1\nautomod=10\nprint \";005;\",1/10,\";\n\"\n"
+expect {
+	"No modulo invert" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Division (1)"
+send "autoinvmod=0\nautomod=0\nprint \";006;\",8/3,\";\n\"\n"
+expect {
+	";006;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Division (2)"
+send "autoinvmod=1\nautomod=0\nprint \";007;\",8/3,\";\n\"\n"
+expect {
+	";007;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Division + mod (1)"
+send "autoinvmod=0\nautomod=0\nprint \";008;\",8/3%10,\";\n\"\n"
+expect {
+	";008;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Division + mod (2)"
+send "autoinvmod=1\nautomod=0\nprint \";009;\",8/3%10,\";\n\"\n"
+expect {
+	";009;6" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Division + automod"
+send "autoinvmod=1\nautomod=10\nprint \";010;\",8/3,\";\n\"\n"
+expect {
+	";010;6" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Division + automod + mod"
+send "autoinvmod=1\nautomod=10\nprint \";011;\",8/3%7,\";\n\"\n"
+expect {
+	";011;5" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Arithmetic division (1)"
+send "autoinvmod=0\nautomod=0\nprint \";012;\",8:3,\";\n\"\n"
+expect {
+	";012;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Arithmetic division (2)"
+send "autoinvmod=1\nautomod=0\nprint \";013;\",8:3,\";\n\"\n"
+expect {
+	";013;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Arithmetic division + mod (1)"
+send "autoinvmod=0\nautomod=0\nprint \";014;\",8:3%10,\";\n\"\n"
+expect {
+	";014;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Arithmetic division + mod (2)"
+send "autoinvmod=1\nautomod=0\nprint \";015;\",8:3%10,\";\n\"\n"
+expect {
+	";015;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Arithmetic division + automod"
+send "autoinvmod=1\nautomod=10\nprint \";016;\",8:3,\";\n\"\n"
+expect {
+	";016;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Arithmetic division + automod + mod"
+send "autoinvmod=1\nautomod=10\nprint \";017;\",6:3%7,\";\n\"\n"
+expect {
+	";017;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

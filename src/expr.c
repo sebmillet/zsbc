@@ -64,7 +64,7 @@ const char *ENODE_TYPES[] = {
 	"ENODE_FUNCTION_CALL"
 };
 
-typedef enum {FN_UNDEF, FN_NOOP, FN_ADD, FN_SUB, FN_MUL, FN_DIV, FN_POW, FN_MOD, FN_NEG,
+typedef enum {FN_UNDEF, FN_NOOP, FN_ADD, FN_SUB, FN_MUL, FN_DIV, FN_ARITH_DIV, FN_POW, FN_MOD, FN_NEG,
 	FN_CMPLT, FN_CMPLE, FN_CMPGT, FN_CMPGE, FN_CMPEQ, FN_CMPNE, FN_OR, FN_AND, FN_NOT,
 	FN_INC, FN_DEC} builtin_id;
 
@@ -261,6 +261,8 @@ static builtin_id str2builtin_id(const char *op)
 		id = FN_MUL;
 	else if (!strcmp(op, "/"))
 		id = FN_DIV;
+	else if (!strcmp(op, ":"))
+		id = FN_ARITH_DIV;
 	else if (!strcmp(op, "^"))
 		id = FN_POW;
 	else if (!strcmp(op, "%"))
@@ -570,9 +572,19 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 
 	if (r == ERROR_NONE) {
 		if (is_builtin_function_call)
-			r = eval_builtin_function_call(self, f, (const numptr *)value_args, pval, pexec_ctx);
-		else
-			r = (table_eval[self->type])(self, (const numptr *)value_args, pval, pexec_ctx);
+			r = eval_builtin_function_call(self, f, (const numptr *)value_args, pval, &exec_ctx_without_modulo);
+		else {
+			if ((r = (table_eval[self->type])(self, (const numptr *)value_args, pval, pexec_ctx)) == ERROR_NONE &&
+					!num_is_not_initialized(pexec_ctx->modulo)) {
+				numptr pval_subject_to_mod = num_undefvalue();
+				r = num_mod(&pval_subject_to_mod, *pval, pexec_ctx->modulo);
+				num_destruct(pval);
+				if (r == ERROR_NONE) {
+					*pval = num_construct_from_num(pval_subject_to_mod);
+					num_destruct(&pval_subject_to_mod);
+				}
+			}
+		}
 	}
 	int i;
 	for (i = 0; i < nbargs; ++i)
@@ -781,6 +793,9 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 				num_destruct(&inv);
 				return r;
 			}
+		case FN_ARITH_DIV:
+			assert(self->nb_args == 2 && value_args != NULL);
+			return num_div(pval, value_args[0], value_args[1]);
 		case FN_POW:
 			assert(self->nb_args == 2 && value_args != NULL);
 			if (num_is_not_initialized(pexec_ctx->modulo))

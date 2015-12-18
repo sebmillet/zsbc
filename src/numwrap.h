@@ -81,6 +81,7 @@ int num_and(numptr *pr, const numptr a, const numptr b);
 int num_or(numptr *pr, const numptr a, const numptr b);
 int num_not(numptr *pr, const numptr a);
 int num_implicit_invmod();
+numptr* num_get_implicit_mod_ptr();
 
 
 /*-----------------------------------------------------------------------------
