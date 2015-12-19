@@ -102,7 +102,7 @@ YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 %left COMPARISON
 %right OP_AND_ASSIGN
 %left '+' '-'
-%left '*' '/' ':' '%'
+%left '*' '/' '%'
 %right '^'
 %nonassoc NEG
 %nonassoc PLUSPLUS_MINMIN
@@ -135,7 +135,6 @@ program:
 			outln_exec_error(r, &exec_ctx, FALSE);
 		}
 		program_destruct($1);
-		destruct_exec_ctx_t(&exec_ctx);
 	}
 ;
 
@@ -222,7 +221,6 @@ expression_no_assignment:
 	| expression '-' expression { $$ = expr_construct_op2_str("-", $1, $3); }
 	| expression '*' expression { $$ = expr_construct_op2_str("*", $1, $3); }
 	| expression '/' expression { $$ = expr_construct_op2_str("/", $1, $3); }
-	| expression ':' expression { $$ = expr_construct_op2_str(":", $1, $3); }
 	| expression '^' expression { $$ = expr_construct_op2_str("^", $1, $3); }
 	| expression '%' expression { $$ = expr_construct_op2_str("%", $1, $3); }
 	| '-' expression %prec NEG { $$ = expr_construct_op1_str("-", $2); }
@@ -484,7 +482,6 @@ void hackbc_check(const char *name, expr_t *e)
 	} else {
 		out_dbg("hackbc_check(): CAUGHT VARIABLE ASSIGNMENT BUT COULD NOT CALCULATE CONSTANT EXPRESSION VALUE!\n");
 	}
-	destruct_exec_ctx_t(&exec_ctx);
 }
 
 void activate_bison_debug()

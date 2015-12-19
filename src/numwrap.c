@@ -29,7 +29,6 @@
 #include <ctype.h>
 
 #define NUM_IMPLICIT_INVMOD_DEFAULT FALSE
-#define NUM_GET_IMPLICIT_MOD_PTR_DEFAULT NULL
 
 char *strcasestr(const char *haystack, const char *needle);
 #ifdef MY_WINDOWS
@@ -111,7 +110,6 @@ static int (*Land)(numptr *pr, const numptr a, const numptr b);
 static int (*Lor)(numptr *pr, const numptr a, const numptr b);
 static int (*Lnot)(numptr *pr, const numptr a);
 static int (*Limplicit_invmod)();
-static numptr* (*Lget_implicit_mod_ptr)();
 static int (*Lread)(numptr *pr);
 
 
@@ -316,7 +314,6 @@ static void libswitch(lib_t *l, int quiet)
 	Lor = NULL;
 	Lnot = NULL;
 	Limplicit_invmod = NULL;
-	Lget_implicit_mod_ptr = NULL;
 	Lread = NULL;
 
 	libcurrent = l;
@@ -359,8 +356,6 @@ static void libswitch(lib_t *l, int quiet)
 
 		/* Providing implicit_invmod is not necessary... */
 /*    assert(Limplicit_invmod != NULL);*/
-		/* Providing get_implicit_mod_ptr is not necessary... */
-/*    assert(Lget_implicit_mod_ptr != NULL);*/
 
 	assert(Lread != NULL);
 
@@ -660,13 +655,6 @@ int num_implicit_invmod()
 	return Limplicit_invmod();
 }
 
-numptr* num_get_implicit_mod_ptr()
-{
-	if (Lget_implicit_mod_ptr == NULL)
-		return NUM_GET_IMPLICIT_MOD_PTR_DEFAULT;
-	return Lget_implicit_mod_ptr();
-}
-
 
 #ifdef HAS_LIB_GMP
 
@@ -701,11 +689,6 @@ static int gmp_obase;
 #define GMP_AUTOINVMOD_DEFAULT 0
 static int gmp_autoinvmod;
 
-	/*  autoinvmod */
-#define GMP_AUTOMOD_DEFAULT 0
-static int gmp_has_automod;
-static numptr gmp_automod;
-
 char *gmp_identify_yourself = NULL;
 static int gmp_function_get_version(numptr *pr);
 static void gmp_firsttimeinit();
@@ -739,7 +722,6 @@ static int gmp_and(numptr *pr, const numptr a, const numptr b);
 static int gmp_or(numptr *pr, const numptr a, const numptr b);
 static int gmp_not(numptr *pr, const numptr a);
 static int gmp_implicit_invmod();
-static numptr* gmp_get_implicit_mod_ptr();
 static int gmp_read(numptr *pr);
 
 static void gmp_register()
@@ -793,27 +775,6 @@ static int gmp_var_update(const char *name, numptr *pnum)
 		if ((r = gmp_enforce_int_and_range(pnum, &gmp_autoinvmod, 0, 1)) == ERROR_NONE) {
 			out_dbg("autoinvmod set to %d\n", gmp_autoinvmod);
 		}
-	} else if (!varname_cmp(name, "automod")) {
-		numptr one = num_construct_from_int(1);
-		numptr c = num_undefvalue(); num_cmpge(&c, *pnum, one);
-		int is_zero = num_is_zero(*pnum);
-		int is_ok = is_zero || !num_is_zero(c);
-		num_destruct(&c);
-		num_destruct(&one);
-		if (!is_ok)
-			return ERROR_INVALID_NUMBER;
-
-		if (!num_is_not_initialized(gmp_automod))
-			num_destruct(&gmp_automod);
-		if (is_zero) {
-			gmp_has_automod = FALSE;
-			out_dbg("automod set to 0 (=> removed)\n");
-		} else {
-			gmp_has_automod = TRUE;
-			gmp_automod = num_construct_from_num(*pnum);
-			out_dbg("automod set to a non-zero value\n");
-		}
-
 	} else
 		FATAL_ERROR("Unknown variable for update_callback: %s\n", name);
 
@@ -852,11 +813,6 @@ static void gmp_firsttimeinit()
 	vars_set_value("autoinvmod", num_construct_from_int(GMP_AUTOINVMOD_DEFAULT), &ppvarnum);
 	assert(gmp_autoinvmod == GMP_AUTOINVMOD_DEFAULT);
 
-	gmp_automod = num_undefvalue();
-	vars_set_update_callback("automod", gmp_var_update);
-	vars_set_value("automod", num_construct_from_int(GMP_AUTOMOD_DEFAULT), &ppvarnum);
-	assert(gmp_has_automod == GMP_AUTOMOD_DEFAULT);
-
 	register_builtin_function("gmpversion", 0, gmp_function_get_version, FALSE);
 	register_builtin_function("powmod", 3, gmp_powmod, FALSE);
 	register_builtin_function("invmod", 2, gmp_invmod, FALSE);
@@ -892,7 +848,6 @@ static void gmp_activate()
 	Lor = gmp_or;
 	Lnot = gmp_not;
 	Limplicit_invmod = gmp_implicit_invmod;
-	Lget_implicit_mod_ptr = gmp_get_implicit_mod_ptr;
 	Lread = gmp_read;
 
 	outstring_set_line_length(-1);
@@ -900,8 +855,6 @@ static void gmp_activate()
 
 static void gmp_terminate()
 {
-	if (!num_is_not_initialized(gmp_automod))
-		num_destruct(&gmp_automod);
 	free(gmp_identify_yourself);
 }
 
@@ -1178,13 +1131,6 @@ static int gmp_not(numptr *pr, const numptr a)
 static int gmp_implicit_invmod()
 {
 	return gmp_autoinvmod;
-}
-
-static numptr* gmp_get_implicit_mod_ptr()
-{
-	if (gmp_has_automod)
-		return &gmp_automod;
-	return NULL;
 }
 
 static int gmp_read(numptr *pr)

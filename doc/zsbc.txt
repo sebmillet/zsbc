@@ -102,27 +102,17 @@ LANGUAGE
 	      euclidian  division  by the calculation of the modulo invert. It
 	      is zero by default. When set to 1 (the  only  allowed  non  zero
 	      value),  the division operation, if done in a context of modulo,
-	      will produce the modulo invert. If you  need  a  real  euclidian
-	      division	while  autoinvmod = 1, use the ':' operator instead of
-	      '/'. Examples:
+	      will produce the modulo invert. Examples:
 		     autoinvmod=0 /* (default) */
-		     5/4
-		     1
-		     5/4%7
-		     1
-		     5:4
-		     1
-		     5:4%7
-		     1
+		     1/4
+		     0
+		     1/4%7
+		     0
 		     autoinvmod=1
-		     5/4
-		     1
-		     5/4%7
-		     3
-		     5:4
-		     1
-		     5:4%7
-		     1
+		     1/4
+		     0
+		     1/4%7
+		     2
 
        Modulo power function
 	      zsbc provides the  powmod  function.  Calling  powmod(a,	b,  c)
@@ -141,25 +131,6 @@ LANGUAGE
 	      parts:
 		     a=2^10^100 /* Error: expression produces too big an integer */
 		     a%97
-
-       Automatic modulo (gmp only)
-	      zsbc provides the variable automod to apply  a  modulo  on  each
-	      operation.  An  assignment to zero removes it. The default value
-	      is zero, meaning, no application of a modulo. Examples:
-		     automod=10
-		     2^11 /* Calculation of (2^11)%10 not (2^(11%10)%10) */
-		     8
-		     2^10^100
-		     6
-		     9/4
-		     2
-		     9:4
-		     2
-		     autoinvmod=1
-		     9/4
-		     Error: ...: No modulo invert
-		     9:4
-		     2
 
 ENVIRONMENT VARIABLES
        ZSBC_ENV_ARGS
