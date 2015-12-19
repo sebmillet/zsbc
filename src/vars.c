@@ -646,6 +646,7 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 
 		program_destruct(program);
 		free(name);
+		destruct_exec_ctx_t(&exec_ctx);
 		return;
 	}
 
@@ -667,12 +668,14 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 				outln_exec_error(ERROR_CUSTOM, &exec_ctx, FALSE);
 
 				vars_t_destruct(f);
+				destruct_exec_ctx_t(&exec_ctx);
 				return;
 			}
 			param = param->next;
 		}
 		al = al->next;
 	}
+	destruct_exec_ctx_t(&exec_ctx);
 
 	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->value.fcnt.defargs, f->value.fcnt.autolist, f->value.fcnt.program);
 }
@@ -746,6 +749,7 @@ void check_functions()
 			program_check(f->program, &exec_ctx, &check);
 		}
 	}
+	destruct_exec_ctx_t(&exec_ctx);
 	++global_check_id;
 }
 

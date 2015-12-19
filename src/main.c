@@ -353,6 +353,17 @@ exec_ctx_t construct_exec_ctx_t()
 	return exec_ctx;
 }
 
+void destruct_exec_ctx_t(exec_ctx_t *pexec_ctx)
+{
+	if (pexec_ctx->error_message != NULL) {
+		free(pexec_ctx->error_message);
+		pexec_ctx->error_message = NULL;
+	}
+	if (!num_is_not_initialized(pexec_ctx->modulo)) {
+		num_destruct(&pexec_ctx->modulo);
+	}
+}
+
 code_location_t construct_unset_code_location_t()
 {
 	code_location_t loc;
@@ -365,7 +376,7 @@ code_location_t construct_unset_code_location_t()
 	return loc;
 }
 
-void set_exec_error_message(exec_ctx_t *exec_ctx, const char *fmt, ...)
+void set_exec_error_message(exec_ctx_t *pexec_ctx, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -388,15 +399,15 @@ void set_exec_error_message(exec_ctx_t *exec_ctx, const char *fmt, ...)
 		 *   For the time being, I prefer to silently remove it.
 		 *
 		 * */
-	if (exec_ctx->error_message != NULL)
-		free(exec_ctx->error_message);
-	exec_ctx->error_message = (char *)malloc(sizeof(char) * len);
+	if (pexec_ctx->error_message != NULL)
+		free(pexec_ctx->error_message);
+	pexec_ctx->error_message = (char *)malloc(sizeof(char) * len);
 
-	vsnprintf(exec_ctx->error_message, len, fmt, args);
+	vsnprintf(pexec_ctx->error_message, len, fmt, args);
 	va_end(args);
 }
 
-void outln_exec_error(int e, exec_ctx_t *exec_ctx, int is_warning)
+void outln_exec_error(int e, exec_ctx_t *pexec_ctx, int is_warning)
 {
 	if (is_warning)
 		fprintf(stderr, "Warning: ");
@@ -404,7 +415,7 @@ void outln_exec_error(int e, exec_ctx_t *exec_ctx, int is_warning)
 		fprintf(stderr, "Error: ");
 
 	const char *builtin_error_message = NULL;
-	if (exec_ctx->error_message == NULL) {
+	if (pexec_ctx->error_message == NULL) {
 		if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
 			builtin_error_message = table_errors[e];
 			if (builtin_error_message == NULL) {
@@ -422,26 +433,26 @@ void outln_exec_error(int e, exec_ctx_t *exec_ctx, int is_warning)
 		FATAL_ERROR("Custom error message while error code != ERROR_CUSTOM, e = %d", e);
 	}
 
-	const char *error_message = exec_ctx->error_message != NULL ? exec_ctx->error_message : builtin_error_message;
+	const char *error_message = pexec_ctx->error_message != NULL ? pexec_ctx->error_message : builtin_error_message;
 
-	if (exec_ctx->ploc != NULL && exec_ctx->ploc->is_set) {
-		if (exec_ctx->ploc->file_name != NULL)
-			fprintf(stderr, "%s: ", exec_ctx->ploc->file_name);
-		if (!opt_SCM && exec_ctx->ploc->first_line >= 1 && exec_ctx->ploc->first_column >= 1 &&
-				exec_ctx->ploc->last_line >= 1 && exec_ctx->ploc->last_column >= 1)
-			fprintf(stderr, "%d.%d-%d.%d: ", exec_ctx->ploc->first_line, exec_ctx->ploc->first_column,
-				exec_ctx->ploc->last_line, exec_ctx->ploc->last_column);
+	if (pexec_ctx->ploc != NULL && pexec_ctx->ploc->is_set) {
+		if (pexec_ctx->ploc->file_name != NULL)
+			fprintf(stderr, "%s: ", pexec_ctx->ploc->file_name);
+		if (!opt_SCM && pexec_ctx->ploc->first_line >= 1 && pexec_ctx->ploc->first_column >= 1 &&
+				pexec_ctx->ploc->last_line >= 1 && pexec_ctx->ploc->last_column >= 1)
+			fprintf(stderr, "%d.%d-%d.%d: ", pexec_ctx->ploc->first_line, pexec_ctx->ploc->first_column,
+				pexec_ctx->ploc->last_line, pexec_ctx->ploc->last_column);
 	}
 
-	if (exec_ctx != NULL)
-		if (exec_ctx->function_name != NULL)
-			fprintf(stderr, "%s(): ", exec_ctx->function_name);
+	if (pexec_ctx != NULL)
+		if (pexec_ctx->function_name != NULL)
+			fprintf(stderr, "%s(): ", pexec_ctx->function_name);
 
 	fprintf(stderr, "%s\n", error_message);
 
-	if (exec_ctx->error_message != NULL) {
-		free(exec_ctx->error_message);
-		exec_ctx->error_message = NULL;
+	if (pexec_ctx->error_message != NULL) {
+		free(pexec_ctx->error_message);
+		pexec_ctx->error_message = NULL;
 	}
 }
 
