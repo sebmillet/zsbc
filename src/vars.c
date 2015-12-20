@@ -641,21 +641,21 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
-	exec_ctx_t exec_ctx = construct_exec_ctx_t();
-	exec_ctx.ploc = &loc;
+	exec_ctx_t *pexec_ctx = construct_exec_ctx_t();
+	pexec_ctx->ploc = &loc;
 
 	if (defargs == defarg_t_badarg) {
 
-		set_exec_error_message(&exec_ctx, "Function %s not created: duplicate parameter names", name);
-		outln_exec_error(ERROR_CUSTOM, &exec_ctx, FALSE);
+		set_exec_error_message(pexec_ctx, "Function %s not created: duplicate parameter names", name);
+		outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
 
 		program_destruct(program);
 		free(name);
-		destruct_exec_ctx_t(&exec_ctx);
+		destruct_exec_ctx_t(pexec_ctx);
 		return;
 	}
 
-	destruct_function_if_defined(name, &exec_ctx);
+	destruct_function_if_defined(name, pexec_ctx);
 
 	vars_t *f = vars_t_construct(name, TYPE_FCNT, FTYPE_USER);
 
@@ -669,18 +669,18 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 		while (param != NULL) {
 			if (darg_type_is_of_same_namespace(param->type, al->type) && !varname_cmp(param->name, al->name)) {
 
-				set_exec_error_message(&exec_ctx, "Function %s not created: duplicate names between parameters and autolist", name);
-				outln_exec_error(ERROR_CUSTOM, &exec_ctx, FALSE);
+				set_exec_error_message(pexec_ctx, "Function %s not created: duplicate names between parameters and autolist", name);
+				outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
 
 				vars_t_destruct(f);
-				destruct_exec_ctx_t(&exec_ctx);
+				destruct_exec_ctx_t(pexec_ctx);
 				return;
 			}
 			param = param->next;
 		}
 		al = al->next;
 	}
-	destruct_exec_ctx_t(&exec_ctx);
+	destruct_exec_ctx_t(pexec_ctx);
 
 	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->pvalue->fcnt.defargs, f->pvalue->fcnt.autolist, f->pvalue->fcnt.program);
 }
@@ -731,7 +731,7 @@ static void function_destruct(function_t f)
 void check_functions()
 {
 	out_dbg("check_functions execution\n");
-	exec_ctx_t exec_ctx = construct_exec_ctx_t();
+	exec_ctx_t *pexec_ctx = construct_exec_ctx_t();
 	vars_t *w;
 	check_t check;
 	check.id = global_check_id;
@@ -739,7 +739,7 @@ void check_functions()
 		if (w->pvalue->fcnt.ftype == FTYPE_USER) {
 			out_dbg("Will now check the function %s\n", w->name);
 			function_t *f = &w->pvalue->fcnt;
-			exec_ctx.function_name = w->name;
+			pexec_ctx->function_name = w->name;
 			check.is_void = f->is_void;
 			check.is_inside_loop = FALSE;
 			check.i_want_a_value = FALSE;
@@ -751,10 +751,10 @@ void check_functions()
 				 * */
 			f->check_id = check.id;
 
-			program_check(f->program, &exec_ctx, &check);
+			program_check(f->program, pexec_ctx, &check);
 		}
 	}
-	destruct_exec_ctx_t(&exec_ctx);
+	destruct_exec_ctx_t(pexec_ctx);
 	++global_check_id;
 }
 

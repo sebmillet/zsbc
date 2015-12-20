@@ -498,9 +498,6 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 	out_dbg("Evaluating expression, type: %s, #args: %d, %s\n", ENODE_TYPES[self->type], nbargs,
 				num_is_not_initialized(pexec_ctx->modulo) ? "no modulo" : "has modulo");
 
-	exec_ctx_t exec_ctx_without_modulo = *pexec_ctx;
-	exec_ctx_without_modulo.modulo = num_undefvalue();
-
 	int is_builtin_function_call = FALSE;
 
 		/* Useless NULL assignment for code execution, done to avoid a warning ('f' may be used uninitialized) */
@@ -512,9 +509,11 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 			return ERROR_CUSTOM;
 		}
 		if (f->ftype == FTYPE_USER) {
-			exec_ctx_without_modulo.function_name = self->var.name;
-			pexec_ctx->function_name = self->var.name;
-			return eval_function_call(self, f, pval, &exec_ctx_without_modulo);
+			exec_ctx_t *pexec_ctx_without_modulo = construct_child_exec_ctx_t(pexec_ctx);
+			pexec_ctx_without_modulo->function_name = self->var.name;
+			int r = eval_function_call(self, f, pval, pexec_ctx_without_modulo);
+			destruct_exec_ctx_t(pexec_ctx_without_modulo);
+			return r;
 		} else if (f->ftype == FTYPE_BUILTIN) {
 			is_builtin_function_call = TRUE;
 			if (f->builtin_nb_args != nbargs)
@@ -552,12 +551,14 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 			if (!is_modulo_op && self->type == ENODE_BUILTIN_OP && (!is_pow_op || ii == 0)) {
 				r = myeval(ca->e, &value_args[idx], pexec_ctx);
 			} else if (is_modulo_op && ii == 1) {
-				exec_ctx_t exec_ctx_with_new_modulo = *pexec_ctx;
-				exec_ctx_with_new_modulo.modulo = num_construct_from_num(value_args[1]);
-				r = myeval(ca->e, &value_args[idx], &exec_ctx_with_new_modulo);
-				num_destruct(&exec_ctx_with_new_modulo.modulo);
+				exec_ctx_t *pexec_ctx_with_new_modulo = construct_child_exec_ctx_t(pexec_ctx);
+				pexec_ctx_with_new_modulo->modulo = num_construct_from_num(value_args[1]);
+				r = myeval(ca->e, &value_args[idx], pexec_ctx_with_new_modulo);
+				destruct_exec_ctx_t(pexec_ctx_with_new_modulo);
 			} else {
-				r = myeval(ca->e, &value_args[idx], &exec_ctx_without_modulo);
+				exec_ctx_t *pexec_ctx_without_modulo = construct_child_exec_ctx_t(pexec_ctx);
+				r = myeval(ca->e, &value_args[idx], pexec_ctx_without_modulo);
+				destruct_exec_ctx_t(pexec_ctx_without_modulo);
 			}
 			if (r != ERROR_NONE)
 				break;

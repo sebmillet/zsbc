@@ -1793,13 +1793,13 @@ yyreduce:
   case 6:
 #line 131 "parser.y" /* yacc.c:1646  */
     {
-		exec_ctx_t exec_ctx = construct_exec_ctx_t();
-		int r = program_execute((yyvsp[0].prog), NULL, &exec_ctx);
+		exec_ctx_t *pexec_ctx = construct_exec_ctx_t();
+		int r = program_execute((yyvsp[0].prog), NULL, pexec_ctx);
 		if (r != ERROR_NONE) {
-			outln_exec_error(r, &exec_ctx, FALSE);
+			outln_exec_error(r, pexec_ctx, FALSE);
 		}
 		program_destruct((yyvsp[0].prog));
-		destruct_exec_ctx_t(&exec_ctx);
+		destruct_exec_ctx_t(pexec_ctx);
 	}
 #line 1805 "parser.c" /* yacc.c:1646  */
     break;
@@ -2599,8 +2599,8 @@ void hackbc_check(const char *name, expr_t *e)
 	}
 
 	numptr num = num_undefvalue();
-	exec_ctx_t exec_ctx = construct_exec_ctx_t();
-	int r = expr_eval(e, &num, &exec_ctx);
+	exec_ctx_t *pexec_ctx = construct_exec_ctx_t();
+	int r = expr_eval(e, &num, pexec_ctx);
 		/*
 		 * We just ignore cases when an error occurs (ex. with an
 		 * instruction like "ibase = 1 / 0", and also cases where
@@ -2613,7 +2613,7 @@ void hackbc_check(const char *name, expr_t *e)
 	} else {
 		out_dbg("hackbc_check(): CAUGHT VARIABLE ASSIGNMENT BUT COULD NOT CALCULATE CONSTANT EXPRESSION VALUE!\n");
 	}
-	destruct_exec_ctx_t(&exec_ctx);
+	destruct_exec_ctx_t(pexec_ctx);
 }
 
 void activate_bison_debug()

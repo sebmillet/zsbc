@@ -128,7 +128,8 @@ code_location_t construct_unset_code_location_t();
 struct exec_ctx_t;
 typedef struct exec_ctx_t exec_ctx_t;
 
-exec_ctx_t construct_exec_ctx_t();
+exec_ctx_t *construct_exec_ctx_t();
+exec_ctx_t *construct_child_exec_ctx_t(const exec_ctx_t *parent);
 void destruct_exec_ctx_t(exec_ctx_t *pexec_ctx);
 void set_exec_error_message(exec_ctx_t *exec_ctx, const char *fmt, ...);
 void outln_exec_error(int e, exec_ctx_t *exec_ctx, int is_warning);

@@ -28,6 +28,7 @@ struct exec_ctx_t {
 	const char *function_name;
 	const code_location_t *ploc;
 	char *error_message;
+	exec_ctx_t *parent;
 	numptr modulo;
 };
 

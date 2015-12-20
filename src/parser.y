@@ -129,13 +129,13 @@ input:
 
 program:
 	instruction_list {
-		exec_ctx_t exec_ctx = construct_exec_ctx_t();
-		int r = program_execute($1, NULL, &exec_ctx);
+		exec_ctx_t *pexec_ctx = construct_exec_ctx_t();
+		int r = program_execute($1, NULL, pexec_ctx);
 		if (r != ERROR_NONE) {
-			outln_exec_error(r, &exec_ctx, FALSE);
+			outln_exec_error(r, pexec_ctx, FALSE);
 		}
 		program_destruct($1);
-		destruct_exec_ctx_t(&exec_ctx);
+		destruct_exec_ctx_t(pexec_ctx);
 	}
 ;
 
@@ -469,8 +469,8 @@ void hackbc_check(const char *name, expr_t *e)
 	}
 
 	numptr num = num_undefvalue();
-	exec_ctx_t exec_ctx = construct_exec_ctx_t();
-	int r = expr_eval(e, &num, &exec_ctx);
+	exec_ctx_t *pexec_ctx = construct_exec_ctx_t();
+	int r = expr_eval(e, &num, pexec_ctx);
 		/*
 		 * We just ignore cases when an error occurs (ex. with an
 		 * instruction like "ibase = 1 / 0", and also cases where
@@ -483,7 +483,7 @@ void hackbc_check(const char *name, expr_t *e)
 	} else {
 		out_dbg("hackbc_check(): CAUGHT VARIABLE ASSIGNMENT BUT COULD NOT CALCULATE CONSTANT EXPRESSION VALUE!\n");
 	}
-	destruct_exec_ctx_t(&exec_ctx);
+	destruct_exec_ctx_t(pexec_ctx);
 }
 
 void activate_bison_debug()

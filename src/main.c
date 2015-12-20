@@ -65,7 +65,7 @@ int yywrap();
 
 static int out_level = L_NORMAL;
 	/* SCM = Special Check Mode, used for 'make check' checks */
-int opt_SCM = FALSE;		
+int opt_SCM = FALSE;
 	/* To check that arrays are copied only at the last minute, when an update occurs */
 int opt_COPYONUPDATE = FALSE;
 
@@ -343,14 +343,25 @@ int outln_warning(const char *fmt, ...)
 	return r;
 }
 
-exec_ctx_t construct_exec_ctx_t()
+exec_ctx_t *construct_exec_ctx_t()
 {
-	exec_ctx_t exec_ctx;
-	exec_ctx.function_name = NULL;
-	exec_ctx.ploc = NULL;
-	exec_ctx.error_message = NULL;
-	exec_ctx.modulo = num_undefvalue();
-	return exec_ctx;
+	exec_ctx_t *pexec_ctx = (exec_ctx_t *)malloc(sizeof(exec_ctx_t));
+	pexec_ctx->function_name = NULL;
+	pexec_ctx->ploc = NULL;
+	pexec_ctx->error_message = NULL;
+	pexec_ctx->modulo = num_undefvalue();
+	pexec_ctx->parent = NULL;
+	return pexec_ctx;
+}
+
+exec_ctx_t *construct_child_exec_ctx_t(const exec_ctx_t *parent)
+{
+	exec_ctx_t *pexec_ctx = construct_exec_ctx_t();
+	*pexec_ctx = *parent;
+	pexec_ctx->error_message = NULL;
+	pexec_ctx->modulo = num_undefvalue();
+	pexec_ctx->parent = (exec_ctx_t *)parent;
+	return pexec_ctx;
 }
 
 void destruct_exec_ctx_t(exec_ctx_t *pexec_ctx)
@@ -362,6 +373,7 @@ void destruct_exec_ctx_t(exec_ctx_t *pexec_ctx)
 	if (!num_is_not_initialized(pexec_ctx->modulo)) {
 		num_destruct(&pexec_ctx->modulo);
 	}
+	free(pexec_ctx);
 }
 
 code_location_t construct_unset_code_location_t()
@@ -378,6 +390,14 @@ code_location_t construct_unset_code_location_t()
 
 void set_exec_error_message(exec_ctx_t *pexec_ctx, const char *fmt, ...)
 {
+		/*
+		 * The error message is to be set on the top parent, as the execution stack is
+		 * emptied *before* error print
+		 *
+		 * */
+	while (pexec_ctx->parent != NULL)
+		pexec_ctx = pexec_ctx->parent;
+
 	va_list args;
 	va_start(args, fmt);
 
@@ -409,6 +429,15 @@ void set_exec_error_message(exec_ctx_t *pexec_ctx, const char *fmt, ...)
 
 void outln_exec_error(int e, exec_ctx_t *pexec_ctx, int is_warning)
 {
+		/*
+		 * *IMPORTANT*
+		 *   See comment in function set_exec_error_message() above
+		 *   about the "walk through" up to the top parent.
+		 *
+		 * */
+	while (pexec_ctx->parent != NULL)
+		pexec_ctx = pexec_ctx->parent;
+
 	if (is_warning)
 		fprintf(stderr, "Warning: ");
 	else
@@ -419,6 +448,11 @@ void outln_exec_error(int e, exec_ctx_t *pexec_ctx, int is_warning)
 		if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
 			builtin_error_message = table_errors[e];
 			if (builtin_error_message == NULL) {
+
+					/* FIXME FIXME FIXME */
+/*                char *p = NULL;*/
+/*                *p = '\0';*/
+
 				FATAL_ERROR("Error code %d has no defined error message!", e);
 			}
 		} else {
@@ -800,7 +834,7 @@ void rl_input(char *buf, long unsigned int *result, int max)
 		rl_line = rl_start;
 		rl_len = strlen(rl_line)+1;
 		if (rl_len != 1)
-			add_history (rl_line); 
+			add_history (rl_line);
 		rl_line[rl_len-1] = '\n';
 /*        fflush(stdout);*/
 /*        if (ferror(stdout))*/
