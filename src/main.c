@@ -131,7 +131,7 @@ static void input_terminate();
 
 static const char *table_errors[] = {
 	NULL,								/* ERROR_NONE */
-	"Divide by 0",						/* ERROR_DIV0 */
+	"Divide by zero",						/* ERROR_DIV0 */
 	"Negative exponent not authorized",	/* ERROR_NEGATIVE_EXP */
 	"Function not defined",				/* ERROR_FUNCTION_NOT_DEFINED */
 	"Parameter number mismatch",		/* ERROR_PARAMETER_NUMBER_MISMATCH */
@@ -145,6 +145,7 @@ static const char *table_errors[] = {
 	"Invalid number",					/* ERROR_INVALID_NUMBER */
 	"Function not implemented",			/* ERROR_FUNCTION_NOT_IMPLEMENTED */
 	"No modulo invert",					/* ERROR_NO_INVMOD */
+	"Modulo by zero",					/* ERROR_MODULO0 */
 	NULL								/* ERROR_CUSTOM */
 };
 

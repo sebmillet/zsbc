@@ -49,7 +49,7 @@ expect {
 set test "invmod (explicit, from .b source file) - when no invert exists"
 send "205\n_invmod(10, 20)\n805\n"
 expect {
-	-re "205\[^0-9\]+Error.*Divide by 0.*\[^0-9\]+805\[^0-9\]+" { pass "$test" }
+	-re "205\[^0-9\]+Error.*Modulo by zero.*\[^0-9\]+805\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 

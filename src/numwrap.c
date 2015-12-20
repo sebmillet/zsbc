@@ -478,6 +478,10 @@ int num_pow(numptr *pr, const numptr a, const numptr b)
 int num_powmod(numptr *pr, const numptr a, const numptr e, const numptr m)
 {
 	assert(num_is_not_initialized(*pr));
+
+	if (num_is_zero(m))
+		return ERROR_MODULO0;
+
 	if (Lpowmod != NULL)
 		return Lpowmod(pr, a, e, m);
 
@@ -511,7 +515,7 @@ int num_mod(numptr *pr, const numptr a, const numptr b)
 {
 	assert(num_is_not_initialized(*pr));
 	if (num_is_zero(b))
-		return ERROR_DIV0;
+		return ERROR_MODULO0;
 	return Lmod(pr, a, b);
 }
 

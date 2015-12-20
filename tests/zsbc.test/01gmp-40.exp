@@ -42,14 +42,14 @@ expect {
 set test "Function (6)"
 send "define ahha(){return 1/0}\n645\nahha()\n"
 expect {
-	-re "645\[^0-9\]+.*Divide by 0\[^0-9\]+" { pass "$test" }
+	-re "645\[^0-9\]+.*Divide by zero\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 
 set test "Function (7)"
 send "define void ahhb(){x=1/0;return}\n648\nahhb()\n"
 expect {
-	-re "648\[^0-9\]+.*Divide by 0\[^0-9\]+" { pass "$test" }
+	-re "648\[^0-9\]+.*Divide by zero\[^0-9\]+" { pass "$test" }
 	default { fail "$test" }
 }
 
