@@ -512,7 +512,7 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 			exec_ctx_t *pexec_ctx_without_modulo = construct_child_exec_ctx_t(pexec_ctx);
 			pexec_ctx_without_modulo->function_name = self->var.name;
 			int r = eval_function_call(self, f, pval, pexec_ctx_without_modulo);
-			destruct_exec_ctx_t(pexec_ctx_without_modulo);
+			destruct_exec_ctx_t(pexec_ctx_without_modulo, r != ERROR_NONE);
 			return r;
 		} else if (f->ftype == FTYPE_BUILTIN) {
 			is_builtin_function_call = TRUE;
@@ -554,11 +554,11 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 				exec_ctx_t *pexec_ctx_with_new_modulo = construct_child_exec_ctx_t(pexec_ctx);
 				pexec_ctx_with_new_modulo->modulo = num_construct_from_num(value_args[1]);
 				r = myeval(ca->e, &value_args[idx], pexec_ctx_with_new_modulo);
-				destruct_exec_ctx_t(pexec_ctx_with_new_modulo);
+				destruct_exec_ctx_t(pexec_ctx_with_new_modulo, r != ERROR_NONE);
 			} else {
 				exec_ctx_t *pexec_ctx_without_modulo = construct_child_exec_ctx_t(pexec_ctx);
 				r = myeval(ca->e, &value_args[idx], pexec_ctx_without_modulo);
-				destruct_exec_ctx_t(pexec_ctx_without_modulo);
+				destruct_exec_ctx_t(pexec_ctx_without_modulo, r != ERROR_NONE);
 			}
 			if (r != ERROR_NONE)
 				break;
@@ -622,7 +622,7 @@ static void getvar_core(const char *varname, int has_index, long int idxval, con
 	 */
 static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create_if_missing, exec_ctx_t *pexec_ctx, int is_becoming_lvalue)
 {
-	long int idxval;
+	long int idxval = 0;
 	int r;
 	if ((r = getindex(self->var.index, &idxval, pexec_ctx)) != ERROR_NONE)
 		return r;
@@ -665,7 +665,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 	assert(num_is_not_initialized(*pval));
 
 	int has_index = self->var.index != NULL;
-	long int idxval;
+	long int idxval = 0;
 
 	numptr val = num_undefvalue();
 	int val_is_to_be_destructed = FALSE;

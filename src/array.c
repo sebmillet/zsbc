@@ -242,7 +242,14 @@ static array_t *array_construct()
 
 array_t *array_t_get_a_copy(array_t *src)
 {
+	out_dbg("Call to array_t_get_a_copy()\n");
+
 	array_t *copy = array_construct();
+	if (src == NULL) {
+		out_dbg("\tsrc is null\n");
+		return copy;
+	}
+
 	copy->nodes = src->nodes;
 
 	out_dbg("src->copyonupdate_self_copy = %d\n", src->copyonupdate_self_copy);

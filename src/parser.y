@@ -135,7 +135,7 @@ program:
 			outln_exec_error(r, pexec_ctx, FALSE);
 		}
 		program_destruct($1);
-		destruct_exec_ctx_t(pexec_ctx);
+		destruct_exec_ctx_t(pexec_ctx, FALSE);
 	}
 ;
 
@@ -483,7 +483,7 @@ void hackbc_check(const char *name, expr_t *e)
 	} else {
 		out_dbg("hackbc_check(): CAUGHT VARIABLE ASSIGNMENT BUT COULD NOT CALCULATE CONSTANT EXPRESSION VALUE!\n");
 	}
-	destruct_exec_ctx_t(pexec_ctx);
+	destruct_exec_ctx_t(pexec_ctx, FALSE);
 }
 
 void activate_bison_debug()

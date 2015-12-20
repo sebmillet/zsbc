@@ -272,7 +272,7 @@ array_t *vars_array_copy(const char *name)
 	vars_t *w = find_var(name, TYPE_ARRAY);
 	if (w == NULL)
 		return NULL;
-	return array_t_get_a_copy(w->pvalue->array);
+	return array_t_get_a_copy(w->pvalue->array_ref != NULL ? *w->pvalue->array_ref : w->pvalue->array);
 }
 
 function_t *vars_get_function(const char *name)
@@ -651,7 +651,7 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 
 		program_destruct(program);
 		free(name);
-		destruct_exec_ctx_t(pexec_ctx);
+		destruct_exec_ctx_t(pexec_ctx, FALSE);
 		return;
 	}
 
@@ -673,14 +673,14 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 				outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
 
 				vars_t_destruct(f);
-				destruct_exec_ctx_t(pexec_ctx);
+				destruct_exec_ctx_t(pexec_ctx, FALSE);
 				return;
 			}
 			param = param->next;
 		}
 		al = al->next;
 	}
-	destruct_exec_ctx_t(pexec_ctx);
+	destruct_exec_ctx_t(pexec_ctx, FALSE);
 
 	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->pvalue->fcnt.defargs, f->pvalue->fcnt.autolist, f->pvalue->fcnt.program);
 }
@@ -754,7 +754,7 @@ void check_functions()
 			program_check(f->program, pexec_ctx, &check);
 		}
 	}
-	destruct_exec_ctx_t(pexec_ctx);
+	destruct_exec_ctx_t(pexec_ctx, FALSE);
 	++global_check_id;
 }
 

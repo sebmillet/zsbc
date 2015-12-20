@@ -1,0 +1,19 @@
+# tests/zsbc.test/01gmp-73.exp
+
+set timeout 3
+spawn "$ZSBC" --SCM "$TESTDIR/01gmp-73.b"
+send_user "***   GMP - function arguments with very complexe calls\n"
+
+set test "Round 1"
+expect {
+	"1:-1000;2:105107" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

@@ -1799,7 +1799,7 @@ yyreduce:
 			outln_exec_error(r, pexec_ctx, FALSE);
 		}
 		program_destruct((yyvsp[0].prog));
-		destruct_exec_ctx_t(pexec_ctx);
+		destruct_exec_ctx_t(pexec_ctx, FALSE);
 	}
 #line 1805 "parser.c" /* yacc.c:1646  */
     break;
@@ -2613,7 +2613,7 @@ void hackbc_check(const char *name, expr_t *e)
 	} else {
 		out_dbg("hackbc_check(): CAUGHT VARIABLE ASSIGNMENT BUT COULD NOT CALCULATE CONSTANT EXPRESSION VALUE!\n");
 	}
-	destruct_exec_ctx_t(pexec_ctx);
+	destruct_exec_ctx_t(pexec_ctx, FALSE);
 }
 
 void activate_bison_debug()

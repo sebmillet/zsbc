@@ -11,8 +11,8 @@ if [ "$A" != "y" -a "$A" != "Y" ]; then
 	exit
 fi
 
-#for i in "01" "02" "03" "04" "05" "10" "20" "21" "30" "31" "40" "41" "42" "43" "45" "46" "47" "48"; do
-#for i in "48"; do
+#for i in "01" "02" "03" "04" "05" "10" "20" "21" "30" "31" "40" "41" "42" "43" "45" "46" "47" "48" "49"; do
+#for i in "49"; do
 for i in "RIENDUTOUT"; do
 	II=zsbc.test/01gmp-$i.exp
 	O=zsbc.test/02bc-$i.exp

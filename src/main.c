@@ -365,15 +365,26 @@ exec_ctx_t *construct_child_exec_ctx_t(const exec_ctx_t *parent)
 	return pexec_ctx;
 }
 
-void destruct_exec_ctx_t(exec_ctx_t *pexec_ctx)
+void destruct_exec_ctx_t(exec_ctx_t *pexec_ctx, int copy_up)
 {
 	if (pexec_ctx->error_message != NULL) {
-		free(pexec_ctx->error_message);
-		pexec_ctx->error_message = NULL;
+		if (copy_up && pexec_ctx->parent != NULL) {
+			pexec_ctx->parent->error_message = pexec_ctx->error_message;
+			pexec_ctx->error_message = NULL;
+		} else {
+			free(pexec_ctx->error_message);
+			pexec_ctx->error_message = NULL;
+		}
 	}
 	if (!num_is_not_initialized(pexec_ctx->modulo)) {
 		num_destruct(&pexec_ctx->modulo);
 	}
+
+	if (copy_up && pexec_ctx->parent != NULL && pexec_ctx->function_name != NULL)
+		pexec_ctx->parent->function_name = pexec_ctx->function_name;
+	if (copy_up && pexec_ctx->parent != NULL && pexec_ctx->ploc != NULL)
+		pexec_ctx->parent->ploc = pexec_ctx->ploc;
+
 	free(pexec_ctx);
 }
 
@@ -391,14 +402,6 @@ code_location_t construct_unset_code_location_t()
 
 void set_exec_error_message(exec_ctx_t *pexec_ctx, const char *fmt, ...)
 {
-		/*
-		 * The error message is to be set on the top parent, as the execution stack is
-		 * emptied *before* error print
-		 *
-		 * */
-	while (pexec_ctx->parent != NULL)
-		pexec_ctx = pexec_ctx->parent;
-
 	va_list args;
 	va_start(args, fmt);
 
@@ -430,15 +433,6 @@ void set_exec_error_message(exec_ctx_t *pexec_ctx, const char *fmt, ...)
 
 void outln_exec_error(int e, exec_ctx_t *pexec_ctx, int is_warning)
 {
-		/*
-		 * *IMPORTANT*
-		 *   See comment in function set_exec_error_message() above
-		 *   about the "walk through" up to the top parent.
-		 *
-		 * */
-	while (pexec_ctx->parent != NULL)
-		pexec_ctx = pexec_ctx->parent;
-
 	if (is_warning)
 		fprintf(stderr, "Warning: ");
 	else
@@ -449,11 +443,6 @@ void outln_exec_error(int e, exec_ctx_t *pexec_ctx, int is_warning)
 		if (e >= 0 && e < (sizeof(table_errors) / sizeof(*table_errors))) {
 			builtin_error_message = table_errors[e];
 			if (builtin_error_message == NULL) {
-
-					/* FIXME FIXME FIXME */
-/*                char *p = NULL;*/
-/*                *p = '\0';*/
-
 				FATAL_ERROR("Error code %d has no defined error message!", e);
 			}
 		} else {
