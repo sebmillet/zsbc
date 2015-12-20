@@ -17,7 +17,7 @@ define void prep(n) {
 	fill(alpha[], n)
 }
 
-l = 12
+l = 20
 n = 2000000
 print "Filling array with ", n, " element(s)\n"
 prep(n);

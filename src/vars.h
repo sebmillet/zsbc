@@ -82,7 +82,7 @@ typedef struct vars_keeper_t {
 	int is_used;
 	int holds_a_value;
 	int ktype;
-	vars_value_t value;
+	vars_value_t *pvalue;
 } vars_keeper_t;
 
 struct vars_t;

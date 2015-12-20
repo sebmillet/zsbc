@@ -143,7 +143,7 @@ static numptr *find_index(array_t *a, long int index, int make_ready_for_assignm
 				out_dbg("Assigning undef value to numbers\n");
 				for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i) {
 					(*walker)[i].num = num_undefvalue();
-					out_dbg("i = %d\n", i);
+/*                    out_dbg("i = %d\n", i);*/
 					assert(num_is_not_initialized((*walker)[i].num));
 				}
 			}
@@ -208,12 +208,15 @@ const numptr *array_get_value(array_t *a, long int index)
 void copyonupdate_manage_copy(array_t *a, int for_destruct)
 {
 	if (a->copyonupdate_self_copy) {
+		out_dbg("copyonupdate_event: main = %lu, mate = %lu\n", a, a->copyonupdate_self_copy_mate);
 		if (a->nodes != NULL) {
 			if (for_destruct) {
+				out_dbg("copyonupdate_event_for_destruct\n");
 				if (opt_COPYONUPDATE)
 					outln(L_ENFORCE, "copyonupdate: soft array destruction of %lu", a);
 				a->nodes = NULL;
 			} else {
+				out_dbg("copyonupdate_event_do_real_copy\n");
 				if (opt_COPYONUPDATE)
 					outln(L_ENFORCE, "copyonupdate: copying array %lu", a);
 				node_tree_copy(&a->nodes, a->nodes, 0);
@@ -223,6 +226,7 @@ void copyonupdate_manage_copy(array_t *a, int for_destruct)
 		a->copyonupdate_self_copy_mate->copyonupdate_remote_copy = FALSE;
 	}
 	if (a->copyonupdate_remote_copy) {
+		out_dbg("copyonupdate_event_notify_remote\n");
 		copyonupdate_manage_copy(a->copyonupdate_remote_copy_mate, FALSE);
 	}
 }
@@ -241,6 +245,30 @@ array_t *array_t_get_a_copy(array_t *src)
 	array_t *copy = array_construct();
 	copy->nodes = src->nodes;
 
+	out_dbg("src->copyonupdate_self_copy = %d\n", src->copyonupdate_self_copy);
+	if (src->copyonupdate_self_copy) {
+		out_dbg("\t=> src->copyonupdate_self_copy_mate = %lu\n", src->copyonupdate_self_copy_mate);
+	}
+	out_dbg("src->copyonupdate_remote_copy = %d\n", src->copyonupdate_remote_copy);
+	if (src->copyonupdate_remote_copy) {
+		out_dbg("\t=> src->copyonupdate_remote_copy_mate = %lu\n", src->copyonupdate_remote_copy_mate);
+
+			/*
+			 * FIXME?
+			 *
+			 * If the source is already tied to a remote, then an immediate copy
+			 * is to be done, otherwise we'll loose track of the current link.
+			 * Alternative would be, to manage a list of remotes. But that's too much
+			 * for now. I mark it here as a fix me with a question mark (it'll
+			 * improve performance marginally I think, and it is not a bug)
+			 *
+			 * */
+
+		out_dbg("\tarray already tied to a remote, doing a copy immediately\n");
+		node_tree_copy(&copy->nodes, src->nodes, 0);
+		return copy;
+	}
+
 		/* copy is the "mate" to copy on first update */
 	copy->copyonupdate_self_copy = TRUE;
 	copy->copyonupdate_self_copy_mate = src;
@@ -248,6 +276,10 @@ array_t *array_t_get_a_copy(array_t *src)
 		/* src is the origin, NOT to copy when an update occurs */
 	src->copyonupdate_remote_copy = TRUE;
 	src->copyonupdate_remote_copy_mate = copy;
+
+	out_dbg("Created a copy with copyonupdate information\n");
+	out_dbg("\tsrc:  %lu, mate: %lu\n", src, src->copyonupdate_remote_copy_mate);
+	out_dbg("\tcopy: %lu, mate: %lu\n", copy, copy->copyonupdate_self_copy_mate);
 
 	return copy;
 }

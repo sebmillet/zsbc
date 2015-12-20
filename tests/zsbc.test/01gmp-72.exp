@@ -1,0 +1,63 @@
+# tests/zsbc.test/01gmp-72.exp
+
+set timeout 3
+spawn "$ZSBC" --SCM "$TESTDIR/01gmp-72.b"
+send_user "***   GMP - function arguments with complexe calls\n"
+
+set test "Round 1"
+expect {
+	"pre:1:r:0;0:p:0;0:q:0;0-post:1:r:1;2:p:0;0:q:0;0-1:r:1;2:p:0;0" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Round 2"
+expect {
+	"pre:2:r:1;2:p:0;0:q:0;0-post:2:r:1;2:p:0;0:q:0;0-2:r:1;2:p:0;0" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Round 3"
+expect {
+	"pre:3:r:0;0:p:0;0:q:0;0-post:3:r:1;2:p:0;0:q:0;0-3:r:1;2:p:1;2" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Round 4"
+expect {
+	"pre:4:r:5;7:p:5;7:q:5;7-post:4:r:5006;7009:p:5;7:q:5;7-4:r:1;2:p:5006;7009" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Round 5"
+expect {
+	"pre:5:r:5;7:p:5;7:q:5;7-post:5:r:5006;7009:p:5;7:q:5;7-5:r:1;2:p:5006;7009:q:50;70" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Round 6"
+expect {
+	"pre:6:r:5;7:p:5;7:q:5;7-post:6:r:-4994;-6991:p:-5;-7:q:5;7-6:r:1;2:p:-4994;-6991:q:50;70" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Round 7"
+send "y=10\nf(y, y)\ny\n"
+expect {
+	"f:x=12:y=10-12" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Round 8"
+send "f(z, z)\nz\n"
+expect {
+	"f:x=12:y=0-12" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

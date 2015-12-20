@@ -906,6 +906,14 @@ static int count_defargs(defargs_t *darg)
 
 static int eval_function_call(const expr_t *self, const function_t *f, numptr *pval, exec_ctx_t *pexec_ctx)
 {
+
+typedef struct record_keeper_action_to_execute {
+	int is_set;
+	vars_keeper_t *k;
+	const char *n;
+	vars_value_t v;
+} rec;
+
 	assert(self->type == ENODE_FUNCTION_CALL);
 	assert(num_is_not_initialized(*pval));
 
@@ -927,10 +935,17 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 	 *  Step 1: walk through function arguments
 	 *-----------------------------------------------------------------------------*/
 
+	rec *recs = (rec *)malloc(sizeof(rec) * (nbargs + nbauto));
+	for (ii = 0; ii < nbargs + nbauto; ++ii) {
+		recs[ii].is_set = FALSE;
+	}
+
 	for (ii = 0; ii < nbargs; ++ii) {
 		assert(darg != NULL);
 
 		vars_value_t nv;
+		nv.num = num_undefvalue();
+		nv.array = NULL;
 		nv.num_ref = NULL;
 		nv.array_ref = NULL;
 
@@ -938,7 +953,7 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 		callargs_t *ca = &self->cargs[ii];
 
 		if (darg->type == DARG_VALUE) {
-			out_dbg("Argument %d (#%s) is var byval\n", ii, darg->name);
+			out_dbg("Argument %s (#%d) is var byval\n", darg->name, ii);
 			if (ca->type != CARG_EXPR) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
@@ -947,7 +962,7 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 			if ((r = myeval(ca->e, &nv.num, pexec_ctx)) != ERROR_NONE)
 				break;
 		} else if (darg->type == DARG_ARRAYVALUE) {
-			out_dbg("Argument %d (#%s) is array byval\n", ii, darg->name);
+			out_dbg("Argument %s (#%d) is array byval\n", darg->name, ii);
 			if (ca->type != CARG_ARRAY) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
@@ -955,7 +970,7 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 			nv.type = TYPE_ARRAY;
 			nv.array = vars_array_copy(ca->array_name);
 		} else if (darg->type == DARG_REF) {
-			out_dbg("Argument %d (#%s) is var byref\n", ii, darg->name);
+			out_dbg("Argument %s (#%d) is var byref\n", darg->name, ii);
 			if (ca->type != CARG_EXPR || ca->e == NULL) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
@@ -967,17 +982,22 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 			nv.type = TYPE_NUM;
 			nv.num_ref = (numptr *)plvnum;
 		} else if (darg->type == DARG_ARRAYREF) {
-			out_dbg("Argument %d (#%s) is array byref\n", ii, darg->name);
+			out_dbg("Argument %s (#%d) is array byref\n", darg->name, ii);
 			if (ca->type != CARG_ARRAY) {
 				r = ERROR_ARGTYPE_MISMATCH;
 				break;
 			}
 			nv.type = TYPE_ARRAY;
 			nv.array_ref = vars_array_get_ref(ca->array_name);
+			out_dbg("%s now points to array %lu (from %lu)\n", darg->name, *nv.array_ref, nv.array_ref);
 		} else
 			FATAL_ERROR("Unknown definition argument type: %d for darg #%lu", darg->type, darg);
 
-		vars_send_to_keeper(&keeper[ii], darg->name, &nv);
+		recs[ii].is_set = TRUE;
+		recs[ii].k = &keeper[ii];
+		recs[ii].n = darg->name;
+		recs[ii].v = nv;
+/*        vars_send_to_keeper(&keeper[ii], darg->name, &nv);*/
 
 		darg = darg->next;
 	}
@@ -1008,7 +1028,11 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 			} else
 				FATAL_ERROR("Unknown auto variable type: %d for darg #%lu", darg->type, darg);
 
-			vars_send_to_keeper(&keeper[ii], darg->name, &nv);
+			recs[ii].is_set = TRUE;
+			recs[ii].k = &keeper[ii];
+			recs[ii].n = darg->name;
+			recs[ii].v = nv;
+/*            vars_send_to_keeper(&keeper[ii], darg->name, &nv);*/
 
 			++ii;
 			darg = darg->next;
@@ -1016,6 +1040,13 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 	}
 
 	if (r == ERROR_NONE) {
+		for (ii = 0; ii < nbargs + nbauto; ++ii) {
+			assert(recs[ii].is_set);
+			assert(recs[ii].k == &keeper[ii]);
+			vars_send_to_keeper(recs[ii].k, recs[ii].n, &recs[ii].v);
+			recs[ii].is_set = FALSE;
+		}
+
 		assert(darg == NULL);
 		assert(ii == nbargs + nbauto);
 		r = program_execute(f->program, pval, pexec_ctx);
@@ -1052,6 +1083,19 @@ static int eval_function_call(const expr_t *self, const function_t *f, numptr *p
 
 	if (keeper != NULL)
 		free(keeper);
+
+	for (ii = 0; ii < nbargs + nbauto; ++ii) {
+		if (recs[ii].is_set) {
+			if (recs[ii].v.type == TYPE_NUM && recs[ii].v.num_ref == NULL) {
+				assert(!num_is_not_initialized(recs[ii].v.num));
+				num_destruct(&recs[ii].v.num);
+			} else if (recs[ii].v.type == TYPE_ARRAY && recs[ii].v.array_ref == NULL) {
+				array_destruct(recs[ii].v.array);
+			}
+		}
+	}
+	if (recs != NULL)
+		free(recs);
 
 	return r;
 }
