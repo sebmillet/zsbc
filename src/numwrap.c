@@ -1026,6 +1026,9 @@ static int gmp_powmod(numptr *pr, const numptr a, const numptr b, const numptr c
 
 	out_dbg("Call to gmp_powmod\n");
 
+	if (num_is_zero(c))
+		return ERROR_MODULO0;
+
 	*pr = num_construct();
 	mpz_powm(*(mpz_t *)*pr, *(const mpz_t *)a, *(const mpz_t *)b, *(const mpz_t *)c);
 	return ERROR_NONE;
@@ -1676,6 +1679,9 @@ static int libbc_pow(numptr *pr, const numptr a, const numptr b)
 
 static int libbc_powmod(numptr *pr, const numptr a, const numptr b, const numptr c)
 {
+	if (num_is_zero(c))
+		return ERROR_MODULO0;
+
 	*pr = num_construct();
 	bc_raisemod((bc_num)a, (bc_num)b, (bc_num)c, (bc_num *)pr, libbc_scale);
 	return ERROR_NONE;
