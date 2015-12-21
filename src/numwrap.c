@@ -77,7 +77,7 @@ typedef struct lib_t {
 } lib_t;
 lib_t *libhead = NULL;
 lib_t *libcurrent = NULL;
-static void lib_register(libinfo_t li, void (*libfirsttimeinit)(), void (*libactivate)(), void (*libterminate)());
+static void lib_register(const libinfo_t li, void (*libfirsttimeinit)(), void (*libactivate)(), void (*libterminate)());
 static void libswitch(lib_t *l, int quiet);
 
 static int num_count_ref = 0;
@@ -941,7 +941,7 @@ static void gmp_print(const numptr num)
 	char *p = buf;
 	while (*p != '\0') {
 		if (gmp_obase <= GMP_USE_UPPERCASE_UP_TO && islower(*p))
-			*p = toupper(*p);
+			*p = (char)toupper(*p);
 		++p;
 	}
 
