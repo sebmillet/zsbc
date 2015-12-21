@@ -73,7 +73,7 @@ typedef struct vars_value_t {
 		numptr num;
 		array_t *array;
 		function_t fcnt;
-	};
+	} v;
 	numptr *num_ref;
 	array_t **array_ref;
 } vars_value_t;
@@ -110,7 +110,18 @@ defargs_t *defargs_construct(defarg_type_t type, const char *name);
 void defargs_destruct(defargs_t *arg);
 
 void vars_user_function_construct(char *name, defargs_t *args, program_t *program, int is_void, const code_location_t loc);
-void register_builtin_function(const char *name, int nb_args, void *f, int is_void);
+void register_builtin_function_0arg(const char *name, int (*builtin0arg)(numptr *pr), int is_void);
+void register_builtin_function_1arg(const char *name, int (*builtin1arg)(numptr *pr, const numptr a), int is_void);
+void register_builtin_function_2arg(
+		const char *name,
+		int (*builtin2arg)(numptr *pr, const numptr a, const numptr b),
+		int is_void
+);
+void register_builtin_function_3arg(
+		const char *name,
+		int (*builtin3arg)(numptr *pr, const numptr a, const numptr b, const numptr c),
+		int is_void
+);
 
 void check_functions();
 

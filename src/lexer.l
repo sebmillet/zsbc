@@ -45,8 +45,6 @@ void cleanup_inputnumber(char *s);
 	/* Defined in this file */
 void yyerror(char *s, ...);
 
-void rl_input(char *buf, long unsigned int *result, int max);
-
 	/* the 2 below are defined in main.c */
 FILE *input_get_next();
 const char *input_get_name();
@@ -55,10 +53,13 @@ const char *input_get_name();
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
 
+#ifdef HAS_LIB_READLINE
+void rl_input(char *buf, long unsigned int *result, int max);
 	/* Have input call the following function */
 #undef  YY_INPUT
 #define YY_INPUT(buf,result,max_size) \
 		rl_input((char *)buf, &result, max_size)
+#endif
 
 %}
 

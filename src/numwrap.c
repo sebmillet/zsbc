@@ -273,8 +273,8 @@ static int shared_functions_read(numptr *pr)
 
 static void shared_libfirsttimeinit_run_on_every_libs()
 {
-	register_builtin_function("check_functions", 0, shared_functions_check_functions, TRUE);
-	register_builtin_function("read", 0, shared_functions_read, TRUE);
+	register_builtin_function_0arg("check_functions", shared_functions_check_functions, TRUE);
+	register_builtin_function_0arg("read", shared_functions_read, TRUE);
 }
 
 static void libswitch(lib_t *l, int quiet)
@@ -817,9 +817,9 @@ static void gmp_firsttimeinit()
 	vars_set_value("autoinvmod", num_construct_from_int(GMP_AUTOINVMOD_DEFAULT), &ppvarnum);
 	assert(gmp_autoinvmod == GMP_AUTOINVMOD_DEFAULT);
 
-	register_builtin_function("gmpversion", 0, gmp_function_get_version, FALSE);
-	register_builtin_function("powmod", 3, gmp_powmod, FALSE);
-	register_builtin_function("invmod", 2, gmp_invmod, FALSE);
+	register_builtin_function_0arg("gmpversion", gmp_function_get_version, FALSE);
+	register_builtin_function_3arg("powmod", gmp_powmod, FALSE);
+	register_builtin_function_2arg("invmod", gmp_invmod, FALSE);
 }
 
 static void gmp_activate()
@@ -1390,11 +1390,11 @@ static void libbc_firsttimeinit()
 	vars_set_value("obase", num_construct_from_int(LIBBC_DEFAULT_OBASE), &ppvarnum);
 	assert(libbc_obase == LIBBC_DEFAULT_OBASE);
 
-	register_builtin_function("bcversion", 0, libbc_function_get_version, FALSE);
-	register_builtin_function("sqrt", 1, libbc_sqrt, FALSE);
-	register_builtin_function("scale", 1, libbc_function_scale, FALSE);
-	register_builtin_function("length", 1, libbc_function_length, FALSE);
-	register_builtin_function("powmod", 3, libbc_powmod, FALSE);
+	register_builtin_function_0arg("bcversion", libbc_function_get_version, FALSE);
+	register_builtin_function_1arg("sqrt", libbc_sqrt, FALSE);
+	register_builtin_function_1arg("scale", libbc_function_scale, FALSE);
+	register_builtin_function_1arg("length", libbc_function_length, FALSE);
+	register_builtin_function_3arg("powmod", libbc_powmod, FALSE);
 }
 
 static void libbc_activate()

@@ -771,6 +771,8 @@ static void cut_env_options(int *env_argc, char ***env_argv, char **alloc_env, c
 	}
 }
 
+#ifdef HAS_LIB_READLINE
+
 /* Code below taken as is (besides some indentation and move to main.c) from bc source in bc/scan.l */
 
 /*
@@ -796,20 +798,15 @@ void yyerror(char *s, ...);
 
 void rl_input(char *buf, long unsigned int *result, int max)
 {
-#ifdef HAS_LIB_READLINE
 	if (yyin != rl_instream || !is_interactive || opt_SCM) {
-#endif
 		while ((*result = read(fileno(yyin), buf, max)) < 0 )
 			if (errno != EINTR) {
 				yyerror("read() in flex scanner failed" );
 				exit(1);
 			}
 		return;
-#ifdef HAS_LIB_READLINE
 	}
-#endif
 
-#ifdef HAS_LIB_READLINE
 		/* Do we need a new string? */
 	if (rl_len == 0) {
 		if (rl_start)
@@ -841,17 +838,17 @@ void rl_input(char *buf, long unsigned int *result, int max)
 		rl_line += max;
 		rl_len -= max;
 	}
-#endif
-
 }
 
-#ifdef HAS_LIB_READLINE
 void init_readline()
 {
 	rl_instream = stdin;
 }
+
 #else
+
 #define init_readline()
+
 #endif
 
 int main(int argc, char *argv[])

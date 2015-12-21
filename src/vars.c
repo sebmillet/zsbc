@@ -112,11 +112,11 @@ void vars_value_destruct(vars_value_t *pvalue)
 		return;
 
 	if (pvalue->type == TYPE_NUM)
-		num_destruct(&pvalue->num);
+		num_destruct(&pvalue->v.num);
 	else if (pvalue->type == TYPE_ARRAY)
-		array_destruct(pvalue->array);
+		array_destruct(pvalue->v.array);
 	else if (pvalue->type == TYPE_FCNT)
-		function_destruct(pvalue->fcnt);
+		function_destruct(pvalue->v.fcnt);
 	else
 		FATAL_ERROR("Unknown symbol type: %d for vars_value_t: %lu", pvalue->type, pvalue);
 }
@@ -138,22 +138,22 @@ static vars_t *vars_t_construct(const char *name, int type, int ftype)
 	v->pvalue->num_ref = NULL;
 	v->pvalue->array_ref = NULL;
 	if (type == TYPE_NUM) {
-		v->pvalue->num = num_undefvalue();
+		v->pvalue->v.num = num_undefvalue();
 	} else if (type == TYPE_ARRAY) {
-		v->pvalue->array = NULL;
+		v->pvalue->v.array = NULL;
 	} else if (type == TYPE_FCNT) {
-		v->pvalue->fcnt.ftype = ftype;
-		v->pvalue->fcnt.check_id = -1;
+		v->pvalue->v.fcnt.ftype = ftype;
+		v->pvalue->v.fcnt.check_id = -1;
 		if (ftype != FTYPE_USER && ftype != FTYPE_BUILTIN)
 			FATAL_ERROR("vars_t_construct(): unknown ftype: %d", ftype);
-		v->pvalue->fcnt.defargs = NULL;
-		v->pvalue->fcnt.autolist = NULL;
-		v->pvalue->fcnt.program = NULL;
-		v->pvalue->fcnt.builtin_nb_args = -1;
-		v->pvalue->fcnt.builtin0arg = NULL;
-		v->pvalue->fcnt.builtin1arg = NULL;
-		v->pvalue->fcnt.builtin2arg = NULL;
-		v->pvalue->fcnt.builtin3arg = NULL;
+		v->pvalue->v.fcnt.defargs = NULL;
+		v->pvalue->v.fcnt.autolist = NULL;
+		v->pvalue->v.fcnt.program = NULL;
+		v->pvalue->v.fcnt.builtin_nb_args = -1;
+		v->pvalue->v.fcnt.builtin0arg = NULL;
+		v->pvalue->v.fcnt.builtin1arg = NULL;
+		v->pvalue->v.fcnt.builtin2arg = NULL;
+		v->pvalue->v.fcnt.builtin3arg = NULL;
 	} else {
 		FATAL_ERROR("Unknown symbol type: %d", type);
 	}
@@ -215,7 +215,7 @@ array_t **vars_array_get_ref(const char *name)
 		if ((w = find_var(name, TYPE_ARRAY)) == NULL)
 			FATAL_ERROR("%s", "Inconsistent data, ref 182");
 	}
-	return w->pvalue->array_ref ? w->pvalue->array_ref : &w->pvalue->array;
+	return w->pvalue->array_ref ? w->pvalue->array_ref : &w->pvalue->v.array;
 }
 
 const numptr *vars_get_value(const char *name)
@@ -228,7 +228,7 @@ const numptr *vars_get_value(const char *name)
 	vars_t *w = find_var(name, TYPE_NUM);
 	if (w != NULL) {
 		out_dbg("\t%s is %s\n", name, w->pvalue->num_ref ? "a reference" : "regular");
-		return (w->pvalue->num_ref ? w->pvalue->num_ref : &w->pvalue->num);
+		return (w->pvalue->num_ref ? w->pvalue->num_ref : &w->pvalue->v.num);
 	}
 
 	out_dbg("\t%s is non-existent\n", name);
@@ -248,9 +248,9 @@ const numptr *vars_array_get_value(const char *name, long int index, int is_beco
 		out_dbg("\t%s[] is %s\n", name, w->pvalue->array_ref ? "a reference" : "regular");
 
 		if (is_becoming_lvalue)
-			copyonupdate_manage_copy(w->pvalue->array_ref ? *w->pvalue->array_ref : w->pvalue->array, FALSE);
+			copyonupdate_manage_copy(w->pvalue->array_ref ? *w->pvalue->array_ref : w->pvalue->v.array, FALSE);
 
-		return array_get_value(w->pvalue->array_ref ? *w->pvalue->array_ref : w->pvalue->array, index);
+		return array_get_value(w->pvalue->array_ref ? *w->pvalue->array_ref : w->pvalue->v.array, index);
 
 	}
 	out_dbg("\t%s[] is non-existent\n", name);
@@ -272,7 +272,7 @@ array_t *vars_array_copy(const char *name)
 	vars_t *w = find_var(name, TYPE_ARRAY);
 	if (w == NULL)
 		return NULL;
-	return array_t_get_a_copy(w->pvalue->array_ref != NULL ? *w->pvalue->array_ref : w->pvalue->array);
+	return array_t_get_a_copy(w->pvalue->array_ref != NULL ? *w->pvalue->array_ref : w->pvalue->v.array);
 }
 
 function_t *vars_get_function(const char *name)
@@ -287,7 +287,7 @@ function_t *vars_get_function(const char *name)
 
 		out_dbg("\tFound %s\n", name);
 
-		return &w->pvalue->fcnt;
+		return &w->pvalue->v.fcnt;
 	} else
 		return NULL;
 }
@@ -310,7 +310,7 @@ static int vars_set_value_core(const char *name, numptr new_value, vars_t *v, co
 
 		if (!v->pvalue->num_ref) {
 			out_dbg("\t%s is regular\n", name);
-			num_destruct(&v->pvalue->num);
+			num_destruct(&v->pvalue->v.num);
 		} else {
 			out_dbg("\t%s is a reference\n", name);
 			num_destruct(v->pvalue->num_ref);
@@ -318,8 +318,8 @@ static int vars_set_value_core(const char *name, numptr new_value, vars_t *v, co
 	}
 
 	if (!v->pvalue->num_ref) {
-		v->pvalue->num = new_value;
-		*ppvarnum = &v->pvalue->num;
+		v->pvalue->v.num = new_value;
+		*ppvarnum = &v->pvalue->v.num;
 	} else {
 		*v->pvalue->num_ref = new_value;
 		*ppvarnum = v->pvalue->num_ref;
@@ -362,7 +362,7 @@ static void vars_array_set_value_core(const char *name, long int index, const nu
 	out_dbg("Setting value of %s[%d]\n", name, index);
 	out_dbg("\t%s is %s\n", name, v->pvalue->array_ref ? "a reference" : "regular");
 
-	array_set_value(v->pvalue->array_ref ? v->pvalue->array_ref : &v->pvalue->array, index, new_value, ppvarnum);
+	array_set_value(v->pvalue->array_ref ? v->pvalue->array_ref : &v->pvalue->v.array, index, new_value, ppvarnum);
 }
 
 void vars_array_set_value(const char *name, long int index, const numptr new_value, const numptr **ppvarnum)
@@ -393,20 +393,20 @@ void vars_display_all()
 	for (w = ctx->container.heads[TYPE_NUM]; w != NULL; w = w->hh.next) {
 		outstring(w->name, FALSE);
 		outstring("=", FALSE);
-		num_print(w->pvalue->num);
+		num_print(w->pvalue->v.num);
 		outstring("", TRUE);
 	}
 	for (w = ctx->container.heads[TYPE_ARRAY]; w != NULL; w = w->hh.next) {
 		size_t l = strlen(w->name) + 50;
 		char *buf = malloc(l);
-		snprintf(buf, l, "%s[]: %li element(s)", w->name, array_count(w->pvalue->array));
+		snprintf(buf, l, "%s[]: %li element(s)", w->name, array_count(w->pvalue->v.array));
 		outstring(buf, TRUE);
 		free(buf);
 	}
 	for (w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
 		outstring(w->name, FALSE);
 		outstring("(", FALSE);
-		function_t *f = &w->pvalue->fcnt;
+		function_t *f = &w->pvalue->v.fcnt;
 		if (f->ftype == FTYPE_BUILTIN) {
 			char c = 'a';
 			int i;
@@ -443,12 +443,12 @@ static void vars_value_soft_copy(vars_value_t *dst, const vars_value_t *src)
 	dst->array_ref = src->array_ref;
 	if (src->type == TYPE_NUM) {
 		if (!src->num_ref)
-			dst->num = src->num;
+			dst->v.num = src->v.num;
 	} else if (src->type == TYPE_ARRAY) {
 		if (!src->array_ref)
-			dst->array = src->array;
+			dst->v.array = src->v.array;
 	} else if (src->type == TYPE_FCNT)
-		dst->fcnt = src->fcnt;
+		dst->v.fcnt = src->v.fcnt;
 	else
 		FATAL_ERROR("Unknown symbol type: %d for vars_value_t: %lu", src->type, src);
 }
@@ -659,13 +659,13 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 
 	vars_t *f = vars_t_construct(name, TYPE_FCNT, FTYPE_USER);
 
-	f->pvalue->fcnt.is_void = is_void;
-	f->pvalue->fcnt.defargs = defargs;
-	f->pvalue->fcnt.program = program;
-	program_gather_defargs(&f->pvalue->fcnt.autolist, &f->pvalue->fcnt.program);
-	defargs_t *al = f->pvalue->fcnt.autolist;
+	f->pvalue->v.fcnt.is_void = is_void;
+	f->pvalue->v.fcnt.defargs = defargs;
+	f->pvalue->v.fcnt.program = program;
+	program_gather_defargs(&f->pvalue->v.fcnt.autolist, &f->pvalue->v.fcnt.program);
+	defargs_t *al = f->pvalue->v.fcnt.autolist;
 	while (al != NULL) {
-		defargs_t *param = f->pvalue->fcnt.defargs;
+		defargs_t *param = f->pvalue->v.fcnt.defargs;
 		while (param != NULL) {
 			if (darg_type_is_of_same_namespace(param->type, al->type) && !varname_cmp(param->name, al->name)) {
 
@@ -685,25 +685,61 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->pvalue->fcnt.defargs, f->pvalue->fcnt.autolist, f->pvalue->fcnt.program);
 }
 
-void register_builtin_function(const char *name, int nb_args, void *f, int is_void)
+static void register_builtin_function(
+		const char *name,
+		int nb_args,
+		int (*builtin0arg)(numptr *pr),
+		int (*builtin1arg)(numptr *pr, const numptr a),
+		int (*builtin2arg)(numptr *pr, const numptr a, const numptr b),
+		int (*builtin3arg)(numptr *pr, const numptr a, const numptr b, const numptr c),
+		int is_void
+);
+
+void register_builtin_function_0arg(const char *name, int (*builtin0arg)(numptr *pr), int is_void)
+{ register_builtin_function(name, 0, builtin0arg, NULL, NULL, NULL, is_void); }
+void register_builtin_function_1arg(const char *name, int (*builtin1arg)(numptr *pr, const numptr a), int is_void)
+{ register_builtin_function(name, 1, NULL, builtin1arg, NULL, NULL, is_void); }
+void register_builtin_function_2arg(const char *name,
+		int (*builtin2arg)(numptr *pr, const numptr a, const numptr b), int is_void)
+{ register_builtin_function(name, 2, NULL, NULL, builtin2arg, NULL, is_void); }
+void register_builtin_function_3arg(const char *name,
+		int (*builtin3arg)(numptr *pr, const numptr a, const numptr b, const numptr c), int is_void)
+{ register_builtin_function(name, 3, NULL, NULL, NULL, builtin3arg, is_void); }
+
+static void register_builtin_function(
+		const char *name,
+		int nb_args,
+		int (*builtin0arg)(numptr *pr),
+		int (*builtin1arg)(numptr *pr, const numptr a),
+		int (*builtin2arg)(numptr *pr, const numptr a, const numptr b),
+		int (*builtin3arg)(numptr *pr, const numptr a, const numptr b, const numptr c),
+		int is_void
+)
 {
 	assert(ctx->lib_reg_number == num_get_current_lib_number());
 
 	destruct_function_if_defined(name, NULL);
 
 	vars_t *v = vars_t_construct(name, TYPE_FCNT, FTYPE_BUILTIN);
-	v->pvalue->fcnt.is_void = is_void;
-	v->pvalue->fcnt.builtin_nb_args = nb_args;
+	v->pvalue->v.fcnt.is_void = is_void;
+	v->pvalue->v.fcnt.builtin_nb_args = nb_args;
+
+	assert(builtin0arg == NULL || nb_args == 0);
+	assert(builtin1arg == NULL || nb_args == 1);
+	assert(builtin2arg == NULL || nb_args == 2);
+	assert(builtin3arg == NULL || nb_args == 3);
 	if (nb_args == 0)
-		v->pvalue->fcnt.builtin0arg = f;
+		v->pvalue->v.fcnt.builtin0arg = builtin0arg;
 	else if (nb_args == 1)
-		v->pvalue->fcnt.builtin1arg = f;
+		v->pvalue->v.fcnt.builtin1arg = builtin1arg;
 	else if (nb_args == 2)
-		v->pvalue->fcnt.builtin2arg = f;
+		v->pvalue->v.fcnt.builtin2arg = builtin2arg;
 	else if (nb_args == 3)
-		v->pvalue->fcnt.builtin3arg = f;
+		v->pvalue->v.fcnt.builtin3arg = builtin3arg;
 	else if (nb_args > 3)
 		FATAL_ERROR("Builtin functions with %d arguments is not supported (maximum: 3)", nb_args);
+	else if (nb_args < 0)
+		FATAL_ERROR("Internal error", nb_args);
 	out_dbg("Constructed function: %lu, name: %s, nb args: %d, function: %lu\n", v, v->name, nb_args, f);
 }
 
@@ -736,9 +772,9 @@ void check_functions()
 	check_t check;
 	check.id = global_check_id;
 	for (w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
-		if (w->pvalue->fcnt.ftype == FTYPE_USER) {
+		if (w->pvalue->v.fcnt.ftype == FTYPE_USER) {
 			out_dbg("Will now check the function %s\n", w->name);
-			function_t *f = &w->pvalue->fcnt;
+			function_t *f = &w->pvalue->v.fcnt;
 			pexec_ctx->function_name = w->name;
 			check.is_void = f->is_void;
 			check.is_inside_loop = FALSE;

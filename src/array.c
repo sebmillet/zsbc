@@ -35,7 +35,7 @@ typedef struct node_t {
 	union {
 		struct node_t *subnode;
 		numptr num;
-	};
+	} u;
 } node_t;
 
 struct array_t {
@@ -57,13 +57,13 @@ static void node_tree_destruct(node_t *nodes, int level)
 	int i;
 	if (level < TREE_LEVELS - 1) {
 		for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i) {
-			if (nodes[i].subnode != NULL)
-				node_tree_destruct(nodes[i].subnode, level + 1);
+			if (nodes[i].u.subnode != NULL)
+				node_tree_destruct(nodes[i].u.subnode, level + 1);
 		}
 	} else {
 		for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i) {
-			if (!num_is_not_initialized(nodes[i].num))
-				num_destruct(&nodes[i].num);
+			if (!num_is_not_initialized(nodes[i].u.num))
+				num_destruct(&nodes[i].u.num);
 		}
 	}
 
@@ -136,27 +136,27 @@ static numptr *find_index(array_t *a, long int index, int make_ready_for_assignm
 			if (l < TREE_LEVELS - 1) {
 				out_dbg("Zeroing subnodes\n");
 				for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i)
-					(*walker)[i].subnode = NULL;
+					(*walker)[i].u.subnode = NULL;
 
 
 			} else {
 				out_dbg("Assigning undef value to numbers\n");
 				for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i) {
-					(*walker)[i].num = num_undefvalue();
+					(*walker)[i].u.num = num_undefvalue();
 /*                    out_dbg("i = %d\n", i);*/
-					assert(num_is_not_initialized((*walker)[i].num));
+					assert(num_is_not_initialized((*walker)[i].u.num));
 				}
 			}
 		}
 		if (l < TREE_LEVELS - 1)
-			walker = &(*walker)[coord[l]].subnode;
+			walker = &(*walker)[coord[l]].u.subnode;
 	}
 
 	assert(l == TREE_LEVELS);
 
 	out_dbg("TREE_LEVELS - 1 = %d, coord[TREE_LEVELS - 1] = %d\n", TREE_LEVELS - 1, coord[TREE_LEVELS - 1]);
 
-	numptr *pnum = &((*walker)[coord[TREE_LEVELS - 1]].num);
+	numptr *pnum = &((*walker)[coord[TREE_LEVELS - 1]].u.num);
 	if (make_ready_for_assignment) {
 		if (!num_is_not_initialized(*pnum))
 			num_destruct(pnum);
@@ -176,18 +176,18 @@ static void node_tree_copy(node_t **dest, const node_t *src, int level)
 	int i;
 	if (level < TREE_LEVELS - 1) {
 		for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i) {
-			if (src[i].subnode != NULL) {
-				node_tree_copy(&(*dest)[i].subnode, src[i].subnode, level + 1);
+			if (src[i].u.subnode != NULL) {
+				node_tree_copy(&(*dest)[i].u.subnode, src[i].u.subnode, level + 1);
 			} else {
-				(*dest)[i].subnode = NULL;
+				(*dest)[i].u.subnode = NULL;
 			}
 		}
 	} else {
 		for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i) {
-			if (num_is_not_initialized(src[i].num)) {
-				(*dest)[i].num = num_undefvalue();
+			if (num_is_not_initialized(src[i].u.num)) {
+				(*dest)[i].u.num = num_undefvalue();
 			} else {
-				(*dest)[i].num = num_construct_from_num(src[i].num);
+				(*dest)[i].u.num = num_construct_from_num(src[i].u.num);
 			}
 		}
 	}
@@ -319,11 +319,11 @@ static long int core_array_count(const node_t *nodes, int rec_level)
 	if (rec_level < TREE_LEVELS - 1) {
 		int i;
 		for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i)
-			r += core_array_count(nodes[i].subnode, rec_level + 1);
+			r += core_array_count(nodes[i].u.subnode, rec_level + 1);
 	} else {
 		int i;
 		for (i = 0; i < TREE_NB_DESCENDANTS_BY_NODE; ++i) {
-			if (!num_is_not_initialized(nodes[i].num))
+			if (!num_is_not_initialized(nodes[i].u.num))
 				++r;
 		}
 	}

@@ -92,7 +92,7 @@ struct expr_t {
 		accessvar_t var;
 		numptr num;
 		builtin_id builtin;
-	};
+	} x;
 	int nb_args;
 	callargs_t *cargs;
 };
@@ -146,19 +146,19 @@ static int (*table_eval[])(const expr_t *self, const numptr *value_args, numptr 
 
 static void destruct_number(expr_t *self)
 {
-	num_destruct(&self->num);
+	num_destruct(&self->x.num);
 }
 
 static void destruct_getvar(expr_t *self)
 {
-	free(self->var.name);
-	expr_destruct(self->var.index);
+	free(self->x.var.name);
+	expr_destruct(self->x.var.index);
 }
 
 static void destruct_setvar(expr_t *self)
 {
-	free(self->var.name);
-	expr_destruct(self->var.index);
+	free(self->x.var.name);
+	expr_destruct(self->x.var.index);
 }
 
 static void destruct_builtin_op(expr_t *self) { UNUSED(self); }
@@ -213,24 +213,24 @@ static expr_t *expr_construct(enode_t type, int nb_args)
 expr_t *expr_construct_number(numptr num)
 {
 	expr_t *self = expr_construct(ENODE_NUMBER, 0);
-	self->num = num;
+	self->x.num = num;
 	return self;
 }
 
 expr_t *expr_construct_getvar(const char *varname, expr_t *index)
 {
 	expr_t *self =  expr_construct(ENODE_GETVAR, 0);
-	self->var.name = (char *)varname;
-	self->var.index = index;
+	self->x.var.name = (char *)varname;
+	self->x.var.index = index;
 		/* Good practice to have NOOP action for getvar (but not examined) */
-	self->var.builtin = FN_NOOP;
+	self->x.var.builtin = FN_NOOP;
 	return self;
 }
 
 static expr_t *expr_construct_op1_builtin_id(builtin_id builtin, expr_t *e1)
 {
 	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 1);
-	self->builtin = builtin;
+	self->x.builtin = builtin;
 	callarg_set_to_expr(&self->cargs[0], e1);
 	return self;
 }
@@ -291,7 +291,7 @@ static builtin_id str2builtin_id(const char *op)
 static expr_t *expr_construct_op2_builtin_id(builtin_id id, expr_t *e1, expr_t *e2)
 {
 	expr_t *self = expr_construct(ENODE_BUILTIN_OP, 2);
-	self->builtin = id;
+	self->x.builtin = id;
 	callarg_set_to_expr(&self->cargs[0], e1);
 	callarg_set_to_expr(&self->cargs[1], e2);
 	return self;
@@ -339,13 +339,13 @@ expr_t *expr_construct_setvar(const char *varname, expr_t *index, const char *op
 		FATAL_ERROR("Unknown operator: '%s'", op);
 
 	expr_t *self = expr_construct(is_postfix ? ENODE_SETVAR_POSTFIX : ENODE_SETVAR, 1);
-	self->var.name = (char *)varname;
-	self->var.index = index;
-	self->var.builtin = id;
+	self->x.var.name = (char *)varname;
+	self->x.var.index = index;
+	self->x.var.builtin = id;
 	callarg_set_to_expr(&self->cargs[0], e1);
-	if (self->type == ENODE_SETVAR && self->var.builtin == FN_NOOP) {
+	if (self->type == ENODE_SETVAR && self->x.var.builtin == FN_NOOP) {
 		if (expr_is_constant(e1)) {
-			hackbc_check(self->var.name, e1);
+			hackbc_check(self->x.var.name, e1);
 		}
 	}
 	return self;
@@ -426,7 +426,7 @@ expr_t *expr_construct_function_call(const char *fcnt_name, callargs_t *callargs
 		w = w->next;
 	}
 	expr_t *self = expr_construct(ENODE_FUNCTION_CALL, n);
-	self->var.name = (char *)fcnt_name;
+	self->x.var.name = (char *)fcnt_name;
 	int i;
 	w = callargs;
 	for (i = 0; i < n; ++i) {
@@ -504,13 +504,13 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 	function_t *f = NULL;
 
 	if (self->type == ENODE_FUNCTION_CALL) {
-		if ((f = vars_get_function(self->var.name)) == NULL) {
-			set_exec_error_message(pexec_ctx, "Function %s not defined", self->var.name);
+		if ((f = vars_get_function(self->x.var.name)) == NULL) {
+			set_exec_error_message(pexec_ctx, "Function %s not defined", self->x.var.name);
 			return ERROR_CUSTOM;
 		}
 		if (f->ftype == FTYPE_USER) {
 			exec_ctx_t *pexec_ctx_without_modulo = construct_child_exec_ctx_t(pexec_ctx);
-			pexec_ctx_without_modulo->function_name = self->var.name;
+			pexec_ctx_without_modulo->function_name = self->x.var.name;
 			int r = eval_function_call(self, f, pval, pexec_ctx_without_modulo);
 			destruct_exec_ctx_t(pexec_ctx_without_modulo, r != ERROR_NONE);
 			return r;
@@ -528,8 +528,8 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 	int ii;
 	int r = ERROR_NONE;
 
-	int is_modulo_op = (self->type == ENODE_BUILTIN_OP && self->builtin == FN_MOD);
-	int is_pow_op = (self->type == ENODE_BUILTIN_OP && self->builtin == FN_POW);
+	int is_modulo_op = (self->type == ENODE_BUILTIN_OP && self->x.builtin == FN_MOD);
+	int is_pow_op = (self->type == ENODE_BUILTIN_OP && self->x.builtin == FN_POW);
 
 	for (ii = 0; ii < nbargs; ++ii) {
 
@@ -589,7 +589,7 @@ UNUSED(pexec_ctx);
 
 	assert(self->type == ENODE_NUMBER && self->nb_args == 0 && value_args == NULL);
 	assert(num_is_not_initialized(*pval));
-	*pval = num_construct_from_num(self->num);
+	*pval = num_construct_from_num(self->x.num);
 	return ERROR_NONE;
 }
 
@@ -626,15 +626,15 @@ static int eval_getvar_core(const expr_t *self, const numptr **ppval, int create
 {
 	long int idxval = 0;
 	int r;
-	if ((r = getindex(self->var.index, &idxval, pexec_ctx)) != ERROR_NONE)
+	if ((r = getindex(self->x.var.index, &idxval, pexec_ctx)) != ERROR_NONE)
 		return r;
-	getvar_core(self->var.name, self->var.index != NULL, idxval, ppval, is_becoming_lvalue);
+	getvar_core(self->x.var.name, self->x.var.index != NULL, idxval, ppval, is_becoming_lvalue);
 
 	if (!*ppval && create_if_missing) {
-		if (self->var.index != NULL) {
-			vars_array_set_value(self->var.name, idxval, num_construct(), ppval);
+		if (self->x.var.index != NULL) {
+			vars_array_set_value(self->x.var.name, idxval, num_construct(), ppval);
 		} else {
-			r = vars_set_value(self->var.name, num_construct(), ppval);
+			r = vars_set_value(self->x.var.name, num_construct(), ppval);
 		}
 	}
 
@@ -666,7 +666,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 	assert((self->type == ENODE_SETVAR || self->type == ENODE_SETVAR_POSTFIX) && self->nb_args == 1 && value_args != NULL);
 	assert(num_is_not_initialized(*pval));
 
-	int has_index = self->var.index != NULL;
+	int has_index = self->x.var.index != NULL;
 	long int idxval = 0;
 
 	numptr val = num_undefvalue();
@@ -675,11 +675,11 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 	int res_is_to_be_destructed = FALSE;
 	const numptr *presult = NULL;
 
-	int r = getindex(self->var.index, &idxval, pexec_ctx);
+	int r = getindex(self->x.var.index, &idxval, pexec_ctx);
 	if (r != ERROR_NONE)
 		return r;
 
-	if (self->var.builtin == FN_NOOP)
+	if (self->x.var.builtin == FN_NOOP)
 
 			/*
 			 * Simple assignment case, examples:
@@ -691,7 +691,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 
 	else {
 		const numptr *pnum;
-		getvar_core(self->var.name, has_index, idxval, &pnum, is_becoming_lvalue);
+		getvar_core(self->x.var.name, has_index, idxval, &pnum, is_becoming_lvalue);
 		if (pnum == NULL)
 			val = num_construct();
 		else
@@ -709,7 +709,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 				 *   --b[3*4]
 				 *
 				 * */
-			etmp = expr_construct_op1_builtin_id(self->var.builtin, exprval);
+			etmp = expr_construct_op1_builtin_id(self->x.var.builtin, exprval);
 
 		} else {
 
@@ -720,7 +720,7 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 				 *
 				 * */
 			expr_t *earg0 = expr_construct_number(num_construct_from_num(value_args[0]));
-			etmp = expr_construct_op2_builtin_id(self->var.builtin, exprval, earg0);
+			etmp = expr_construct_op2_builtin_id(self->x.var.builtin, exprval, earg0);
 		}
 		r = expr_eval(etmp, &res, pexec_ctx);
 		if (r == ERROR_NONE) {
@@ -732,9 +732,9 @@ static int eval_setvar_core(const expr_t *self, const numptr *value_args, numptr
 
 	if (r == ERROR_NONE) {
 		if (has_index) {
-			vars_array_set_value(self->var.name, idxval, num_construct_from_num(*presult), ppvarnum);
+			vars_array_set_value(self->x.var.name, idxval, num_construct_from_num(*presult), ppvarnum);
 		} else {
-			r = vars_set_value(self->var.name, num_construct_from_num(*presult), ppvarnum);
+			r = vars_set_value(self->x.var.name, num_construct_from_num(*presult), ppvarnum);
 		}
 		if (r == ERROR_NONE)
 			*pval = num_construct_from_num(is_postfix ? val : *presult);
@@ -762,7 +762,7 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 	numptr numone;
 	numptr inv;
 	int r;
-	switch (self->builtin) {
+	switch (self->x.builtin) {
 		case FN_ADD:
 			assert(self->nb_args == 2 && value_args != NULL);
 			return num_add(pval, value_args[0], value_args[1]);
@@ -860,7 +860,7 @@ UNUSED(pexec_ctx);
 	else if (n == 3)
 		return f->builtin3arg(pval, value_args[0], value_args[1], value_args[2]);
 	else
-		FATAL_ERROR("Number of arguments not implemented (%d) for function %s", n, self->var.name);
+		FATAL_ERROR("Number of arguments not implemented (%d) for function %s", n, self->x.var.name);
 
 		/* Never executed... */
 	return ERROR_NONE;
@@ -916,7 +916,7 @@ typedef struct record_keeper_action_to_execute {
 	int is_set;
 	vars_keeper_t *k;
 	const char *n;
-	vars_value_t v;
+	vars_value_t val;
 } rec;
 
 	assert(self->type == ENODE_FUNCTION_CALL);
@@ -949,8 +949,8 @@ typedef struct record_keeper_action_to_execute {
 		assert(darg != NULL);
 
 		vars_value_t nv;
-		nv.num = num_undefvalue();
-		nv.array = NULL;
+		nv.v.num = num_undefvalue();
+		nv.v.array = NULL;
 		nv.num_ref = NULL;
 		nv.array_ref = NULL;
 
@@ -964,7 +964,7 @@ typedef struct record_keeper_action_to_execute {
 				break;
 			}
 			nv.type = TYPE_NUM;
-			if ((r = myeval(ca->e, &nv.num, pexec_ctx)) != ERROR_NONE)
+			if ((r = myeval(ca->e, &nv.v.num, pexec_ctx)) != ERROR_NONE)
 				break;
 		} else if (darg->type == DARG_ARRAYVALUE) {
 			out_dbg("Argument %s (#%d) is array byval\n", darg->name, ii);
@@ -973,7 +973,7 @@ typedef struct record_keeper_action_to_execute {
 				break;
 			}
 			nv.type = TYPE_ARRAY;
-			nv.array = vars_array_copy(ca->array_name);
+			nv.v.array = vars_array_copy(ca->array_name);
 		} else if (darg->type == DARG_REF) {
 			out_dbg("Argument %s (#%d) is var byref\n", darg->name, ii);
 			if (ca->type != CARG_EXPR || ca->e == NULL) {
@@ -1001,7 +1001,7 @@ typedef struct record_keeper_action_to_execute {
 		recs[ii].is_set = TRUE;
 		recs[ii].k = &keeper[ii];
 		recs[ii].n = darg->name;
-		recs[ii].v = nv;
+		recs[ii].val = nv;
 /*        vars_send_to_keeper(&keeper[ii], darg->name, &nv);*/
 
 		darg = darg->next;
@@ -1025,18 +1025,18 @@ typedef struct record_keeper_action_to_execute {
 			if (darg->type == DARG_VALUE) {
 				out_dbg("Auto variable %d (#%s) is var\n", n, darg->name);
 				nv.type = TYPE_NUM;
-				nv.num = num_construct();
+				nv.v.num = num_construct();
 			} else if (darg->type == DARG_ARRAYVALUE) {
 				out_dbg("Auto variable %d (#%s) is array\n", n, darg->name);
 				nv.type = TYPE_ARRAY;
-				nv.array = NULL;
+				nv.v.array = NULL;
 			} else
 				FATAL_ERROR("Unknown auto variable type: %d for darg #%lu", darg->type, darg);
 
 			recs[ii].is_set = TRUE;
 			recs[ii].k = &keeper[ii];
 			recs[ii].n = darg->name;
-			recs[ii].v = nv;
+			recs[ii].val = nv;
 /*            vars_send_to_keeper(&keeper[ii], darg->name, &nv);*/
 
 			++ii;
@@ -1048,7 +1048,7 @@ typedef struct record_keeper_action_to_execute {
 		for (ii = 0; ii < nbargs + nbauto; ++ii) {
 			assert(recs[ii].is_set);
 			assert(recs[ii].k == &keeper[ii]);
-			vars_send_to_keeper(recs[ii].k, recs[ii].n, &recs[ii].v);
+			vars_send_to_keeper(recs[ii].k, recs[ii].n, &recs[ii].val);
 			recs[ii].is_set = FALSE;
 		}
 
@@ -1091,11 +1091,11 @@ typedef struct record_keeper_action_to_execute {
 
 	for (ii = 0; ii < nbargs + nbauto; ++ii) {
 		if (recs[ii].is_set) {
-			if (recs[ii].v.type == TYPE_NUM && recs[ii].v.num_ref == NULL) {
-				assert(!num_is_not_initialized(recs[ii].v.num));
-				num_destruct(&recs[ii].v.num);
-			} else if (recs[ii].v.type == TYPE_ARRAY && recs[ii].v.array_ref == NULL) {
-				array_destruct(recs[ii].v.array);
+			if (recs[ii].val.type == TYPE_NUM && recs[ii].val.num_ref == NULL) {
+				assert(!num_is_not_initialized(recs[ii].val.v.num));
+				num_destruct(&recs[ii].val.v.num);
+			} else if (recs[ii].val.type == TYPE_ARRAY && recs[ii].val.array_ref == NULL) {
+				array_destruct(recs[ii].val.v.array);
 			}
 		}
 	}
@@ -1116,14 +1116,14 @@ void expr_check(expr_t *e, exec_ctx_t *pexec_ctx, check_t *check)
 
 	function_t *f;
 	if (e->type == ENODE_FUNCTION_CALL) {
-		if ((f = vars_get_function(e->var.name)) == NULL) {
-			set_exec_error_message(pexec_ctx, "Function %s not defined", e->var.name);
+		if ((f = vars_get_function(e->x.var.name)) == NULL) {
+			set_exec_error_message(pexec_ctx, "Function %s not defined", e->x.var.name);
 			outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
 			return;
 		}
 		if (f->ftype == FTYPE_USER) {
 			if (count_defargs(f->defargs) != e->nb_args) {
-				set_exec_error_message(pexec_ctx, "Parameter number mismatch in %s() call", e->var.name);
+				set_exec_error_message(pexec_ctx, "Parameter number mismatch in %s() call", e->x.var.name);
 				outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
 			} else {
 				defargs_t *darg = f->defargs;
@@ -1145,7 +1145,7 @@ void expr_check(expr_t *e, exec_ctx_t *pexec_ctx, check_t *check)
 						}
 					}
 					if (flag) {
-						set_exec_error_message(pexec_ctx, "%s() call: argument #%d mismatch", e->var.name, ii + 1);
+						set_exec_error_message(pexec_ctx, "%s() call: argument #%d mismatch", e->x.var.name, ii + 1);
 						outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
 					}
 					darg = darg->next;
@@ -1156,7 +1156,7 @@ void expr_check(expr_t *e, exec_ctx_t *pexec_ctx, check_t *check)
 				f->check_id = check->id;
 				check_t save_check = *check;
 				const char *save_function_name = pexec_ctx->function_name;
-				pexec_ctx->function_name = e->var.name;
+				pexec_ctx->function_name = e->x.var.name;
 				check->is_void = f->is_void;
 				check->is_inside_loop = FALSE;
 				/* no update of i_want_a_value here, the one found in *check is good enough */
@@ -1166,7 +1166,7 @@ void expr_check(expr_t *e, exec_ctx_t *pexec_ctx, check_t *check)
 			}
 		} else if (f->ftype == FTYPE_BUILTIN) {
 			if (f->builtin_nb_args != e->nb_args) {
-				set_exec_error_message(pexec_ctx, "Parameter number mismatch in %s() call", e->var.name);
+				set_exec_error_message(pexec_ctx, "Parameter number mismatch in %s() call", e->x.var.name);
 				outln_exec_error(ERROR_CUSTOM, pexec_ctx, FALSE);
 			}
 		} else {
@@ -1174,7 +1174,7 @@ void expr_check(expr_t *e, exec_ctx_t *pexec_ctx, check_t *check)
 		}
 
 		if (check->i_want_a_value && f->is_void) {
-			set_exec_error_message(pexec_ctx, "Call of void %s() in a context requesting a value", e->var.name);
+			set_exec_error_message(pexec_ctx, "Call of void %s() in a context requesting a value", e->x.var.name);
 			outln_exec_error(ERROR_CUSTOM, pexec_ctx, TRUE);
 		}
 

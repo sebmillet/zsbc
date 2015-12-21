@@ -47,7 +47,7 @@ struct program_t {
 		program_loop_t loop;	/* TINSTR_LOOP */
 		program_ifseq_t ifseq;	/* TINSTR_IFSEQ */
 		defargs_t *autolist;	/* TINSTR_DEFARGS */
-	};
+	} prg;
 
 	program_t *next;
 		/*
@@ -75,7 +75,7 @@ static program_t *program_construct(instr_t type, const code_location_t *ploc)
 program_t *program_construct_expr(expr_t *e, int is_assignment, const code_location_t loc)
 {
 	program_t *p = program_construct(is_assignment ? TINSTR_EXPR_ASSIGN_EXPR : TINSTR_EXPR_EXPR, &loc);
-	p->expr = e;
+	p->prg.expr = e;
 	out_dbg("Construct of one program of type %s, address = %lu\n", is_assignment ? "TINSTR_ASSIGN_EXPR" : "TINSTR_EXPR", p);
 	return p;
 }
@@ -90,7 +90,7 @@ program_t *program_construct_expr(expr_t *e, int is_assignment, const code_locat
 program_t *program_construct_return(expr_t *e, const code_location_t loc)
 {
 	program_t *p = program_construct(TINSTR_EXPR_RETURN, &loc);
-	p->expr = e;
+	p->prg.expr = e;
 	out_dbg("Construct of one program of type return, expression: %lu, address = %lu\n", e, p);
 	return p;
 }
@@ -98,7 +98,7 @@ program_t *program_construct_return(expr_t *e, const code_location_t loc)
 program_t *program_construct_str(const char *s, const code_location_t loc)
 {
 	program_t *p = program_construct(TINSTR_STR, &loc);
-	p->str = (char *)s;
+	p->prg.str = (char *)s;
 	out_dbg("Construct one program of type string, string value: '%s', address = %lu\n", s, p);
 	return p;
 }
@@ -106,7 +106,7 @@ program_t *program_construct_str(const char *s, const code_location_t loc)
 program_t *program_construct_loop(program_loop_t *loop, const code_location_t loc)
 {
 	program_t *p = program_construct(TINSTR_LOOP, &loc);
-	p->loop = *loop;
+	p->prg.loop = *loop;
 	out_dbg("Construct one program of type loop, address = %lu\n", p);
 	return p;
 }
@@ -128,7 +128,7 @@ program_t *program_construct_continue(const code_location_t loc)
 program_t *program_construct_ifseq(program_ifseq_t *ifseq, const code_location_t loc)
 {
 	program_t *p = program_construct(TINSTR_IFSEQ, &loc);
-	p->ifseq = *ifseq;
+	p->prg.ifseq = *ifseq;
 	out_dbg("Construct of one program of type if, expression: %lu, program_if: %lu, program_else: %lu, address = %lu\n",
 		ifseq->expr, ifseq->pif, ifseq->pelse, p);
 	return p;
@@ -137,7 +137,7 @@ program_t *program_construct_ifseq(program_ifseq_t *ifseq, const code_location_t
 program_t *program_construct_autolist(defargs_t *autolist, const code_location_t loc)
 {
 	program_t *p = program_construct(TINSTR_AUTOLIST, &loc);
-	p->autolist = (autolist == defarg_t_badarg ? NULL : autolist);
+	p->prg.autolist = (autolist == defarg_t_badarg ? NULL : autolist);
 	out_dbg("Construct of one program of type autolist, autolist: %lu, address = %lu\n", autolist, p);
 	return p;
 }
@@ -153,13 +153,13 @@ void program_gather_defargs(defargs_t **pautolist, program_t **base)
 
 				/* 1- Detach the list from the program and attach it to the given autolist */
 
-			if (p->autolist) {
+			if (p->prg.autolist) {
 				if (!*pautolist) {
-					*pautolist = p->autolist;
+					*pautolist = p->prg.autolist;
 				} else {
-					defargs_chain(*pautolist, p->autolist);
+					defargs_chain(*pautolist, p->prg.autolist);
 				}
-				p->autolist = NULL;
+				p->prg.autolist = NULL;
 			}
 
 				/* 2- Destruct the program and update pointers chain accordingly */
@@ -197,28 +197,28 @@ void program_destruct(program_t *p)
 			case TINSTR_EXPR_EXPR:
 			case TINSTR_EXPR_ASSIGN_EXPR:
 			case TINSTR_EXPR_RETURN:
-				expr_destruct(p->expr);
+				expr_destruct(p->prg.expr);
 				break;
 			case TINSTR_STR:
-				free(p->str);
+				free(p->prg.str);
 				break;
 			case TINSTR_LOOP:
-				expr_destruct(p->loop.exprbefore);
-				expr_destruct(p->loop.testbefore);
-				program_destruct(p->loop.core);
-				expr_destruct(p->loop.testafter);
-				expr_destruct(p->loop.exprafter);
+				expr_destruct(p->prg.loop.exprbefore);
+				expr_destruct(p->prg.loop.testbefore);
+				program_destruct(p->prg.loop.core);
+				expr_destruct(p->prg.loop.testafter);
+				expr_destruct(p->prg.loop.exprafter);
 				break;
 			case TINSTR_BREAK:
 			case TINSTR_CONTINUE:
 				break;
 			case TINSTR_IFSEQ:
-				expr_destruct(p->ifseq.expr);
-				program_destruct(p->ifseq.pif);
-				program_destruct(p->ifseq.pelse);
+				expr_destruct(p->prg.ifseq.expr);
+				program_destruct(p->prg.ifseq.pif);
+				program_destruct(p->prg.ifseq.pelse);
 				break;
 			case TINSTR_AUTOLIST:
-				defargs_destruct(p->autolist);
+				defargs_destruct(p->prg.autolist);
 				break;
 			default:
 				FATAL_ERROR("Unknown program type: %d, program address: %lu", p->type, p);
@@ -259,7 +259,7 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 			case TINSTR_EXPR_RETURN:
 				print_result = (p->type == TINSTR_EXPR_EXPR || (p->is_part_of_print && p->type == TINSTR_EXPR_ASSIGN_EXPR));
 				num = num_undefvalue();
-				if ((r = expr_eval(p->expr, &num, pexec_ctx)) != ERROR_NONE) {
+				if ((r = expr_eval(p->prg.expr, &num, pexec_ctx)) != ERROR_NONE) {
 					out_dbg("Expression produced return value %d\n", r);
 					break;
 				} else if (print_result && !num_is_not_initialized(num)) {
@@ -283,12 +283,12 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 				}
 				break;
 			case TINSTR_STR:
-				t = interpret_escape_sequences_alloc(p->str);
+				t = interpret_escape_sequences_alloc(p->prg.str);
 				outstring(t, FALSE);
 				free(t);
 				break;
 			case TINSTR_LOOP:
-				loop = &p->loop;
+				loop = &p->prg.loop;
 
 					/* First term of 3-term for() */
 				num = num_undefvalue();
@@ -350,7 +350,7 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 				r = ERROR_CONTINUE;
 				break;
 			case TINSTR_IFSEQ:
-				ifseq = &p->ifseq;
+				ifseq = &p->prg.ifseq;
 
 					/* PART 1 - TEST */
 
@@ -437,7 +437,7 @@ void program_check(program_t *p, exec_ctx_t *pexec_ctx, check_t *check)
 			case TINSTR_EXPR_EXPR:
 			case TINSTR_EXPR_ASSIGN_EXPR:
 				check->i_want_a_value = p->is_part_of_print;
-				expr_check(p->expr, pexec_ctx, check);
+				expr_check(p->prg.expr, pexec_ctx, check);
 				break;
 
 			case TINSTR_STR:
@@ -446,39 +446,39 @@ void program_check(program_t *p, exec_ctx_t *pexec_ctx, check_t *check)
 
 			case TINSTR_IFSEQ:
 				check->i_want_a_value = TRUE;
-				expr_check(p->ifseq.expr, pexec_ctx, check);
+				expr_check(p->prg.ifseq.expr, pexec_ctx, check);
 				check->i_want_a_value = FALSE;
-				program_check(p->ifseq.pif, pexec_ctx, check);
-				if (p->ifseq.pelse != NULL) {
+				program_check(p->prg.ifseq.pif, pexec_ctx, check);
+				if (p->prg.ifseq.pelse != NULL) {
 					check->i_want_a_value = FALSE;
-					program_check(p->ifseq.pelse, pexec_ctx, check);
+					program_check(p->prg.ifseq.pelse, pexec_ctx, check);
 				}
 				break;
 
 			case TINSTR_EXPR_RETURN:
-				if (p->expr == NULL && !check->is_void) {
+				if (p->prg.expr == NULL && !check->is_void) {
 					set_exec_error_message(pexec_ctx, "Void return in non void function");
 					outln_exec_error(ERROR_CUSTOM, pexec_ctx, TRUE);
-				} else if (p->expr != NULL && check->is_void) {
+				} else if (p->prg.expr != NULL && check->is_void) {
 					set_exec_error_message(pexec_ctx, "Non void return in void function");
 					outln_exec_error(ERROR_CUSTOM, pexec_ctx, TRUE);
 				}
 				check->i_want_a_value = TRUE;
-				expr_check(p->expr, pexec_ctx, check);
+				expr_check(p->prg.expr, pexec_ctx, check);
 				break;
 
 			case TINSTR_LOOP:
 				check->is_inside_loop = TRUE;
 				check->i_want_a_value = FALSE;
-				expr_check(p->loop.exprbefore, pexec_ctx, check);
+				expr_check(p->prg.loop.exprbefore, pexec_ctx, check);
 				check->i_want_a_value = TRUE;
-				expr_check(p->loop.testbefore, pexec_ctx, check);
+				expr_check(p->prg.loop.testbefore, pexec_ctx, check);
 				check->i_want_a_value = FALSE;
-				program_check(p->loop.core, pexec_ctx, check);
+				program_check(p->prg.loop.core, pexec_ctx, check);
 				check->i_want_a_value = TRUE;
-				expr_check(p->loop.testafter, pexec_ctx, check);
+				expr_check(p->prg.loop.testafter, pexec_ctx, check);
 				check->i_want_a_value = FALSE;
-				expr_check(p->loop.exprafter, pexec_ctx, check);
+				expr_check(p->prg.loop.exprafter, pexec_ctx, check);
 				break;
 
 			case TINSTR_BREAK:
