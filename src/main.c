@@ -687,7 +687,7 @@ if (++a >= argc) { \
 				break;
 			}
 		} else {
-			input_register(IT_FILE, argv[a], NULL, -1, TRUE);
+			input_register(IT_FILE, argv[a], NULL, 0, TRUE);
 		}
 #ifdef ZZDEBUGOPTS
 			fprintf(stderr, "B - shortopt_i = %d, shortopt_nb = %d\n", shortopt_i, shortopt_nb);
@@ -703,7 +703,7 @@ if (++a >= argc) { \
 #endif
 	}
 	while (a >= 1 && a < argc) {
-		input_register(IT_FILE, argv[a], NULL, -1, TRUE);
+		input_register(IT_FILE, argv[a], NULL, 0, TRUE);
 		++a;
 	}
 

@@ -161,9 +161,9 @@ static void destruct_setvar(expr_t *self)
 	expr_destruct(self->var.index);
 }
 
-static void destruct_builtin_op(expr_t *self) { }
+static void destruct_builtin_op(expr_t *self) { UNUSED(self); }
 
-static void destruct_function_call(expr_t *self) { }
+static void destruct_function_call(expr_t *self) { UNUSED(self); }
 
 void expr_destruct(expr_t *self)
 {
@@ -585,6 +585,8 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 
 static int eval_number(const expr_t *self, const numptr *value_args, numptr *pval, exec_ctx_t *pexec_ctx)
 {
+UNUSED(pexec_ctx);
+
 	assert(self->type == ENODE_NUMBER && self->nb_args == 0 && value_args == NULL);
 	assert(num_is_not_initialized(*pval));
 	*pval = num_construct_from_num(self->num);
@@ -841,6 +843,8 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 
 static int eval_builtin_function_call(const expr_t *self, const function_t *f, const numptr *value_args, numptr *pval, exec_ctx_t *pexec_ctx)
 {
+UNUSED(pexec_ctx);
+
 	int n = f->builtin_nb_args;
 
 	assert(((value_args == NULL && self->nb_args == 0) || (value_args != NULL && self->nb_args >= 1)) && self->nb_args == n);
