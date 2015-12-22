@@ -48,6 +48,7 @@ const code_location_t code_loc(const YYLTYPE yl);
 const char *input_get_name();
 
 extern defargs_t *defarg_t_badarg;
+extern int flag_quitting;
 
 #ifdef BISON_DEBUG
 #define YYDEBUG 1
@@ -380,7 +381,7 @@ function_call:
 
 statement:
 	function_definition
-	| QUIT { YYABORT; }
+	| QUIT { flag_quitting = TRUE; YYABORT; }
 	| SYMBOLS {
 		vars_display_all();
 	}

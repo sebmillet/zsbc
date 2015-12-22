@@ -80,47 +80,9 @@ static int bc_mathlib = FALSE;
 	/* When debug activated, name of files to display the debug of (NULL: display all) */
 const char *debug_filenames = NULL;
 
-	/*
-	 * FIXME
-	 *
-	 * Originally, load of the libmath library (the bc syntax code that defines
-	 * e, l, s, c, a and j math functions) used a fake file open over built-in
-	 * data. By the way this built-in data is libbc_libmath, it is provided
-	 * by src/bc/libmath.c, built from the bc-original libmath.b.
-	 * This functionality would use the function fmemopen.
-	 * Good.
-	 *
-	 * Then I tried to compile it under Windows and... no fmemopen function!
-	 * And I didn't want to undergo the crazyness of writing the data stream into
-	 * a temp file read by the parser at program start-up.
-	 * So, I used yy_scan_buffer function.
-	 *
-	 * As it turns out, this way of working is MUCH easier than the initial
-	 * use of fmemopen.
-	 * Now, why this FIXME?
-	 * All the below (type of input as being file versus data, address of data, ...)
-	 * is useless! I leave it here for the time being, in case I'd need different
-	 * inputs (different from simple files whose name is specified as command-line
-	 * arguments).
-	 * But I think after an important delay I'll remove and simplify all this back.
-	 *
-	 */
-
-/*#ifdef MY_WINDOWS*/
-	/*
-	 * Hack to make mingw happy in the absence of fmemopen.
-	 * It is extremly gruiiik.
-	 * */
-/*#define fmemopen(a, b, c) fopen("", c)*/
-/*#endif*/
-
-enum {IT_FILE, IT_BUILTIN_DATA};
 	/* To manage input files specified in command line arguments */
 typedef struct input_t {
-	int itype;
 	const char *name;
-	const void *data;
-	size_t data_size;
 } input_t;
 
 static input_t *input_list = NULL;
@@ -129,13 +91,14 @@ static int input_nb = 0;
 static int input_cursor;
 static const char *input_name;
 static FILE *input_FILE;
-static void input_register(int itype, const char *name, const void *data, size_t data_size, int append);
+static void input_register(const char *name);
 static void set_input_name(const char *s);
 const char *input_get_name();
 static void input_terminate();
 
 static int flag_interrupt_execution = FALSE;
 static int flag_execution_underway = FALSE;
+int flag_quitting = FALSE;
 
 static const char *table_errors[] = {
 	NULL,								/* ERROR_NONE */
@@ -576,6 +539,7 @@ void interrupt_signal_handler(int sig)
 {
 	if (flag_execution_underway) {
 		flag_interrupt_execution = TRUE;
+		signal(SIGINT, interrupt_signal_handler);
 		return;
 	}
 
@@ -585,13 +549,13 @@ void interrupt_signal_handler(int sig)
 	rl_initialize();
 #endif
 
+	signal(SIGINT, interrupt_signal_handler);
 }
 
 int is_flag_interrupt_execution_set()
 {
 	int r = flag_interrupt_execution;
 	flag_interrupt_execution = FALSE;
-	signal(SIGINT, interrupt_signal_handler);
 	return r;
 }
 
@@ -726,7 +690,7 @@ if (++a >= argc) { \
 				break;
 			}
 		} else {
-			input_register(IT_FILE, argv[a], NULL, 0, TRUE);
+			input_register(argv[a]);
 		}
 #ifdef ZZDEBUGOPTS
 			fprintf(stderr, "B - shortopt_i = %d, shortopt_nb = %d\n", shortopt_i, shortopt_nb);
@@ -742,7 +706,7 @@ if (++a >= argc) { \
 #endif
 	}
 	while (a >= 1 && a < argc) {
-		input_register(IT_FILE, argv[a], NULL, 0, TRUE);
+		input_register(argv[a]);
 		++a;
 	}
 
@@ -978,8 +942,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "%s: option -l (a.k. -mathlib) works only with libbc. Consider using option '--numlib bc'.\n", PACKAGE_NAME);
 		exit(-3);
 	}
-/*    if (bc_mathlib)*/
-/*        input_register(IT_BUILTIN_DATA, "<builtin mathlib>", libbc_libmath, libbc_libmath_len, FALSE);*/
 
 	int i;
 	for (i = 0; i < input_nb; ++i) {
@@ -1054,7 +1016,7 @@ void lib_list()
 	 *
 	 * Adds entry at first position if append is FALSE, or at last position if append is TRUE.
 	 * */
-static void input_register(int itype, const char *name, const void *data, size_t data_size, int append)
+static void input_register(const char *name)
 {
 	if (++input_nb > input_nb_alloc) {
 		if (input_list == NULL) {
@@ -1066,19 +1028,8 @@ static void input_register(int itype, const char *name, const void *data, size_t
 		}
 	}
 	input_t *new_input;
-	if (!append) {
-		int i;
-		for (i = input_nb - 1; i >= 0; --i) {
-			input_list[i] = input_list[i - 1];
-		}
-		new_input = &input_list[0];
-	} else {
-		new_input = &input_list[input_nb - 1];
-	}
-	new_input->itype = itype;
+	new_input = &input_list[input_nb - 1];
 	new_input->name = name;
-	new_input->data = data;
-	new_input->data_size = data_size;
 }
 
 static void input_terminate()
@@ -1116,41 +1067,22 @@ FILE *input_get_next()
 
 	if (input_cursor < input_nb) {
 
-/* 1st category of input: entries (files or builtin) to read */
+/* Input is a file (provided in the command-line options) */
 
 		input_t *inp = &input_list[input_cursor];
 		input_name = inp->name;
 		out_dbg("input_get_next() is now on entry: %s\n", input_name);
-		if (inp->itype == IT_FILE) {
 
-/* 1st category -> 1st flavor of input: files provided as command-line arguments */
+		if ((input_FILE = fopen(input_name, "r")) == NULL) {
+			outln_error("File '%s' is unavailable", input_name);
+			exit(-99);
+		} else {
+			out_dbg("input_get_next(): opened file %s, it is the next yyin-to-be\n", input_name);
+		}
 
-			if ((input_FILE = fopen(input_name, "r")) == NULL) {
-				outln_error("File '%s' is unavailable", input_name);
-				exit(-99);
-			} else {
-				out_dbg("input_get_next(): opened file %s, it is the next yyin-to-be\n", input_name);
-			}
-		} else if (inp->itype == IT_BUILTIN_DATA) {
+	} else if (input_cursor >= input_nb && !flag_quitting) {
 
-/* 1st category -> 2nd flavor of input: builtin data */
-
-/* Commented... (does not compile with msvc)
-
-			if ((input_FILE = fmemopen((void *)inp->data, inp->data_size, "r")) == NULL) {
-				outln_error("Builtin data '%s' is unavailable!!! This program executable has serious issues!", input_name);
-				exit(-999);
-			} else {
-				out_dbg("input_get_next(): opened builtin data '%s', it is the next yyin-to-be\n", input_name);
-			}
-*/
-			FATAL_ERROR("%s", "IT_BUILTIN_DATA not available");
-
-		} else
-			FATAL_ERROR("Unknown input_t type, entry: %d, type: %d", input_cursor, inp->itype);
-	} else if (input_cursor == input_nb) {
-
-/* 2nd category of input: stdin */
+/* Input will be stdin */
 
 		input_name = "";
 		input_FILE = stdin;
@@ -1158,7 +1090,7 @@ FILE *input_get_next()
 		check_functions();
 	} else {
 
-/* Inputs terminated... */
+/* Input terminated... */
 
 		input_name = NULL;
 		input_FILE = NULL;
