@@ -1080,7 +1080,9 @@ FILE *input_get_next()
 			out_dbg("input_get_next(): opened file %s, it is the next yyin-to-be\n", input_name);
 		}
 
+#ifdef MY_WINDOWS
 	} else if (input_cursor >= input_nb && !flag_quitting) {
+#endif
 
 /* Input will be stdin */
 
