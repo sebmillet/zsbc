@@ -53,6 +53,8 @@ const char *input_get_name();
     yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
 
+#define YY_NO_INPUT
+
 #ifdef HAS_LIB_READLINE
 void rl_input(char *buf, long unsigned int *result, int max);
 	/* Have input call the following function */

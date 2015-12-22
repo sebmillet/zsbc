@@ -34,6 +34,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #ifdef MY_LINUX
 #include <unistd.h>
@@ -133,9 +134,12 @@ static void set_input_name(const char *s);
 const char *input_get_name();
 static void input_terminate();
 
+static int flag_interrupt_execution = FALSE;
+static int flag_execution_underway = FALSE;
+
 static const char *table_errors[] = {
 	NULL,								/* ERROR_NONE */
-	"Divide by zero",						/* ERROR_DIV0 */
+	"Divide by zero",					/* ERROR_DIV0 */
 	"Negative exponent not authorized",	/* ERROR_NEGATIVE_EXP */
 	"Function not defined",				/* ERROR_FUNCTION_NOT_DEFINED */
 	"Parameter number mismatch",		/* ERROR_PARAMETER_NUMBER_MISMATCH */
@@ -150,6 +154,7 @@ static const char *table_errors[] = {
 	"Function not implemented",			/* ERROR_FUNCTION_NOT_IMPLEMENTED */
 	"No modulo invert",					/* ERROR_NO_INVMOD */
 	"Modulo by zero",					/* ERROR_MODULO0 */
+	"Execution interrupted",			/* ERROR_EXECUTION_INTERRUPTED */
 	NULL								/* ERROR_CUSTOM */
 };
 
@@ -356,6 +361,9 @@ exec_ctx_t *construct_exec_ctx_t()
 	pexec_ctx->error_message = NULL;
 	pexec_ctx->modulo = num_undefvalue();
 	pexec_ctx->parent = NULL;
+
+	flag_execution_underway = TRUE;
+
 	return pexec_ctx;
 }
 
@@ -371,6 +379,9 @@ exec_ctx_t *construct_child_exec_ctx_t(const exec_ctx_t *parent)
 
 void destruct_exec_ctx_t(exec_ctx_t *pexec_ctx, int copy_up)
 {
+	if (pexec_ctx->parent == NULL)
+		flag_execution_underway = FALSE;
+
 	if (pexec_ctx->error_message != NULL) {
 		if (copy_up && pexec_ctx->parent != NULL) {
 			pexec_ctx->parent->error_message = pexec_ctx->error_message;
@@ -390,6 +401,7 @@ void destruct_exec_ctx_t(exec_ctx_t *pexec_ctx, int copy_up)
 		pexec_ctx->parent->ploc = pexec_ctx->ploc;
 
 	free(pexec_ctx);
+
 }
 
 code_location_t construct_unset_code_location_t()
@@ -558,6 +570,29 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 	fprintf(stderr, "\n");
 	va_end(args);
 	exit(1);
+}
+
+void interrupt_signal_handler(int sig)
+{
+	if (flag_execution_underway) {
+		flag_interrupt_execution = TRUE;
+		return;
+	}
+
+	out(L_ENFORCE, "\n(interrupt) use quit to exit.\n");
+
+#ifdef READLINE
+	rl_initialize();
+#endif
+
+}
+
+int is_flag_interrupt_execution_set()
+{
+	int r = flag_interrupt_execution;
+	flag_interrupt_execution = FALSE;
+	signal(SIGINT, interrupt_signal_handler);
+	return r;
 }
 
 	/*
@@ -979,6 +1014,8 @@ int main(int argc, char *argv[])
 #endif
 	} else
 		yywrap();
+
+	signal(SIGINT, interrupt_signal_handler);
 
 	yyparse();
 

@@ -81,7 +81,7 @@ int num_cmpne(numptr *pr, const numptr a, const numptr b);
 int num_and(numptr *pr, const numptr a, const numptr b);
 int num_or(numptr *pr, const numptr a, const numptr b);
 int num_not(numptr *pr, const numptr a);
-int num_implicit_invmod();
+int num_want_automatic_invmod();
 
 
 /*-----------------------------------------------------------------------------

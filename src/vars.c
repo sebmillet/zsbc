@@ -682,7 +682,7 @@ void vars_user_function_construct(char *name, defargs_t *defargs, program_t *pro
 	}
 	destruct_exec_ctx_t(pexec_ctx, FALSE);
 
-	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->pvalue->fcnt.defargs, f->pvalue->fcnt.autolist, f->pvalue->fcnt.program);
+	out_dbg("Constructed function: %lu, name: %s, defargs: %lu, autolist: %lu, program: %lu\n", f, f->name, f->pvalue->v.fcnt.defargs, f->pvalue->v.fcnt.autolist, f->pvalue->v.fcnt.program);
 }
 
 static void register_builtin_function(
@@ -728,19 +728,23 @@ static void register_builtin_function(
 	assert(builtin1arg == NULL || nb_args == 1);
 	assert(builtin2arg == NULL || nb_args == 2);
 	assert(builtin3arg == NULL || nb_args == 3);
-	if (nb_args == 0)
+	if (nb_args == 0) {
 		v->pvalue->v.fcnt.builtin0arg = builtin0arg;
-	else if (nb_args == 1)
+		out_dbg("Constructed function: %lu, name: %s, nb args: %d, function: %lu\n", v, v->name, nb_args, builtin0arg);
+	} else if (nb_args == 1) {
 		v->pvalue->v.fcnt.builtin1arg = builtin1arg;
-	else if (nb_args == 2)
+		out_dbg("Constructed function: %lu, name: %s, nb args: %d, function: %lu\n", v, v->name, nb_args, builtin1arg);
+	} else if (nb_args == 2) {
 		v->pvalue->v.fcnt.builtin2arg = builtin2arg;
-	else if (nb_args == 3)
+		out_dbg("Constructed function: %lu, name: %s, nb args: %d, function: %lu\n", v, v->name, nb_args, builtin2arg);
+	} else if (nb_args == 3) {
 		v->pvalue->v.fcnt.builtin3arg = builtin3arg;
-	else if (nb_args > 3)
+		out_dbg("Constructed function: %lu, name: %s, nb args: %d, function: %lu\n", v, v->name, nb_args, builtin3arg);
+	} else if (nb_args > 3) {
 		FATAL_ERROR("Builtin functions with %d arguments is not supported (maximum: 3)", nb_args);
-	else if (nb_args < 0)
+	} else if (nb_args < 0) {
 		FATAL_ERROR("Internal error", nb_args);
-	out_dbg("Constructed function: %lu, name: %s, nb args: %d, function: %lu\n", v, v->name, nb_args, f);
+	}
 }
 
 static void function_destruct(function_t f)

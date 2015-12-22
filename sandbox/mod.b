@@ -1,7 +1,13 @@
 	/* Calculate the invert of a mod n */
 define _invmod(a, n) {
-	auto aa, bb, r, t, anc_t, nou_t
+	auto aa, bb, r, t, anc_t, nou_t, negflag
 	aa = n
+	negflag = 0
+	if (a < 0) {
+		negflag = 1
+		a %= n
+		if (a < 0) a += n
+	}
 	bb = a
 	r = 1
 	t = 1
@@ -32,6 +38,7 @@ define _invmod(a, n) {
 			*/
 		return 1 % 0
 	} else {
+		if (negflag) t -= n
 		return t
 	}
 }

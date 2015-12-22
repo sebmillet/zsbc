@@ -243,7 +243,11 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 {
 	out_dbg("Entering program_execute for %lu\n", p);
 	int r = ERROR_NONE;
+
 	while (p != NULL && r == ERROR_NONE) {
+		if (is_flag_interrupt_execution_set())
+			return ERROR_EXECUTION_INTERRUPTED;
+
 		out_dbg("Executing one instruction, type: %d, address: %lu\n", p->type, p);
 		pexec_ctx->ploc = &p->loc;
 		numptr num;

@@ -28,7 +28,7 @@
 #include <limits.h>
 #include <ctype.h>
 
-#define NUM_IMPLICIT_INVMOD_DEFAULT FALSE
+#define NUM_AUTOMATIC_INVMOD_DEFAULT FALSE
 
 char *strcasestr(const char *haystack, const char *needle);
 #ifdef MY_WINDOWS
@@ -109,7 +109,7 @@ static int (*Lcmpne)(numptr *pr, const numptr a, const numptr b);
 static int (*Land)(numptr *pr, const numptr a, const numptr b);
 static int (*Lor)(numptr *pr, const numptr a, const numptr b);
 static int (*Lnot)(numptr *pr, const numptr a);
-static int (*Limplicit_invmod)();
+static int (*Lwant_automatic_invmod)();
 static int (*Lread)(numptr *pr);
 
 
@@ -313,7 +313,7 @@ static void libswitch(lib_t *l, int quiet)
 	Land = NULL;
 	Lor = NULL;
 	Lnot = NULL;
-	Limplicit_invmod = NULL;
+	Lwant_automatic_invmod = NULL;
 	Lread = NULL;
 
 	libcurrent = l;
@@ -354,8 +354,8 @@ static void libswitch(lib_t *l, int quiet)
 	assert(Lor != NULL);
 	assert(Lnot != NULL);
 
-		/* Providing implicit_invmod is not necessary... */
-/*    assert(Limplicit_invmod != NULL);*/
+		/* Providing automatic_invmod is not necessary... */
+/*    assert(Lwant_automatic_invmod != NULL);*/
 
 	assert(Lread != NULL);
 
@@ -528,10 +528,20 @@ int num_invmod(numptr *pr, const numptr a, const numptr n)
 	if (Linvmod != NULL)
 		return Linvmod(pr, a, n);
 
+	out_dbg("Performing 'manual' invmod (zsbc code, not numlib)\n");
+
 	numptr one = num_construct_from_int(1);
 	numptr zero = num_construct_from_int(0);
 	numptr aa = num_construct_from_num(n);
-	numptr bb = num_construct_from_num(a);
+
+	numptr bb = num_undefvalue(); num_mod(&bb, a, n);
+	numptr cc = num_undefvalue(); num_cmpge(&cc, bb, zero);
+	int is_neg = num_is_zero(cc); num_destruct(&cc);
+	if (is_neg) {
+		numptr tmp = num_undefvalue(); num_add(&tmp, bb, n);
+		num_destruct(&bb); bb = num_construct_from_num(tmp); num_destruct(&tmp);
+	}
+
 	numptr r = num_construct_from_int(1);
 	numptr t = num_construct_from_int(1);
 	numptr anc_t = num_construct_from_int(0);
@@ -577,7 +587,11 @@ int num_invmod(numptr *pr, const numptr a, const numptr n)
 	if (num_is_zero(compar)) {
 		result = ERROR_NO_INVMOD;
 	} else {
-		*pr = num_construct_from_num(t);
+		if (is_neg) {
+			num_sub(pr, t, n);
+		} else {
+			*pr = num_construct_from_num(t);
+		}
 		result = ERROR_NONE;
 	}
 	num_destruct(&compar);
@@ -652,11 +666,11 @@ int num_not(numptr *pr, const numptr a)
 	return Lnot(pr, a);
 }
 
-int num_implicit_invmod()
+int num_want_automatic_invmod()
 {
-	if (Limplicit_invmod == NULL)
-		return NUM_IMPLICIT_INVMOD_DEFAULT;
-	return Limplicit_invmod();
+	if (Lwant_automatic_invmod == NULL)
+		return NUM_AUTOMATIC_INVMOD_DEFAULT;
+	return Lwant_automatic_invmod();
 }
 
 
@@ -725,7 +739,7 @@ static int gmp_cmpne(numptr *pr, const numptr a, const numptr b);
 static int gmp_and(numptr *pr, const numptr a, const numptr b);
 static int gmp_or(numptr *pr, const numptr a, const numptr b);
 static int gmp_not(numptr *pr, const numptr a);
-static int gmp_implicit_invmod();
+static int gmp_automatic_invmod();
 static int gmp_read(numptr *pr);
 
 static void gmp_register()
@@ -851,7 +865,7 @@ static void gmp_activate()
 	Land = gmp_and;
 	Lor = gmp_or;
 	Lnot = gmp_not;
-	Limplicit_invmod = gmp_implicit_invmod;
+	Lwant_automatic_invmod = gmp_automatic_invmod;
 	Lread = gmp_read;
 
 	outstring_set_line_length(-1);
@@ -1044,6 +1058,8 @@ static int gmp_mod(numptr *pr, const numptr a, const numptr b)
 
 static int gmp_invmod(numptr *pr, const numptr a, const numptr b)
 {
+	out_dbg("Performing gmp invmod\n");
+
 	*pr = num_construct();
 		/*  The calling function, num_mod, has checked whether or not b is null */
 	if (mpz_invert(*(mpz_t *)*pr, *(const mpz_t *)a, *(const mpz_t *)b))
@@ -1135,7 +1151,7 @@ static int gmp_not(numptr *pr, const numptr a)
 	return ERROR_NONE;
 }
 
-static int gmp_implicit_invmod()
+static int gmp_automatic_invmod()
 {
 	return gmp_autoinvmod;
 }

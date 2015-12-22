@@ -73,8 +73,9 @@ const char *VAR_LAST;
 #define ERROR_FUNCTION_NOT_IMPLEMENTED	13
 #define ERROR_NO_INVMOD					14
 #define ERROR_MODULO0					15
-#define ERROR_CUSTOM					16	/* Error string defined at runtime */
-#define ERROR_LAST						16
+#define ERROR_EXECUTION_INTERRUPTED		16
+#define ERROR_CUSTOM					17	/* Error string defined at runtime */
+#define ERROR_LAST						17
 
 #define L_ENFORCE	(-1)
 #define L_ERROR		0
@@ -136,6 +137,8 @@ void set_exec_error_message(exec_ctx_t *exec_ctx, const char *fmt, ...);
 void outln_exec_error(int e, exec_ctx_t *exec_ctx, int is_warning);
 
 void loc_reset();
+
+int is_flag_interrupt_execution_set();
 
 struct function_t;
 typedef struct function_t function_t;

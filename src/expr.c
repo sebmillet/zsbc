@@ -488,6 +488,9 @@ static int myeval(const expr_t *e, numptr *pval, exec_ctx_t *pexec_ctx)
 
 int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 {
+	if (is_flag_interrupt_execution_set())
+		return ERROR_EXECUTION_INTERRUPTED;
+
 	if (self == NULL) {
 		*pval = num_undefvalue();
 		return ERROR_NONE;
@@ -526,6 +529,9 @@ int expr_eval(const expr_t *self, numptr *pval, exec_ctx_t *pexec_ctx)
 	if (nbargs >= 1)
 		value_args = malloc(sizeof(numptr) * (unsigned)nbargs);
 	int ii;
+	for (ii = 0; ii < nbargs; ++ii)
+		value_args[ii] = num_undefvalue();
+
 	int r = ERROR_NONE;
 
 	int is_modulo_op = (self->type == ENODE_BUILTIN_OP && self->x.builtin == FN_MOD);
@@ -774,7 +780,7 @@ static int eval_builtin_op(const expr_t *self, const numptr *value_args, numptr 
 			return num_mul(pval, value_args[0], value_args[1]);
 		case FN_DIV:
 			assert(self->nb_args == 2 && value_args != NULL);
-			if (num_is_not_initialized(pexec_ctx->modulo) || !num_implicit_invmod())
+			if (num_is_not_initialized(pexec_ctx->modulo) || !num_want_automatic_invmod())
 				return num_div(pval, value_args[0], value_args[1]);
 			else {
 				inv = num_undefvalue();
@@ -849,7 +855,7 @@ UNUSED(pexec_ctx);
 
 	assert(((value_args == NULL && self->nb_args == 0) || (value_args != NULL && self->nb_args >= 1)) && self->nb_args == n);
 
-	out_dbg("Evaluating function %s that has %d argument(s)\n", self->var.name, n);
+	out_dbg("Evaluating function %s that has %d argument(s)\n", self->x.var.name, n);
 
 	if (n == 0)
 		return f->builtin0arg(pval);
@@ -922,7 +928,7 @@ typedef struct record_keeper_action_to_execute {
 	assert(self->type == ENODE_FUNCTION_CALL);
 	assert(num_is_not_initialized(*pval));
 
-	out_dbg("Evaluating user function %s, call has %d argument(s)\n", self->var.name, self->nb_args);
+	out_dbg("Evaluating user function %s, call has %d argument(s)\n", self->x.var.name, self->nb_args);
 
 	int nbargs = count_defargs(f->defargs);
 	int nbauto = count_defargs(f->autolist);
