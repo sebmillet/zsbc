@@ -1082,6 +1082,8 @@ FILE *input_get_next()
 
 #ifdef MY_WINDOWS
 	} else if (input_cursor >= input_nb && !flag_quitting) {
+#else
+	} else if (input_cursor == input_nb) {
 #endif
 
 /* Input will be stdin */
