@@ -105,15 +105,19 @@ zsbc provides the \fBinvmod\fP function. Calling \fIinvmod(a, b)\fP returns the 
 .TP
 .B Automatic modulo invert calculation
 .RS
-zsbc provides the variable \fBautoinvmod\fP to automatically replace euclidian division by the calculation of the modulo invert. It is zero by default. When set to 1 (the only allowed non zero value), the division operation, if done in a context of modulo, will produce the modulo invert. Examples:
+zsbc provides the variable \fBautoinvmod\fP to automatically replace euclidian division by the calculation of the modulo invert.
+.br
+\fBIt is 1 by default.\fP
+.br
+When set to 1 (the only allowed non zero value), the division operation, if done in a context of modulo, will produce the modulo invert. Examples:
 .nf
 .RS
-autoinvmod=0 /* (default) */
+autoinvmod=0
 1/4
 .B 0
 1/4%7
 .B 0
-autoinvmod=1
+autoinvmod=1 /* (default) */
 1/4
 .B 0
 1/4%7

@@ -704,7 +704,7 @@ static int gmp_ibase;
 static int gmp_obase;
 
 	/*  autoinvmod */
-#define GMP_AUTOINVMOD_DEFAULT 0
+#define GMP_AUTOINVMOD_DEFAULT 1
 static int gmp_autoinvmod;
 
 char *gmp_identify_yourself = NULL;
