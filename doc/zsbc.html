@@ -154,14 +154,20 @@ zsbc provides the <B>invmod</B> function. Calling <I>invmod(a, b)</I> returns th
 
 <DD>
 <DL COMPACT><DT><DD>
-zsbc provides the variable <B>autoinvmod</B> to automatically replace euclidian division by the calculation of the modulo invert. It is zero by default. When set to 1 (the only allowed non zero value), the division operation, if done in a context of modulo, will produce the modulo invert. Examples:
+zsbc provides the variable <B>autoinvmod</B> to automatically replace euclidian division by the calculation of the modulo invert.
+<BR>
+
+<B>It is 1 by default.</B>
+<BR>
+
+When set to 1 (the only allowed non zero value), the division operation, if done in a context of modulo, will produce the modulo invert. Examples:
 <PRE>
-<DL COMPACT><DT><DD>autoinvmod=0 /* (default) */
+<DL COMPACT><DT><DD>autoinvmod=0
 1/4
 <B>0</B>
 1/4%7
 <B>0</B>
-autoinvmod=1
+autoinvmod=1 /* (default) */
 1/4
 <B>0</B>
 1/4%7
@@ -272,6 +278,6 @@ It also goes in depth about the hack to manage <I>ibase</I> &quot;as if&quot; ta
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 08:42:43 GMT, December 19, 2015
+Time: 17:36:22 GMT, December 22, 2015
 </BODY>
 </HTML>
