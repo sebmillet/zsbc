@@ -1090,6 +1090,7 @@ FILE *input_get_next()
 			out_dbg("input_get_next(): opened file %s, it is the next yyin-to-be\n", input_name);
 		}
 
+		return input_FILE;
 	}
 
 	int go_to_stdin = (input_cursor == input_nb);
@@ -1102,6 +1103,7 @@ FILE *input_get_next()
 #endif
 
 	if (go_to_stdin) {
+
 /* Input will be stdin */
 
 		input_name = "";
