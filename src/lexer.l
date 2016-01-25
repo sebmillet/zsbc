@@ -148,7 +148,7 @@ symbols			return SYMBOLS;
 while			return WHILE;
 for				return FOR;
 define			return DEFINE;
-void			return VOID;
+void			return MYVOID;
 return			return RETURN;
 break			return BREAK;
 continue		return CONTINUE;

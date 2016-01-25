@@ -23,6 +23,10 @@
 #include "../extracfg.h"
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#endif
+
 #include "common.h"
 #include "vars.h"
 #include "expr.h"
@@ -101,24 +105,24 @@ static int flag_execution_underway = FALSE;
 int flag_quitting = FALSE;
 
 static const char *table_errors[] = {
-	NULL,								/* ERROR_NONE */
-	"Divide by zero",					/* ERROR_DIV0 */
-	"Negative exponent not authorized",	/* ERROR_NEGATIVE_EXP */
-	"Function not defined",				/* ERROR_FUNCTION_NOT_DEFINED */
-	"Parameter number mismatch",		/* ERROR_PARAMETER_NUMBER_MISMATCH */
-	NULL,								/* ERROR_BREAK */
-	NULL,								/* ERROR_CONTINUE */
-	"Illegal return statement",			/* ERROR_RETURN */
-	"Parameter type mismatch",			/* ERROR_ARGTYPE_MISMATCH */
-	"Illegal value",					/* ERROR_ILLEGAL_VALUE */
-	"Square root of a negative number",	/* ERROR_SQRT_OF_NEG */
-	"Array index out of bounds",		/* ERROR_ARRAY_OUT_OF_BOUNDS */
-	"Invalid number",					/* ERROR_INVALID_NUMBER */
-	"Function not implemented",			/* ERROR_FUNCTION_NOT_IMPLEMENTED */
-	"No modulo invert",					/* ERROR_NO_INVMOD */
-	"Modulo by zero",					/* ERROR_MODULO0 */
-	"Execution interrupted",			/* ERROR_EXECUTION_INTERRUPTED */
-	NULL								/* ERROR_CUSTOM */
+	NULL,                               /* ERROR_NONE */
+	"Divide by zero",                   /* ERROR_DIV0 */
+	"Negative exponent not authorized", /* ERROR_NEGATIVE_EXP */
+	"Function not defined",             /* ERROR_FUNCTION_NOT_DEFINED */
+	"Parameter number mismatch",        /* ERROR_PARAMETER_NUMBER_MISMATCH */
+	NULL,                               /* ERROR_BREAK_INSTR */
+	NULL,                               /* ERROR_CONTINUE_INSTR */
+	"Illegal return statement",         /* ERROR_RETURN */
+	"Parameter type mismatch",          /* ERROR_ARGTYPE_MISMATCH */
+	"Illegal value",                    /* ERROR_ILLEGAL_VALUE */
+	"Square root of a negative number", /* ERROR_SQRT_OF_NEG */
+	"Array index out of bounds",        /* ERROR_ARRAY_OUT_OF_BOUNDS */
+	"Invalid number",                   /* ERROR_INVALID_NUMBER */
+	"Function not implemented",         /* ERROR_FUNCTION_NOT_IMPLEMENTED */
+	"No modulo invert",                 /* ERROR_NO_INVMOD */
+	"Modulo by zero",                   /* ERROR_MODULO0 */
+	"Execution interrupted",            /* ERROR_EXECUTION_INTERRUPTED */
+	NULL                                /* ERROR_CUSTOM */
 };
 
 	/*
@@ -542,6 +546,8 @@ void interrupt_signal_handler(int sig)
 		signal(SIGINT, interrupt_signal_handler);
 		return;
 	}
+
+	out_dbg("interrupt_signal_handler() executed, sig = %d\n", sig);
 
 	out(L_ENFORCE, "\n(interrupt) use quit to exit.\n");
 
@@ -1082,6 +1088,7 @@ FILE *input_get_next()
 
 #ifdef MY_WINDOWS
 	} else if (input_cursor >= input_nb && !flag_quitting) {
+		Sleep(1000000);
 #else
 	} else if (input_cursor == input_nb) {
 #endif

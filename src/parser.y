@@ -93,7 +93,7 @@ YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 
 %token QUIT SYMBOLS LIBSWITCH LIBLIST
 %token WHILE FOR BREAK CONTINUE IF ELSE
-%token DEFINE VOID RETURN AUTOLIST PRINT
+%token DEFINE MYVOID RETURN AUTOLIST PRINT
 
 %token NEWLINE
 
@@ -355,7 +355,7 @@ function_definition:
 	hackbc_enter DEFINE IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty hackbc_terminate {
 		vars_user_function_construct($3, $5, $8, FALSE, code_loc(@$));
 	}
-	| hackbc_enter DEFINE VOID IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty hackbc_terminate {
+	| hackbc_enter DEFINE MYVOID IDENTIFIER '(' defargs_list_or_empty ')' newlines_or_empty instruction_non_empty hackbc_terminate {
 		vars_user_function_construct($4, $6, $9, TRUE, code_loc(@$));
 	}
 ;

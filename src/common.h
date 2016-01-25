@@ -57,33 +57,33 @@ const char *VAR_LAST;
 	 * The constants below, in this order, are used to define corresponding error
 	 * messages in the array of strings table_errors (main.c)
 	 *  */
-#define ERROR_NONE						0
-#define ERROR_DIV0						1
-#define ERROR_NEGATIVE_EXP				2
-#define ERROR_FUNCTION_NOT_DEFINED		3
-#define ERROR_PARAMETER_NUMBER_MISMATCH	4
-#define ERROR_BREAK						5	/* Not an error */
-#define ERROR_CONTINUE					6	/* Not an error */
-#define ERROR_RETURN					7
-#define ERROR_ARGTYPE_MISMATCH			8
-#define ERROR_ILLEGAL_VALUE				9
-#define ERROR_SQRT_OF_NEG				10
-#define ERROR_ARRAY_OUT_OF_BOUNDS		11
-#define ERROR_INVALID_NUMBER			12
-#define ERROR_FUNCTION_NOT_IMPLEMENTED	13
-#define ERROR_NO_INVMOD					14
-#define ERROR_MODULO0					15
-#define ERROR_EXECUTION_INTERRUPTED		16
-#define ERROR_CUSTOM					17	/* Error string defined at runtime */
-#define ERROR_LAST						17
+#define ERROR_NONE                      0
+#define ERROR_DIV0                      1
+#define ERROR_NEGATIVE_EXP              2
+#define ERROR_FUNCTION_NOT_DEFINED      3
+#define ERROR_PARAMETER_NUMBER_MISMATCH 4
+#define ERROR_BREAK_INSTR               5 /* Not an error */
+#define ERROR_CONTINUE_INSTR            6 /* Not an error */
+#define ERROR_RETURN                    7
+#define ERROR_ARGTYPE_MISMATCH          8
+#define ERROR_ILLEGAL_VALUE             9
+#define ERROR_SQRT_OF_NEG               10
+#define ERROR_ARRAY_OUT_OF_BOUNDS       11
+#define ERROR_INVALID_NUMBER            12
+#define ERROR_FUNCTION_NOT_IMPLEMENTED  13
+#define ERROR_NO_INVMOD                 14
+#define ERROR_MODULO0                   15
+#define ERROR_EXECUTION_INTERRUPTED     16
+#define ERROR_CUSTOM                    17 /* Error string defined at runtime */
+#define ERROR_LAST                      17
 
-#define L_ENFORCE	(-1)
-#define L_ERROR		0
-#define L_WARNING	1
-#define L_QUIET		2
-#define L_NORMAL	3
-#define L_VERBOSE	4
-#define L_DEBUG		5
+#define L_ENFORCE (-1)
+#define L_ERROR   0
+#define L_WARNING 1
+#define L_QUIET   2
+#define L_NORMAL  3
+#define L_VERBOSE 4
+#define L_DEBUG   5
 int out(int level, const char *fmt, ...);
 int outln(int level, const char *fmt, ...);
 int outln_error(const char *fmt, ...);
