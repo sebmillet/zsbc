@@ -1115,7 +1115,7 @@ return DEFINE;
 case 32:
 YY_RULE_SETUP
 #line 151 "lexer.l"
-return VOID;
+return MYVOID;
 	YY_BREAK
 case 33:
 YY_RULE_SETUP

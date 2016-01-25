@@ -315,11 +315,11 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 
 						/* The content of the loop being executed, for every loops realms */
 					r = program_execute(loop->core, pval, pexec_ctx);
-					if (r == ERROR_BREAK) {
+					if (r == ERROR_BREAK_INSTR) {
 						r = ERROR_NONE;
 						break;
 					}
-					if (r == ERROR_CONTINUE) {
+					if (r == ERROR_CONTINUE_INSTR) {
 						r = ERROR_NONE;
 						continue;
 					}
@@ -347,11 +347,11 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 				break;
 			case TINSTR_BREAK:
 				pnext = NULL;
-				r = ERROR_BREAK;
+				r = ERROR_BREAK_INSTR;
 				break;
 			case TINSTR_CONTINUE:
 				pnext = NULL;
-				r = ERROR_CONTINUE;
+				r = ERROR_CONTINUE_INSTR;
 				break;
 			case TINSTR_IFSEQ:
 				ifseq = &p->prg.ifseq;

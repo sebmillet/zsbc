@@ -62,7 +62,7 @@ extern int yydebug;
     IF = 272,
     ELSE = 273,
     DEFINE = 274,
-    VOID = 275,
+    MYVOID = 275,
     RETURN = 276,
     AUTOLIST = 277,
     PRINT = 278,
@@ -92,7 +92,7 @@ extern int yydebug;
 #define IF 272
 #define ELSE 273
 #define DEFINE 274
-#define VOID 275
+#define MYVOID 275
 #define RETURN 276
 #define AUTOLIST 277
 #define PRINT 278
