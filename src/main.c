@@ -25,6 +25,7 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
+int dont_stop_execution = FALSE;
 #endif
 
 #include "common.h"
@@ -541,6 +542,9 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 
 void interrupt_signal_handler(int sig)
 {
+#if defined(_WIN32) || defined(_WIN64)
+	dont_stop_execution = TRUE;
+#endif
 	if (flag_execution_underway) {
 		flag_interrupt_execution = TRUE;
 		signal(SIGINT, interrupt_signal_handler);
@@ -1086,13 +1090,18 @@ FILE *input_get_next()
 			out_dbg("input_get_next(): opened file %s, it is the next yyin-to-be\n", input_name);
 		}
 
+	}
+
+	int go_to_stdin = (input_cursor == input_nb);
 #ifdef MY_WINDOWS
-	} else if (input_cursor >= input_nb && !flag_quitting) {
-		Sleep(1000000);
-#else
-	} else if (input_cursor == input_nb) {
+	if (input_cursor > input_nb && !flag_quitting) {
+		Sleep(100);
+		go_to_stdin = dont_stop_execution;
+		dont_stop_execution = FALSE;
+	}
 #endif
 
+	if (go_to_stdin) {
 /* Input will be stdin */
 
 		input_name = "";
