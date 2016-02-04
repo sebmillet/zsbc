@@ -26,6 +26,9 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 int dont_stop_execution = FALSE;
+#define my_fileno _fileno
+#else
+#define my_fileno fileno
 #endif
 
 #include "common.h"
@@ -868,18 +871,37 @@ void init_readline()
 #endif
 
 	/* FIXME */
+#if defined(_WIN32) || defined(_WIN64)
+#else
 #include <sys/ioctl.h>
+#endif
 
 int main(int argc, char *argv[])
 {
 	init_readline();
 
 
+	int rows, columns;
+	int ok = isatty(my_fileno(stdout));
+#if defined(_WIN32) || defined(_WIN64)
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+	columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+	rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#else
 		/* FIXME */
 	struct winsize w;
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-	printf("lines %d\n", w.ws_row);
-	printf("columns %d\n", w.ws_col);
+	rows = w.ws_row;
+	columns = w.ws_col;
+#endif
+	if (ok) {
+		printf("lines %d\n", columns);
+		printf("columns %d\n", rows);
+	} else {
+		printf("not a terminal\n");
+	}
 	return 0;
 
 
