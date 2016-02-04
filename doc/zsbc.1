@@ -32,22 +32,22 @@ Select numeric library to use. Default is relative integers of the GNU Multiple 
 The "GNU Multiple Precision Arithmetic Library" homepage is https://gmplib.org/
 .TP
 .B \-v\ \-\-version
-Display version information and exit.
+Display version information and exit
 .TP
 .B \-V,\ \-\-verbose
-Be more talkative.
+Be more talkative
 .TP
 .B \-q,\ \-\-quiet
-Be less talkative.
+Be less talkative
 .TP
 .B \-l,\ \-\-mathlib
-Load bc's math functions library. Can be used only with option \fB-n bc\fP as this option makes sense only wile using bc numeric library.
+Load bc's math functions library. Can be used only with option \fB-n bc\fP as this option makes sense only wile using bc numeric library
 .TP
 .B \-t,\ \-\-liblist
-Display numeric number libraries available and exit.
+Display numeric number libraries available and exit
 .SH INITIALIZATION FILES
 .TP
-None.
+None
 .SH LANGUAGE
 .TP
 zsbc language syntax is the one of bc with minor extensions, see below. You can find bc manual here:
@@ -59,7 +59,7 @@ zsbc is fully compatible with bc when started with option \fB-n bc\fP
 .br
 In this mode, it produces the exact same results as bc when running tests, including bc's mathlib functions (option \fI-l\fP)
 .br
-By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with \fBscale = 0\fP.
+By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with \fBscale = 0\fP. Note besides the language (that is fully compatible), there can be some minor differences in the calculations conventions. For example gmp mod function will always return a positive integer, while bc keep the sign of operand the mod is calculated of.
 .TP
 .B The scale variable
 When used with the default \fIgmp\fP numeric library, zsbc is \fIscale-variable-agnostic\fP. A variable of name \fIscale\fP is just like any other variable and won't change zsbc behavior whatsoever.
@@ -156,20 +156,20 @@ a%97
 .SH ENVIRONMENT VARIABLES
 .TP
 .B ZSBC_ENV_ARGS
-Can contain any option normally provided at zsbc invocation.
+Can contain any option normally provided at zsbc invocation
 .TP
 .B ZSBC_LINE_LENGTH
 Maximum line length in output. If a number to print is bigger, cut line with a \fB'\\'\fP character followed by a newline.
 .br
-If the variable is not set, take a default value of 0.
+If the variable is not set, take a default value of 0
 .br
-A zero value (or if variable is not set) means no line cut.
+A zero value (or if variable is not set) means no line cut
 .SH SEE ALSO
 .TP
 \fIbc\fP(1)
 .SH AUTHOR
 .TP
-Written by Sébastien Millet <milletseb@laposte.net>.
+Written by Sébastien Millet <milletseb@laposte.net>
 .SH ACKNOWLEDGEMENTS
 .TP
 .B bc

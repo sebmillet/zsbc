@@ -34,24 +34,24 @@ OPTIONS
 	      https://gmplib.org/
 
        -v --version
-	      Display version information and exit.
+	      Display version information and exit
 
        -V, --verbose
-	      Be more talkative.
+	      Be more talkative
 
        -q, --quiet
-	      Be less talkative.
+	      Be less talkative
 
        -l, --mathlib
 	      Load bc's math functions library. Can be used only  with	option
 	      -n  bc  as  this	option	makes sense only wile using bc numeric
-	      library.
+	      library
 
        -t, --liblist
-	      Display numeric number libraries available and exit.
+	      Display numeric number libraries available and exit
 
 INITIALIZATION FILES
-       None.
+       None
 
 LANGUAGE
        zsbc language syntax is the one of bc with minor extensions, see below.
@@ -65,7 +65,11 @@ LANGUAGE
 	      By default zsbc starts with  gmp	(the  GNU  Multiple  Precision
 	      Arithmetic  Library)  relative  integers	library.  The language
 	      remains compatible with bc but the calculations are the same  as
-	      bc only for bc used with scale = 0.
+	      bc  only	for  bc used with scale = 0. Note besides the language
+	      (that is fully compatible), there can be some minor  differences
+	      in  the  calculations  conventions. For example gmp mod function
+	      will always return a positive integer, while bc keep the sign of
+	      operand the mod is calculated of.
 
        The scale variable
 	      When  used  with the default gmp numeric library, zsbc is scale-
@@ -135,19 +139,19 @@ LANGUAGE
 
 ENVIRONMENT VARIABLES
        ZSBC_ENV_ARGS
-	      Can contain any option normally provided at zsbc invocation.
+	      Can contain any option normally provided at zsbc invocation
 
        ZSBC_LINE_LENGTH
 	      Maximum  line  length in output. If a number to print is bigger,
 	      cut line with a '\' character followed by a newline.
-	      If the variable is not set, take a default value of 0.
-	      A zero value (or if variable is not set) means no line cut.
+	      If the variable is not set, take a default value of 0
+	      A zero value (or if variable is not set) means no line cut
 
 SEE ALSO
        bc(1)
 
 AUTHOR
-       Written by Sébastien Millet <milletseb@laposte.net>.
+       Written by Sébastien Millet <milletseb@laposte.net>
 
 ACKNOWLEDGEMENTS
        bc     zsbc re-uses bc language and if started with option  -n  bc,  it

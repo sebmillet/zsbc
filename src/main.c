@@ -405,6 +405,9 @@ void set_exec_error_message(exec_ctx_t *pexec_ctx, const char *fmt, ...)
 		 *
 		 *   Stop program if an error was already set?
 		 *   For the time being, I prefer to silently remove it.
+		 *   But the coding good practice here - it shall even be a *rule* -
+		 *   is, that an error raised should always be cleared by a call
+		 *   to outln_exec_error().
 		 *
 		 * */
 	if (pexec_ctx->error_message != NULL)
@@ -864,9 +867,21 @@ void init_readline()
 
 #endif
 
+	/* FIXME */
+#include <sys/ioctl.h>
+
 int main(int argc, char *argv[])
 {
 	init_readline();
+
+
+		/* FIXME */
+	struct winsize w;
+	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+	printf("lines %d\n", w.ws_row);
+	printf("columns %d\n", w.ws_col);
+	return 0;
+
 
 		/* done to have a non NULL defarg_t_badarg pointer (any address would be fine) */
 	defarg_t_badarg = (defargs_t *)VAR_LAST;
@@ -1096,6 +1111,16 @@ FILE *input_get_next()
 	int go_to_stdin = (input_cursor == input_nb);
 #ifdef MY_WINDOWS
 	if (input_cursor > input_nb && !flag_quitting) {
+			/*
+			 * FIXME - FIXME
+			 *
+			 * Sleep 1/10 of second, to allow ctrl-c (caught by interrupt_signal_handler)
+			 * to set dont_stop_execution to TRUE.
+			 *
+			 * Yes, this code is extremly uggly. There is a race condition and we solve it
+			 * with a call to Sleep()!
+			 *
+			 * */
 		Sleep(100);
 		go_to_stdin = dont_stop_execution;
 		dont_stop_execution = FALSE;

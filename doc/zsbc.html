@@ -61,29 +61,29 @@ The &quot;GNU Multiple Precision Arithmetic Library&quot; homepage is <A HREF="h
 <DT><B>-v&nbsp;--version</B>
 
 <DD>
-Display version information and exit.
+Display version information and exit
 <DT><B>-V,&nbsp;--verbose</B>
 
 <DD>
-Be more talkative.
+Be more talkative
 <DT><B>-q,&nbsp;--quiet</B>
 
 <DD>
-Be less talkative.
+Be less talkative
 <DT><B>-l,&nbsp;--mathlib</B>
 
 <DD>
-Load bc's math functions library. Can be used only with option <B>-n bc</B> as this option makes sense only wile using bc numeric library.
+Load bc's math functions library. Can be used only with option <B>-n bc</B> as this option makes sense only wile using bc numeric library
 <DT><B>-t,&nbsp;--liblist</B>
 
 <DD>
-Display numeric number libraries available and exit.
+Display numeric number libraries available and exit
 </DL>
 <A NAME="lbAF">&nbsp;</A>
 <H2>INITIALIZATION FILES</H2>
 
 <DL COMPACT>
-<DT>None.<DD>
+<DT>None<DD>
 </DL>
 <A NAME="lbAG">&nbsp;</A>
 <H2>LANGUAGE</H2>
@@ -102,7 +102,7 @@ zsbc is fully compatible with bc when started with option <B>-n bc</B>
 In this mode, it produces the exact same results as bc when running tests, including bc's mathlib functions (option <I>-l</I>)
 <BR>
 
-By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with <B>scale = 0</B>.
+By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with <B>scale = 0</B>. Note besides the language (that is fully compatible), there can be some minor differences in the calculations conventions. For example gmp mod function will always return a positive integer, while bc keep the sign of operand the mod is calculated of.
 <DT><B>The scale variable</B>
 
 <DD>
@@ -216,17 +216,17 @@ a%97
 <DT><B>ZSBC_ENV_ARGS</B>
 
 <DD>
-Can contain any option normally provided at zsbc invocation.
+Can contain any option normally provided at zsbc invocation
 <DT><B>ZSBC_LINE_LENGTH</B>
 
 <DD>
 Maximum line length in output. If a number to print is bigger, cut line with a <B>'\'</B> character followed by a newline.
 <BR>
 
-If the variable is not set, take a default value of 0.
+If the variable is not set, take a default value of 0
 <BR>
 
-A zero value (or if variable is not set) means no line cut.
+A zero value (or if variable is not set) means no line cut
 </DL>
 <A NAME="lbAI">&nbsp;</A>
 <H2>SEE ALSO</H2>
@@ -238,7 +238,7 @@ A zero value (or if variable is not set) means no line cut.
 <H2>AUTHOR</H2>
 
 <DL COMPACT>
-<DT>Written by Sébastien Millet &lt;<A HREF="mailto:milletseb@laposte.net">milletseb@laposte.net</A>&gt;.<DD>
+<DT>Written by Sébastien Millet &lt;<A HREF="mailto:milletseb@laposte.net">milletseb@laposte.net</A>&gt;<DD>
 </DL>
 <A NAME="lbAK">&nbsp;</A>
 <H2>ACKNOWLEDGEMENTS</H2>
@@ -278,6 +278,6 @@ It also goes in depth about the hack to manage <I>ibase</I> &quot;as if&quot; ta
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 17:36:22 GMT, December 22, 2015
+Time: 22:05:30 GMT, January 29, 2016
 </BODY>
 </HTML>
