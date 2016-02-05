@@ -1158,6 +1158,7 @@ static int gmp_automatic_invmod()
 
 static int gmp_read(numptr *pr)
 {
+	/* FIXME */
 const int INITIAL_BUF_LENGTH = 2;
 const int INCREASE_FACTOR = 2;
 

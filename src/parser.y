@@ -122,10 +122,14 @@ YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 %%
 
 input:
-	%empty { loc_reset(); }
-	| program NEWLINE input
-	| statement NEWLINE input
-	| error NEWLINE input { out_dbg("Error encountered, ran yyclearin and yyerrok\n"); yyclearin; yyerrok; }
+	%empty { outstring_reset(); loc_reset(); }
+	| { outstring_reset(); } program NEWLINE input
+	| { outstring_reset(); } statement NEWLINE input
+	| error NEWLINE input {
+		out_dbg("Error encountered, ran yyclearin and yyerrok\n");
+		yyclearin; yyerrok;
+		outstring_reset();
+	}
 ;
 
 program:

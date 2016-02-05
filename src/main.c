@@ -23,6 +23,7 @@
 #include "../extracfg.h"
 #endif
 
+	/* Unable to use macro MY_WINDOWS below (defined by common.h) */
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 int dont_stop_execution = FALSE;
@@ -46,6 +47,8 @@ int dont_stop_execution = FALSE;
 
 #ifdef MY_LINUX
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <termios.h>
 #else
 #include <io.h>
 #define isatty _isatty
@@ -250,26 +253,135 @@ int out(int level, const char *fmt, ...)
 	}
 }
 
-int outstring_lw = 0;
-int outstring_line_length = DEFAULT_LINE_LENGTH;
-void outstring_1char(int c)
+void term_get_geometry(int *rows, int *columns)
 {
-	++outstring_lw;
-	if (outstring_line_length != 0 && c != '\n' && outstring_lw >= outstring_line_length - 1) {
-		putchar('\\');
-		putchar('\n');
-		outstring_lw = 1;
+	if (!is_interactive || !isatty(my_fileno(stdout))) {
+		*rows = 0;
+		*columns = 0;
+		return;
 	}
-	putchar(c);
-	if (c == '\n')
-		outstring_lw = 0;
+#ifdef MY_WINDOWS
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+	*rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+	*columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+#else
+	struct winsize w;
+	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+	*rows = w.ws_row;
+	*columns = w.ws_col;
+#endif
 }
 
-	/*
-	 * Output a string.
-	 * Uses a different logic from other functions: this one
-	 *
-	 * */
+int term_getkey(void) {
+      struct termios current_settings, new_settings;
+
+      if (tcgetattr(STDIN_FILENO, &current_settings))
+		  return EOF;
+
+	  new_settings = current_settings;
+      new_settings.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
+      if (tcsetattr(STDIN_FILENO, TCSANOW, &new_settings))
+		  return EOF;
+
+      int c = getchar();
+
+      tcsetattr(STDIN_FILENO, TCSANOW, &current_settings);
+
+      return c;
+}
+
+int outstring_c = 0;
+int outstring_l = 0;
+int outstring_term_columns = 0;
+int outstring_term_lines = 0;
+
+#define OUTSTRING_MODE_NORMAL 0
+#define OUTSTRING_MODE_ALL    1
+#define OUTSTRING_MODE_ZAP    2
+int outstring_mode = OUTSTRING_MODE_NORMAL;
+
+int outstring_line_length = DEFAULT_LINE_LENGTH;
+
+void term_clean_current_line_with_spaces()
+{
+	putchar('\015');
+	int i;
+	for (i = 0; i < outstring_term_columns; ++i)
+		putchar(' ');
+	putchar('\015');
+}
+
+void outstring_1char(int c)
+{
+	if (outstring_mode == OUTSTRING_MODE_ZAP)
+		return;
+	if (outstring_line_length != 0 && c != '\n' && outstring_c >= outstring_line_length - 2) {
+		putchar('\\');
+		putchar('\n');
+		outstring_c = 0;
+		++outstring_l;
+	}
+	if (outstring_mode != OUTSTRING_MODE_ALL) {
+		if (is_interactive && outstring_term_lines >= 1 && (outstring_l + 1 >= outstring_term_lines)) {
+			int loop = TRUE;
+			while (loop) {
+				printf("-- Press <space>, <return>, q, a or h:");
+				int ch = term_getkey();
+				loop = FALSE;
+				switch (tolower(ch)) {
+					case ' ':
+						outstring_l = 0;
+						outstring_c = 0;
+						break;
+					case '\n':
+						--outstring_l;
+						outstring_c = 0;
+						break;
+					case 'a':
+						outstring_mode = OUTSTRING_MODE_ALL;
+						break;
+					case 'q':
+						outstring_mode = OUTSTRING_MODE_ZAP;
+						break;
+					case 'h':
+						term_clean_current_line_with_spaces();
+						printf("-- " PACKAGE_NAME " quick help for pager\n"
+							"   <space>: display next screen\n"
+							"   <return>: display next line\n"
+							"   q: stop display\n"
+							"   a: display all remaining text without paging\n"
+							);
+						loop = TRUE;
+						break;
+					case EOF:
+							/*
+							 * Something went wrong in the key press retrieval from terminal
+							 * so we just display all.
+							 * */
+						outstring_mode = OUTSTRING_MODE_ALL;
+						break;
+					default:
+						loop = TRUE;
+				}
+				term_clean_current_line_with_spaces();
+			}
+		}
+		if (outstring_mode == OUTSTRING_MODE_ZAP)
+			return;
+	}
+	++outstring_c;
+	if (outstring_term_columns >= 1 && outstring_c >= 1 && (outstring_c % outstring_term_columns == 0)) {
+		++outstring_l;
+	}
+	putchar(c);
+	if (c == '\n') {
+		outstring_c = 0;
+		++outstring_l;
+	}
+}
+
 void outstring(const char *s, int append_newline)
 {
 	char c;
@@ -287,6 +399,15 @@ void outstring_set_line_length(int ll)
 		ll = rt_line_length;
 	outstring_line_length = ll;
 	out_dbg("Line length set to %d\n", outstring_line_length);
+}
+
+void outstring_reset()
+{
+	out_dbg("outstring_reset(): before reset, outstring_c = %d, outstring_l = %d\n", outstring_c, outstring_l);
+	outstring_c = 0;
+	outstring_l = 0;
+	outstring_mode = OUTSTRING_MODE_NORMAL;
+	term_get_geometry(&outstring_term_lines, &outstring_term_columns);
 }
 
 int out_dbg_core(const char *filename, int line, const char *fmt, ...)
@@ -548,7 +669,7 @@ void fatalln(const char *file, int line, const char *fmt, ...)
 
 void interrupt_signal_handler(int sig)
 {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef MY_WINDOWS
 	dont_stop_execution = TRUE;
 #endif
 	if (flag_execution_underway) {
@@ -818,7 +939,7 @@ void yyerror(char *s, ...);
 void rl_input(char *buf, long unsigned int *result, int max)
 {
 	if (yyin != rl_instream || !is_interactive || opt_SCM) {
-		while ((*result = read(fileno(yyin), buf, max)) < 0 )
+		while ((*result = read(my_fileno(yyin), buf, max)) < 0 )
 			if (errno != EINTR) {
 				yyerror("read() in flex scanner failed" );
 				exit(1);
@@ -864,46 +985,15 @@ void init_readline()
 	rl_instream = stdin;
 }
 
-#else
+#else /* #ifdef HAS_LIB_READLINE */
 
 #define init_readline()
 
-#endif
-
-	/* FIXME */
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <sys/ioctl.h>
-#endif
+#endif /* #ifdef AS_LIB_READLINE */
 
 int main(int argc, char *argv[])
 {
 	init_readline();
-
-
-	int rows, columns;
-	int ok = isatty(my_fileno(stdout));
-#if defined(_WIN32) || defined(_WIN64)
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
-
-	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-	columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-	rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-#else
-		/* FIXME */
-	struct winsize w;
-	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-	rows = w.ws_row;
-	columns = w.ws_col;
-#endif
-	if (ok) {
-		printf("lines %d\n", columns);
-		printf("columns %d\n", rows);
-	} else {
-		printf("not a terminal\n");
-	}
-	return 0;
-
 
 		/* done to have a non NULL defarg_t_badarg pointer (any address would be fine) */
 	defarg_t_badarg = (defargs_t *)VAR_LAST;
@@ -1025,6 +1115,12 @@ int main(int argc, char *argv[])
 		yywrap();
 
 	signal(SIGINT, interrupt_signal_handler);
+
+/*         FIXME */
+/*    sleep(1);*/
+/*    int c = term_getkey();*/
+/*    printf("Key pressed: %d (%c) [%02X]\n", c, (char)c, (unsigned char)c);*/
+/*    return 0;*/
 
 	yyparse();
 
