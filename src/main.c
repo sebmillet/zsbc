@@ -274,6 +274,7 @@ void term_get_geometry(int *rows, int *columns)
 #endif
 }
 
+#ifdef MY_LINUX
 int term_getkey(void) {
       struct termios current_settings, new_settings;
 
@@ -291,6 +292,12 @@ int term_getkey(void) {
 
       return c;
 }
+#endif
+#ifdef MY_WINDOWS
+int term_getkey(void) {
+	return getch();
+}
+#endif
 
 int outstring_c = 0;
 int outstring_l = 0;
@@ -308,7 +315,7 @@ void term_clean_current_line_with_spaces()
 {
 	putchar('\015');
 	int i;
-	for (i = 0; i < outstring_term_columns; ++i)
+	for (i = 0; i < outstring_term_columns - 1; ++i)
 		putchar(' ');
 	putchar('\015');
 }
@@ -335,7 +342,7 @@ void outstring_1char(int c)
 						outstring_l = 0;
 						outstring_c = 0;
 						break;
-					case '\n':
+					case '\n': case '\r':
 						--outstring_l;
 						outstring_c = 0;
 						break;
