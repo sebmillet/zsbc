@@ -94,6 +94,7 @@ YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 %token QUIT SYMBOLS LIBSWITCH LIBLIST
 %token WHILE FOR BREAK CONTINUE IF ELSE
 %token DEFINE MYVOID RETURN AUTOLIST PRINT
+%token WARRANTY LIMITS
 
 %token NEWLINE
 
@@ -401,11 +402,24 @@ statement:
 	| LIBLIST {
 		lib_list();
 	}
+	| WARRANTY {
+		outstring(TRUE, "This program is distributed in the hope that it will be useful,\n"
+			"but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
+			"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
+			"GNU General Public License v3 for more details.");
+	}
+	| LIMITS {
+		outstring_fmt(TRUE, "ZSBC_BASE_MAX   = %d", num_maxbase());
+		outstring_fmt(TRUE, "ZSBC_DIM_MAX    = %d", array_dimmax());
+		if (num_scalemax() == -1)
+			outstring_fmt(TRUE, "ZSBC_SCALE_MAX  = n/a");
+		else
+			outstring_fmt(TRUE, "ZSBC_SCALE_MAX  = %d", num_scalemax());
+	}
 ;
 
 %%
 
-#define VARIBASE "ibase"
 static int hackbc_has_entered = FALSE;
 static int hackbc_nested_level;
 static int save_ibase_is_set;

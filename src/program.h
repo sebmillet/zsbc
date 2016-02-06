@@ -11,7 +11,6 @@
  *       Compiler:  gcc
  *
  *         Author:  Sébastien Millet (smt), milletseb@laposte.net
- *   Organization:  
  *
  * =====================================================================================
  */

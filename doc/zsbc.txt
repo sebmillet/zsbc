@@ -15,7 +15,7 @@ DESCRIPTION
 	      gers. One can define functions and manipulate arrays, all  using
 	      bc language.
 	      By  default  it deals with relative integers. zsbc is equivalent
-	      to bc when used with scale = 0. zsbc stands for Zero-Scale bc.
+	      to bc when used with scale = 0. zsbc stands for zero-scale bc.
 
        bc's mathlib
 	      If started with option -n bc, zsbc uses bc numeric library, pro‐
@@ -26,8 +26,8 @@ DESCRIPTION
 OPTIONS
        -n, --numlib
 	      Select  numeric  library to use. Default is relative integers of
-	      the GNU Multiple Precision Arithmetic Library (gmp  or  libgmp).
-	      As of December 2015, possible values are
+	      the GNU Multiple	Precision  Arithmetic  Library	(gmp).	As  of
+	      December 2015, possible values are
 	      gmp
 	      bc
 	      The  "GNU  Multiple  Precision  Arithmetic  Library" homepage is
@@ -58,6 +58,49 @@ LANGUAGE
        You can find bc manual here:
 	      https://www.gnu.org/software/bc/manual/bc.html
 
+       zsbc specificities
+	      Some  instructions, functions and variables are specific to zsbc
+	      (they are not found in bc).
+
+	      libswitch
+	      Can be shortened as lib. With no argument, display  the  current
+	      numeric  library.  With  a  string  (must  be  surrounded by "),
+	      defines the numeric library to switch to.
+
+	      liblist
+	      Display the list of available numeric libraries
+
+	      symbols
+	      Display the list of symbols (all	variables,  arrays  and  func‐
+	      tions)
+
+	      gmpversion()
+	      Display  the gmp numeric library version in the form of a simple
+	      integer - libgmp only
+
+	      bcversion()
+	      Display the bc numeric library version in the form of  a	simple
+	      integer - libbc only
+
+	      check_functions()
+	      Examine  functions  and  display warnings if inconsistencies are
+	      found, like a call to a non-existent function, a wrong number or
+	      wrong type of argument in a function call, etc.
+	      Note  this  function  is	called	at zsbc startup, after loading
+	      files listed in command-line arguments.
+
+	      autoinvmod
+	      Only when using the gmp numeric library.
+	      Default: 1
+	      When set to 1, a division inside a mod operation will be	calcu‐
+	      lated  as  a  modulo invert. Otherwise a division is a euclidian
+	      division. See below for more details.
+
+	      more
+	      Default: 1
+	      When set to 1, use a built-in minimalistic pager remotely  simi‐
+	      lar to the "more" program.
+
        bc compatibility
 	      zsbc is fully compatible with bc when started with option -n bc
 	      In this mode, it produces the exact same results as bc when run‐
@@ -68,8 +111,8 @@ LANGUAGE
 	      bc  only	for  bc used with scale = 0. Note besides the language
 	      (that is fully compatible), there can be some minor  differences
 	      in  the  calculations  conventions. For example gmp mod function
-	      will always return a positive integer, while bc keep the sign of
-	      operand the mod is calculated of.
+	      will always return a positive integer, while bc keeps  the  sign
+	      of operand the mod is calculated of.
 
        The scale variable
 	      When  used  with the default gmp numeric library, zsbc is scale-
@@ -97,9 +140,9 @@ LANGUAGE
 		     div2(myarray[++i])
 
        Modulo invert function
-	      zsbc provides the invmod function. Calling invmod(a, b)  returns
-	      the invert of a modulo b. If it does not exist, it produces a No
-	      modulo invert error.
+	      zsbc provides the invmod function (with the default gmp  numeric
+	      library). Calling invmod(a, b) returns the invert of a modulo b.
+	      If it does not exist, it produces a No modulo invert error.
 
        Automatic modulo invert calculation
 	      zsbc provides the variable autoinvmod to	automatically  replace
@@ -147,6 +190,14 @@ ENVIRONMENT VARIABLES
 	      If the variable is not set, take a default value of 0
 	      A zero value (or if variable is not set) means no line cut
 
+			    ZSBC_LINE_LENGTH default
+		     If ZSBC_LINE_LENGTH doesn't exist and  by	default  (with
+		     gmp  numeric  library), zsbc will take 0 as default value
+		     => no line cut
+		     If ZSBC_LINE_LENGTH doesn't exist	and  zsbc  is  running
+		     with bc numeric library (option -n bc), zsbc will take 70
+		     as default value => same as bc
+
 SEE ALSO
        bc(1)
 
@@ -158,14 +209,16 @@ ACKNOWLEDGEMENTS
 	      passes  the  same  tests as bc and in real life situations it'll
 	      produce the exact same results. On the other hand  zsbc  is  not
 	      meant  as  a substitute or fork of bc. zsbc uses code of its own
-	      except bc numeric library (taken as  is)	and  some  "interface"
-	      functions,  to  work  with  bc  numeric library, that got copied
-	      over.
-	      The file FAQ provided with zsbc source gives details  about  the
+	      except bc numeric library (taken as is) and some interface func‐
+	      tions, to work with bc numeric library, that got copied over.
+	      The  file  FAQ provided with zsbc source gives details about the
 	      "code take aways" found in zsbc, copied from bc source.
-	      It  also	goes  in  depth about the hack to manage ibase "as if"
-	      taken into account at execution time, to reflect bc behavior.
+	      It also goes in depth about the hack implemented to manage ibase
+	      "as  if"	taken  into  account  at execution time, to reflect bc
+	      behavior. Indeed	zsbc  does  not  convert  strings  to  numeric
+	      objects  at execution time, it performs this conversion at func‐
+	      tion definition time, once and for all.
 
 
 
-December 2015			  version 0.1			       zsbc(1)
+February 2016			  version 0.2			       zsbc(1)

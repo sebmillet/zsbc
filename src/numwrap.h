@@ -83,21 +83,8 @@ int num_or(numptr *pr, const numptr a, const numptr b);
 int num_not(numptr *pr, const numptr a);
 int num_want_automatic_invmod();
 
-
-/*-----------------------------------------------------------------------------
- *  BC specific
- *-----------------------------------------------------------------------------*/
-
-
-//void num_init_libbc();
-
-
-/*-----------------------------------------------------------------------------
- *  GMP specific
- *-----------------------------------------------------------------------------*/
-
-
-//void num_init_gmp();
+int num_maxbase();
+int num_scalemax();
 
 #endif	/* NUMWRAP_H */
 

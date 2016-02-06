@@ -309,6 +309,11 @@ int array_check_index(long int index)
 	return index >= 0 && index <= TREE_UPPER_INDEX ? ERROR_NONE : ERROR_ARRAY_OUT_OF_BOUNDS;
 }
 
+int array_dimmax()
+{
+	return TREE_UPPER_INDEX;
+}
+
 static long int core_array_count(const node_t *nodes, int rec_level)
 {
 	if (nodes == NULL)

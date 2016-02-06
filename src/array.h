@@ -32,6 +32,7 @@ void array_set_value(array_t **pa, long int index, const numptr new_value, const
 long int array_count(const array_t *a);
 
 int array_check_index(long int index);
+int array_dimmax();
 
 void copyonupdate_manage_copy(array_t *a, int for_destruct);
 

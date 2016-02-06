@@ -304,10 +304,10 @@ int outstring_l = 0;
 int outstring_term_columns = 0;
 int outstring_term_lines = 0;
 
-#define OUTSTRING_MODE_NORMAL 0
+#define OUTSTRING_MODE_PAGER  0
 #define OUTSTRING_MODE_ALL    1
 #define OUTSTRING_MODE_ZAP    2
-int outstring_mode = OUTSTRING_MODE_NORMAL;
+int outstring_mode = OUTSTRING_MODE_PAGER;
 
 int outstring_line_length = DEFAULT_LINE_LENGTH;
 
@@ -334,7 +334,7 @@ void outstring_1char(int c)
 		if (is_interactive && outstring_term_lines >= 1 && (outstring_l + 1 >= outstring_term_lines)) {
 			int loop = TRUE;
 			while (loop) {
-				printf("-- Press <space>, <return>, q, a or h:");
+				printf("-- Press key (h for help)");
 				int ch = term_getkey();
 				loop = FALSE;
 				switch (tolower(ch)) {
@@ -389,7 +389,7 @@ void outstring_1char(int c)
 	}
 }
 
-void outstring(const char *s, int append_newline)
+void outstring(int append_newline, const char *s)
 {
 	char c;
 	while ((c = *s) != '\0') {
@@ -400,6 +400,26 @@ void outstring(const char *s, int append_newline)
 		outstring_1char('\n');
 }
 
+void outstring_fmt(int append_newline, const char *fmt, ...)
+{
+		/*
+		 * FIXME
+		 *
+		 * Not very clean calculation...
+		 * */
+
+	int len = strlen(fmt) + 200;
+	char *buf = (char *)malloc(sizeof(char) * len);
+
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(buf, len, fmt, args);
+	buf[len - 1] = '\0';
+	va_end(args);
+	outstring(append_newline, buf);
+	free(buf);
+}
+
 void outstring_set_line_length(int ll)
 {
 	if (ll == -1)
@@ -408,12 +428,17 @@ void outstring_set_line_length(int ll)
 	out_dbg("Line length set to %d\n", outstring_line_length);
 }
 
+static int pager_is_active()
+{
+	return var_get_integer_value(VARMORE);
+}
+
 void outstring_reset()
 {
 	out_dbg("outstring_reset(): before reset, outstring_c = %d, outstring_l = %d\n", outstring_c, outstring_l);
 	outstring_c = 0;
 	outstring_l = 0;
-	outstring_mode = OUTSTRING_MODE_NORMAL;
+	outstring_mode = (pager_is_active() ? OUTSTRING_MODE_PAGER : OUTSTRING_MODE_ALL);
 	term_get_geometry(&outstring_term_lines, &outstring_term_columns);
 }
 
@@ -546,6 +571,7 @@ void set_exec_error_message(exec_ctx_t *pexec_ctx, const char *fmt, ...)
 	pexec_ctx->error_message = (char *)malloc(sizeof(char) * len);
 
 	vsnprintf(pexec_ctx->error_message, len, fmt, args);
+	pexec_ctx->error_message[len - 1] = '\0';
 	va_end(args);
 }
 
@@ -1150,12 +1176,12 @@ void lib_list()
 {
 	char *w = NULL;
 	libinfo_t li;
-	outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "ID", "DESCRIPTION", "LIBNAME", "VERSION", "NUMSET");
-	outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", "------------", "------------------------------",
+	outstring_fmt(TRUE, "%-12s %-30s %-10s %-10s %-10s", "ID", "DESCRIPTION", "LIBNAME", "VERSION", "NUMSET");
+	outstring_fmt(TRUE, "%-12s %-30s %-10s %-10s %-10s", "------------", "------------------------------",
 			"----------", "----------", "----------");
 	do {
 		num_lib_enumerate(&w, &li);
-		outln(L_ENFORCE, "%-12s %-30s %-10s %-10s %-10s", li.id, li.description, li.libname, li.version, li.number_set);
+		outstring_fmt(TRUE, "%-12s %-30s %-10s %-10s %-10s", li.id, li.description, li.libname, li.version, li.number_set);
 	} while (w != NULL);
 }
 

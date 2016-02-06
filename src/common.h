@@ -53,6 +53,10 @@
 
 const char *VAR_LAST;
 
+#define VARIBASE "ibase"
+#define VAROBASE "obase"
+#define VARMORE  "more"
+
 	/*
 	 * The constants below, in this order, are used to define corresponding error
 	 * messages in the array of strings table_errors (main.c)
@@ -94,8 +98,9 @@ void fatalln(const char *file, int line, const char *fmt, ...);
 int out_dbg_core(const char *filename, int line, const char *fmt, ...);
 
 void outstring_1char(int c);
-void outstring(const char *s, int append_newline);
+void outstring(int append_newline, const char *s);
 void outstring_set_line_length(int ll);
+void outstring_fmt(int append_newline, const char *fmt, ...);
 
 char *s_strncpy(char *dest, const char *src, size_t n);
 char *s_strncat(char *dest, const char *src, size_t n);

@@ -235,6 +235,19 @@ const numptr *vars_get_value(const char *name)
 	return NULL;
 }
 
+	/*
+	 * *WARNING*
+	 *
+	 *   No check of variable value bound!
+	 *
+	 * */
+int var_get_integer_value(const char *varname)
+{
+	const numptr *pnum = vars_get_value(varname);
+	int r = (int)num_getlongint(*pnum);
+	return r;
+}
+
 const numptr *vars_array_get_value(const char *name, long int index, int is_becoming_lvalue)
 {
 
@@ -391,21 +404,21 @@ void vars_display_all()
 
 	vars_t *w;
 	for (w = ctx->container.heads[TYPE_NUM]; w != NULL; w = w->hh.next) {
-		outstring(w->name, FALSE);
-		outstring("=", FALSE);
+		outstring(FALSE, w->name);
+		outstring(FALSE, "=");
 		num_print(w->pvalue->v.num);
-		outstring("", TRUE);
+		outstring(TRUE, "");
 	}
 	for (w = ctx->container.heads[TYPE_ARRAY]; w != NULL; w = w->hh.next) {
 		size_t l = strlen(w->name) + 50;
 		char *buf = malloc(l);
 		snprintf(buf, l, "%s[]: %li element(s)", w->name, array_count(w->pvalue->v.array));
-		outstring(buf, TRUE);
+		outstring(TRUE, buf);
 		free(buf);
 	}
 	for (w = ctx->container.heads[TYPE_FCNT]; w != NULL; w = w->hh.next) {
-		outstring(w->name, FALSE);
-		outstring("(", FALSE);
+		outstring(FALSE, w->name);
+		outstring(FALSE, "(");
 		function_t *f = &w->pvalue->v.fcnt;
 		if (f->ftype == FTYPE_BUILTIN) {
 			char c = 'a';
@@ -413,23 +426,23 @@ void vars_display_all()
 			for (i = 0; i < f->builtin_nb_args; ++i) {
 				outstring_1char(c);
 				if (i < f->builtin_nb_args - 1)
-					outstring(", ", FALSE);
+					outstring(FALSE, ", ");
 				++c;
 			}
-			outstring(")", TRUE);
+			outstring(TRUE, ")");
 		} else if (f->ftype == FTYPE_USER) {
 			defargs_t *dargs = f->defargs;
 			while (dargs != NULL) {
 				if (dargs->type == DARG_REF || dargs->type == DARG_ARRAYREF)
-					outstring("*", FALSE);
-				outstring(dargs->name, FALSE);
+					outstring(FALSE, "*");
+				outstring(FALSE, dargs->name);
 				if (dargs->type == DARG_ARRAYVALUE || dargs->type == DARG_ARRAYREF)
-					outstring("[]", FALSE);
+					outstring(FALSE, "[]");
 				dargs = dargs->next;
 				if (dargs != NULL)
-					outstring(", ", FALSE);
+					outstring(FALSE, ", ");
 			}
-			outstring(")", TRUE);
+			outstring(TRUE, ")");
 		} else {
 			FATAL_ERROR("Unknown ftype: %d", f->ftype);
 		}

@@ -269,7 +269,7 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 				} else if (print_result && !num_is_not_initialized(num)) {
 					num_print(num);
 					if (!p->is_part_of_print)
-						outstring("", TRUE);
+						outstring(TRUE, "");
 				}
 				if (p->type == TINSTR_EXPR_RETURN) {
 					r = ERROR_RETURN;
@@ -280,6 +280,7 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 					}
 					pnext = NULL;
 				} else {
+/*                    if (r == ERROR_NONE && !num_is_not_initialized(num)) {*/
 					if (r == ERROR_NONE) {
 						const numptr *ppvarnum;
 						vars_set_value(VAR_LAST, num, &ppvarnum);
@@ -288,7 +289,7 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 				break;
 			case TINSTR_STR:
 				t = interpret_escape_sequences_alloc(p->prg.str);
-				outstring(t, FALSE);
+				outstring(FALSE, t);
 				free(t);
 				break;
 			case TINSTR_LOOP:

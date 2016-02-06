@@ -97,6 +97,7 @@ void vars_set_update_callback(const char *name, int (*update_callback)(const cha
 void vars_array_set_value(const char *name, long int index, const numptr new_value, const numptr **ppvarnum);
 function_t *vars_get_function(const char *name);
 void var_delete(const char *name);
+int var_get_integer_value(const char *varname);
 
 vars_keeper_t *vars_keeper_array_construct(int n);
 void vars_send_to_keeper(vars_keeper_t *keep, const char *name, const vars_value_t *new_value);

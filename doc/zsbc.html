@@ -4,7 +4,7 @@ Content-type: text/html; charset=UTF-8
 <HTML><HEAD><TITLE>Man page of zsbc</TITLE>
 </HEAD><BODY>
 <H1>zsbc</H1>
-Section: User Commands  (1)<BR>Updated: version 0.1<BR><A HREF="#index">Index</A>
+Section: User Commands  (1)<BR>Updated: version 0.2<BR><A HREF="#index">Index</A>
 <A HREF="/cgi-bin/man/man2html">Return to Main Contents</A><HR>
 
 <P>
@@ -32,7 +32,7 @@ Section: User Commands  (1)<BR>Updated: version 0.1<BR><A HREF="#index">Index</A
 zsbc is a calculator to do arithmetic with arbitrary big integers. One can define functions and manipulate arrays, all using bc language.
 <BR>
 
-By default it deals with relative integers. zsbc is equivalent to bc when used with <B>scale = 0</B>. zsbc stands for <I>Zero-Scale bc</I>.
+By default it deals with relative integers. zsbc is equivalent to bc when used with <B>scale = 0</B>. zsbc stands for <I>z</I>ero-<I>s</I>cale <I>bc</I>.
 <DT><B>bc's mathlib</B>
 
 <DD>
@@ -46,7 +46,7 @@ When started with <B>-n bc</B>, you can also provide <B>-l</B> option (same as b
 <DT><B>-n,&nbsp;--numlib</B>
 
 <DD>
-Select numeric library to use. Default is relative integers of the GNU Multiple Precision Arithmetic Library (gmp or libgmp). As of December 2015, possible values are
+Select numeric library to use. Default is relative integers of the GNU Multiple Precision Arithmetic Library (gmp). As of December 2015, possible values are
 <BR>
 
 <I>gmp</I>
@@ -93,6 +93,62 @@ Display numeric number libraries available and exit
 <BR>
 
 <A HREF="https://www.gnu.org/software/bc/manual/bc.html">https://www.gnu.org/software/bc/manual/bc.html</A>
+<DT><B>zsbc specificities</B>
+
+<DD>
+Some instructions, functions and variables are specific to zsbc (they are not found in bc).
+<DT>
+<DD>
+<I>libswitch</I>
+
+Can be shortened as <I>lib</I>. With no argument, display the current numeric library. With a string (must be surrounded by &quot;), defines the numeric library to switch to.
+<DT>
+<DD>
+<I>liblist</I>
+
+Display the list of available numeric libraries
+<DT>
+<DD>
+<I>symbols</I>
+
+Display the list of symbols (all variables, arrays and functions)
+<DT>
+<DD>
+<I>gmpversion()</I>
+
+Display the gmp numeric library version in the form of a simple integer - libgmp only
+<DT>
+<DD>
+<I>bcversion()</I>
+
+Display the bc numeric library version in the form of a simple integer - libbc only
+<DT>
+<DD>
+<I>check_functions()</I>
+
+Examine functions and display warnings if inconsistencies are found, like a call to a non-existent function, a wrong number or wrong type of argument in a function call, etc.
+<BR>
+
+Note this function is called at zsbc startup, after loading files listed in command-line arguments.
+<DT>
+<DD>
+<I>autoinvmod</I>
+
+Only when using the gmp numeric library.
+<BR>
+
+Default: 1
+<BR>
+
+When set to 1, a division inside a mod operation will be calculated as a <B>modulo invert</B>. Otherwise a division is a euclidian division. See below for more details.
+<DT>
+<DD>
+<I>more</I>
+
+Default: 1
+<BR>
+
+When set to 1, use a built-in minimalistic pager remotely similar to the &quot;more&quot; program.
 <DT><B>bc compatibility</B>
 
 <DD>
@@ -102,7 +158,7 @@ zsbc is fully compatible with bc when started with option <B>-n bc</B>
 In this mode, it produces the exact same results as bc when running tests, including bc's mathlib functions (option <I>-l</I>)
 <BR>
 
-By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with <B>scale = 0</B>. Note besides the language (that is fully compatible), there can be some minor differences in the calculations conventions. For example gmp mod function will always return a positive integer, while bc keep the sign of operand the mod is calculated of.
+By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with <B>scale = 0</B>. Note besides the language (that is fully compatible), there can be some minor differences in the calculations conventions. For example gmp mod function will always return a positive integer, while bc keeps the sign of operand the mod is calculated of.
 <DT><B>The scale variable</B>
 
 <DD>
@@ -149,7 +205,7 @@ or
 <DT><B>Modulo invert function</B>
 
 <DD>
-zsbc provides the <B>invmod</B> function. Calling <I>invmod(a, b)</I> returns the invert of <I>a</I> modulo <I>b</I>. If it does not exist, it produces a <I>No modulo invert</I> error.
+zsbc provides the <B>invmod</B> function (with the default gmp numeric library). Calling <I>invmod(a, b)</I> returns the invert of <I>a</I> modulo <I>b</I>. If it does not exist, it produces a <I>No modulo invert</I> error.
 <DT><B>Automatic modulo invert calculation</B>
 
 <DD>
@@ -227,6 +283,15 @@ If the variable is not set, take a default value of 0
 <BR>
 
 A zero value (or if variable is not set) means no line cut
+<DT><DL COMPACT><DT><DD>
+<DD>
+<B>ZSBC_LINE_LENGTH default</B>
+
+If ZSBC_LINE_LENGTH doesn't exist and by default (with gmp numeric library), zsbc will take 0 as default value =&gt; no line cut
+<BR>
+
+If ZSBC_LINE_LENGTH doesn't exist and zsbc is running with bc numeric library (option <B>-n bc</B>), zsbc will take 70 as default value =&gt; same as bc
+</DL>
 </DL>
 <A NAME="lbAI">&nbsp;</A>
 <H2>SEE ALSO</H2>
@@ -247,7 +312,7 @@ A zero value (or if variable is not set) means no line cut
 <DT><B>bc</B>
 
 <DD>
-zsbc re-uses bc language and if started with option <B>-n bc</B>, it passes the same tests as bc and in real life situations it'll produce the exact same results. On the other hand zsbc is not meant as a substitute or fork of bc. zsbc uses code of its own except bc numeric library (taken as is) and some &quot;interface&quot; functions, to work with bc numeric library, that got copied over.
+zsbc re-uses bc language and if started with option <B>-n bc</B>, it passes the same tests as bc and in real life situations it'll produce the exact same results. On the other hand zsbc is not meant as a substitute or fork of bc. zsbc uses code of its own except bc numeric library (taken as is) and some interface functions, to work with bc numeric library, that got copied over.
 <BR>
 
 <BR>
@@ -255,7 +320,7 @@ zsbc re-uses bc language and if started with option <B>-n bc</B>, it passes the 
 The file <I>FAQ</I> provided with zsbc source gives details about the &quot;code take aways&quot; found in zsbc, copied from bc source.
 <BR>
 
-It also goes in depth about the hack to manage <I>ibase</I> &quot;as if&quot; taken into account at execution time, to reflect bc behavior.
+It also goes in depth about the hack implemented to manage <I>ibase</I> &quot;as if&quot; taken into account at execution time, to reflect bc behavior. Indeed zsbc does not convert strings to numeric objects at execution time, it performs this conversion at function definition time, once and for all.
 
 <P>
 </DL>
@@ -278,6 +343,6 @@ It also goes in depth about the hack to manage <I>ibase</I> &quot;as if&quot; ta
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 22:05:30 GMT, January 29, 2016
+Time: 10:29:32 GMT, February 06, 2016
 </BODY>
 </HTML>

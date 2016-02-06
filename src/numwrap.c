@@ -111,6 +111,8 @@ static int (*Lor)(numptr *pr, const numptr a, const numptr b);
 static int (*Lnot)(numptr *pr, const numptr a);
 static int (*Lwant_automatic_invmod)();
 static int (*Lread)(numptr *pr);
+static int (*Lmaxbase)();
+static int (*Lscalemax)();
 
 
 /*-----------------------------------------------------------------------------
@@ -271,10 +273,39 @@ static int shared_functions_read(numptr *pr)
 	return Lread(pr);
 }
 
+	/*
+	 * This function does 2 things
+	 *   1- Enforce the value to being an integer.
+	 *   2- Check whether the integer is in the interval [min_val, max_val]
+	 *      and return corresponding error code.
+	 */
+static int enforce_int_and_range(numptr *pnum, int *pint, int min_val, int max_val)
+{
+	long l = num_getlongint(*pnum);
+	if (l < min_val || l > max_val)
+		return ERROR_ILLEGAL_VALUE;
+
+	*pint = (int)l;
+
+		/*
+		 * The sequence below is necessary to clean-up the variable if necessary (remove decimals for ex.)
+		 * After destruct/construct, we are 100% sure the *pnum num object exactly reflects what we put
+		 * in *pint
+		 *
+		 * */
+	num_destruct(pnum);
+	*pnum = num_construct_from_int(*pint);
+
+	return ERROR_NONE;
+}
+
 static void shared_libfirsttimeinit_run_on_every_libs()
 {
 	register_builtin_function_0arg("check_functions", shared_functions_check_functions, TRUE);
 	register_builtin_function_0arg("read", shared_functions_read, TRUE);
+
+	const numptr *ppvarnum;
+	vars_set_value(VARMORE, num_construct_from_int(1), &ppvarnum);
 }
 
 static void libswitch(lib_t *l, int quiet)
@@ -315,6 +346,8 @@ static void libswitch(lib_t *l, int quiet)
 	Lnot = NULL;
 	Lwant_automatic_invmod = NULL;
 	Lread = NULL;
+	Lmaxbase = NULL;
+	Lscalemax = NULL;
 
 	libcurrent = l;
 	libcurrent->libactivate();
@@ -358,6 +391,10 @@ static void libswitch(lib_t *l, int quiet)
 /*    assert(Lwant_automatic_invmod != NULL);*/
 
 	assert(Lread != NULL);
+	assert(Lmaxbase != NULL);
+
+		/* Providing it is not necessary... */
+/*    assert(Lscalemax != NULL);*/
 
 	if (!quiet)
 		outln(L_VERBOSE, "%s", Llib_identify_yourself());
@@ -673,6 +710,15 @@ int num_want_automatic_invmod()
 	return Lwant_automatic_invmod();
 }
 
+int num_maxbase() { return Lmaxbase(); }
+
+int num_scalemax() {
+	if (!Lscalemax)
+		return -1;
+	else
+		return Lscalemax();
+}
+
 
 #ifdef HAS_LIB_GMP
 
@@ -741,6 +787,7 @@ static int gmp_or(numptr *pr, const numptr a, const numptr b);
 static int gmp_not(numptr *pr, const numptr a);
 static int gmp_automatic_invmod();
 static int gmp_read(numptr *pr);
+static int gmp_maxbase();
 
 static void gmp_register()
 {
@@ -757,40 +804,20 @@ static void gmp_register()
 	lib_register(li, gmp_firsttimeinit, gmp_activate, gmp_terminate);
 }
 
-	/*
-	 * This function does 2 things
-	 *   1- Enforce the value to being an integer.
-	 *   2- Check whether the integer is in the interval [min_val, max_val]
-	 *      and return corresponding error code.
-	 */
-static int gmp_enforce_int_and_range(numptr *pnum, int *pint, int min_val, int max_val)
-{
-	long l = gmp_getlongint(*pnum);
-	if (l < min_val || l > max_val)
-		return ERROR_ILLEGAL_VALUE;
-
-	*pint = (int)l;
-
-	num_destruct(pnum);
-	*pnum = num_construct_from_int(*pint);
-
-	return ERROR_NONE;
-}
-
 static int gmp_var_update(const char *name, numptr *pnum)
 {
 	int r = ERROR_NONE;
 
-	if (!varname_cmp(name, "ibase")) {
-		if ((r = gmp_enforce_int_and_range(pnum, &gmp_ibase, GMP_MIN_IBASE, GMP_MAX_IBASE)) == ERROR_NONE) {
-			out_dbg("ibase set to %d\n", gmp_ibase);
+	if (!varname_cmp(name, VARIBASE)) {
+		if ((r = enforce_int_and_range(pnum, &gmp_ibase, GMP_MIN_IBASE, GMP_MAX_IBASE)) == ERROR_NONE) {
+			out_dbg(VARIBASE " set to %d\n", gmp_ibase);
 		}
-	} else if (!varname_cmp(name, "obase")) {
-		if ((r = gmp_enforce_int_and_range(pnum, &gmp_obase, GMP_MIN_OBASE, GMP_MAX_OBASE)) == ERROR_NONE) {
-			out_dbg("obase set to %d\n", gmp_obase);
+	} else if (!varname_cmp(name, VAROBASE)) {
+		if ((r = enforce_int_and_range(pnum, &gmp_obase, GMP_MIN_OBASE, GMP_MAX_OBASE)) == ERROR_NONE) {
+			out_dbg(VAROBASE " set to %d\n", gmp_obase);
 		}
 	} else if (!varname_cmp(name, "autoinvmod")) {
-		if ((r = gmp_enforce_int_and_range(pnum, &gmp_autoinvmod, 0, 1)) == ERROR_NONE) {
+		if ((r = enforce_int_and_range(pnum, &gmp_autoinvmod, 0, 1)) == ERROR_NONE) {
 			out_dbg("autoinvmod set to %d\n", gmp_autoinvmod);
 		}
 	} else
@@ -819,12 +846,12 @@ static void gmp_firsttimeinit()
 {
 	const numptr *ppvarnum;
 
-	vars_set_update_callback("ibase", gmp_var_update);
-	vars_set_value("ibase", num_construct_from_int(GMP_DEFAULT_IBASE), &ppvarnum);
+	vars_set_update_callback(VARIBASE, gmp_var_update);
+	vars_set_value(VARIBASE, num_construct_from_int(GMP_DEFAULT_IBASE), &ppvarnum);
 	assert(gmp_ibase == GMP_DEFAULT_IBASE);
 
-	vars_set_update_callback("obase", gmp_var_update);
-	vars_set_value("obase", num_construct_from_int(GMP_DEFAULT_OBASE), &ppvarnum);
+	vars_set_update_callback(VAROBASE, gmp_var_update);
+	vars_set_value(VAROBASE, num_construct_from_int(GMP_DEFAULT_OBASE), &ppvarnum);
 	assert(gmp_obase == GMP_DEFAULT_OBASE);
 
 	vars_set_update_callback("autoinvmod", gmp_var_update);
@@ -867,6 +894,7 @@ static void gmp_activate()
 	Lnot = gmp_not;
 	Lwant_automatic_invmod = gmp_automatic_invmod;
 	Lread = gmp_read;
+	Lmaxbase = gmp_maxbase;
 
 	outstring_set_line_length(-1);
 }
@@ -1206,6 +1234,11 @@ const int INCREASE_FACTOR = 2;
 	return r;
 }
 
+static int gmp_maxbase()
+{
+	return GMP_MAX_OBASE;
+}
+
 #endif
 
 
@@ -1270,6 +1303,8 @@ static int libbc_and(numptr *pr, const numptr a, const numptr b);
 static int libbc_or(numptr *pr, const numptr a, const numptr b);
 static int libbc_not(numptr *pr, const numptr a);
 static int libbc_read(numptr *pr);
+static int libbc_maxbase();
+static int libbc_scalemax();
 
 static void libbc_register()
 {
@@ -1300,41 +1335,21 @@ static void libbc_register()
 	out_dbg("libbc_bc_line_length = %d\n", libbc_bc_line_length);
 }
 
-	/*
-	 * This function does 2 things
-	 *   1- Enforce the value to being an integer.
-	 *   2- Check whether the integer is in the interval [min_val, max_val]
-	 *      and return corresponding error code.
-	 */
-static int libbc_enforce_int_and_range(numptr *pnum, int *pint, int min_val, int max_val)
-{
-	long l = bc_num2long((bc_num)*pnum);
-	if (l < min_val || l > max_val)
-		return ERROR_ILLEGAL_VALUE;
-
-	*pint = (int)l;
-
-	num_destruct(pnum);
-	*pnum = num_construct_from_int(*pint);
-
-	return ERROR_NONE;
-}
-
 static int libbc_var_update(const char *name, numptr *pnum)
 {
 	int r = ERROR_NONE;
 
 	if (!varname_cmp(name, "scale")) {
-		if ((r = libbc_enforce_int_and_range(pnum, &libbc_scale, 0, LIBBC_MAX_SCALE)) == ERROR_NONE) {
+		if ((r = enforce_int_and_range(pnum, &libbc_scale, 0, LIBBC_MAX_SCALE)) == ERROR_NONE) {
 			out_dbg("scale set to %d\n", libbc_scale);
 		}
-	} else if (!varname_cmp(name, "ibase")) {
-		if ((r = libbc_enforce_int_and_range(pnum, &libbc_ibase, LIBBC_MIN_IBASE, LIBBC_MAX_IBASE)) == ERROR_NONE) {
+	} else if (!varname_cmp(name, VARIBASE)) {
+		if ((r = enforce_int_and_range(pnum, &libbc_ibase, LIBBC_MIN_IBASE, LIBBC_MAX_IBASE)) == ERROR_NONE) {
 			out_dbg("ibase set to %d\n", libbc_ibase);
 		}
-	} else if (!varname_cmp(name, "obase")) {
-		if ((r = libbc_enforce_int_and_range(pnum, &libbc_obase, LIBBC_MIN_OBASE, LIBBC_MAX_OBASE)) == ERROR_NONE) {
-			out_dbg("obase set to %d\n", libbc_obase);
+	} else if (!varname_cmp(name, VAROBASE)) {
+		if ((r = enforce_int_and_range(pnum, &libbc_obase, LIBBC_MIN_OBASE, LIBBC_MAX_OBASE)) == ERROR_NONE) {
+			out_dbg(VAROBASE " set to %d\n", libbc_obase);
 		}
 	} else
 		FATAL_ERROR("Unknown variable for update_callback: %s\n", name);
@@ -1399,12 +1414,12 @@ static void libbc_firsttimeinit()
 	vars_set_value("scale", num_construct_from_int(LIBBC_DEFAULT_SCALE), &ppvarnum);
 	assert(libbc_scale == LIBBC_DEFAULT_SCALE);
 
-	vars_set_update_callback("ibase", libbc_var_update);
-	vars_set_value("ibase", num_construct_from_int(LIBBC_DEFAULT_IBASE), &ppvarnum);
+	vars_set_update_callback(VARIBASE, libbc_var_update);
+	vars_set_value(VARIBASE, num_construct_from_int(LIBBC_DEFAULT_IBASE), &ppvarnum);
 	assert(libbc_ibase == LIBBC_DEFAULT_IBASE);
 
-	vars_set_update_callback("obase", libbc_var_update);
-	vars_set_value("obase", num_construct_from_int(LIBBC_DEFAULT_OBASE), &ppvarnum);
+	vars_set_update_callback(VAROBASE, libbc_var_update);
+	vars_set_value(VAROBASE, num_construct_from_int(LIBBC_DEFAULT_OBASE), &ppvarnum);
 	assert(libbc_obase == LIBBC_DEFAULT_OBASE);
 
 	register_builtin_function_0arg("bcversion", libbc_function_get_version, FALSE);
@@ -1444,6 +1459,8 @@ static void libbc_activate()
 	Lor = libbc_or;
 	Lnot = libbc_not;
 	Lread = libbc_read;
+	Lmaxbase = libbc_maxbase;
+	Lscalemax = libbc_scalemax;
 
 	outstring_set_line_length(libbc_bc_line_length);
 }
@@ -1834,6 +1851,16 @@ const int INCREASE_FACTOR = 2;
 	int r = num_construct_from_str(buf, pr);
 	free(buf);
 	return r;
+}
+
+static int libbc_maxbase()
+{
+	return LIBBC_MAX_OBASE;
+}
+
+static int libbc_scalemax()
+{
+	return LIBBC_MAX_SCALE;
 }
 
 #endif

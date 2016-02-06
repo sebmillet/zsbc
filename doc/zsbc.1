@@ -1,6 +1,6 @@
 .\" Written by Sébastien Millet
 .\"
-.TH zsbc 1 "version 0.1" "December 2015"
+.TH zsbc 1 "version 0.2" "February 2016"
 
 .SH NAME
 .TP
@@ -15,7 +15,7 @@ zsbc \- an arbitrary precision calculator for cryptography
 .B zsbc
 zsbc is a calculator to do arithmetic with arbitrary big integers. One can define functions and manipulate arrays, all using bc language.
 .br
-By default it deals with relative integers. zsbc is equivalent to bc when used with \fBscale = 0\fP. zsbc stands for \fIZero-Scale bc\fP.
+By default it deals with relative integers. zsbc is equivalent to bc when used with \fBscale = 0\fP. zsbc stands for \fIz\fPero-\fIs\fPcale \fIbc\fP.
 .TP
 .B bc's mathlib
 If started with option \fB-n bc\fP, zsbc uses bc numeric library, providing reals of arbitrary precision.
@@ -23,7 +23,7 @@ When started with \fB-n bc\fP, you can also provide \fB-l\fP option (same as bc)
 .SH OPTIONS
 .TP
 .B \-n,\ \-\-numlib
-Select numeric library to use. Default is relative integers of the GNU Multiple Precision Arithmetic Library (gmp or libgmp). As of December 2015, possible values are
+Select numeric library to use. Default is relative integers of the GNU Multiple Precision Arithmetic Library (gmp). As of December 2015, possible values are
 .br
 .I gmp
 .br
@@ -54,12 +54,55 @@ zsbc language syntax is the one of bc with minor extensions, see below. You can 
 .br
 https://www.gnu.org/software/bc/manual/bc.html
 .TP
+.B zsbc specificities
+Some instructions, functions and variables are specific to zsbc (they are not found in bc).
+.TP
+.RE
+.I libswitch
+Can be shortened as \fIlib\fP. With no argument, display the current numeric library. With a string (must be surrounded by "), defines the numeric library to switch to.
+.TP
+.RE
+.I liblist
+Display the list of available numeric libraries
+.TP
+.RE
+.I symbols
+Display the list of symbols (all variables, arrays and functions)
+.TP
+.RE
+.I gmpversion()
+Display the gmp numeric library version in the form of a simple integer - libgmp only
+.TP
+.RE
+.I bcversion()
+Display the bc numeric library version in the form of a simple integer - libbc only
+.TP
+.RE
+.I check_functions()
+Examine functions and display warnings if inconsistencies are found, like a call to a non-existent function, a wrong number or wrong type of argument in a function call, etc.
+.br
+Note this function is called at zsbc startup, after loading files listed in command-line arguments.
+.TP
+.RE
+.I autoinvmod
+Only when using the gmp numeric library.
+.br
+Default: 1
+.br
+When set to 1, a division inside a mod operation will be calculated as a \fBmodulo invert\fP. Otherwise a division is a euclidian division. See below for more details.
+.TP
+.RE
+.I more
+Default: 1
+.br
+When set to 1, use a built-in minimalistic pager remotely similar to the "more" program.
+.TP
 .B bc compatibility
 zsbc is fully compatible with bc when started with option \fB-n bc\fP
 .br
 In this mode, it produces the exact same results as bc when running tests, including bc's mathlib functions (option \fI-l\fP)
 .br
-By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with \fBscale = 0\fP. Note besides the language (that is fully compatible), there can be some minor differences in the calculations conventions. For example gmp mod function will always return a positive integer, while bc keep the sign of operand the mod is calculated of.
+By default zsbc starts with gmp (the GNU Multiple Precision Arithmetic Library) relative integers library. The language remains compatible with bc but the calculations are the same as bc only for bc used with \fBscale = 0\fP. Note besides the language (that is fully compatible), there can be some minor differences in the calculations conventions. For example gmp mod function will always return a positive integer, while bc keeps the sign of operand the mod is calculated of.
 .TP
 .B The scale variable
 When used with the default \fIgmp\fP numeric library, zsbc is \fIscale-variable-agnostic\fP. A variable of name \fIscale\fP is just like any other variable and won't change zsbc behavior whatsoever.
@@ -101,7 +144,7 @@ div2(myarray[++i])
 .RE
 .TP
 .B Modulo invert function
-zsbc provides the \fBinvmod\fP function. Calling \fIinvmod(a, b)\fP returns the invert of \fIa\fP modulo \fIb\fP. If it does not exist, it produces a \fINo modulo invert\fP error.
+zsbc provides the \fBinvmod\fP function (with the default gmp numeric library). Calling \fIinvmod(a, b)\fP returns the invert of \fIa\fP modulo \fIb\fP. If it does not exist, it produces a \fINo modulo invert\fP error.
 .TP
 .B Automatic modulo invert calculation
 .RS
@@ -164,6 +207,12 @@ Maximum line length in output. If a number to print is bigger, cut line with a \
 If the variable is not set, take a default value of 0
 .br
 A zero value (or if variable is not set) means no line cut
+.TP
+.RS
+.B ZSBC_LINE_LENGTH default
+If ZSBC_LINE_LENGTH doesn't exist and by default (with gmp numeric library), zsbc will take 0 as default value => no line cut
+.br
+If ZSBC_LINE_LENGTH doesn't exist and zsbc is running with bc numeric library (option \fB-n bc\fP), zsbc will take 70 as default value => same as bc
 .SH SEE ALSO
 .TP
 \fIbc\fP(1)
@@ -173,10 +222,10 @@ Written by Sébastien Millet <milletseb@laposte.net>
 .SH ACKNOWLEDGEMENTS
 .TP
 .B bc
-zsbc re-uses bc language and if started with option \fB-n bc\fP, it passes the same tests as bc and in real life situations it'll produce the exact same results. On the other hand zsbc is not meant as a substitute or fork of bc. zsbc uses code of its own except bc numeric library (taken as is) and some "interface" functions, to work with bc numeric library, that got copied over.
+zsbc re-uses bc language and if started with option \fB-n bc\fP, it passes the same tests as bc and in real life situations it'll produce the exact same results. On the other hand zsbc is not meant as a substitute or fork of bc. zsbc uses code of its own except bc numeric library (taken as is) and some interface functions, to work with bc numeric library, that got copied over.
 .br
 .br
 The file \fIFAQ\fP provided with zsbc source gives details about the "code take aways" found in zsbc, copied from bc source.
 .br
-It also goes in depth about the hack to manage \fIibase\fP "as if" taken into account at execution time, to reflect bc behavior.
+It also goes in depth about the hack implemented to manage \fIibase\fP "as if" taken into account at execution time, to reflect bc behavior. Indeed zsbc does not convert strings to numeric objects at execution time, it performs this conversion at function definition time, once and for all.
 .RE
