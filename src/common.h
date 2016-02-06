@@ -109,6 +109,7 @@ char *s_alloc_and_copy(char **dst, const char *src);
 char *interpret_escape_sequences_alloc(const char *s);
 
 void lib_list();
+void help(const char *id);
 
 #define UNUSED(x) (void)(x)
 

@@ -212,12 +212,12 @@ ACKNOWLEDGEMENTS
 	      except bc numeric library (taken as is) and some interface func‐
 	      tions, to work with bc numeric library, that got copied over.
 	      The  file  FAQ provided with zsbc source gives details about the
-	      "code take aways" found in zsbc, copied from bc source.
+	      code take aways found in zsbc, copied from bc source.
 	      It also goes in depth about the hack implemented to manage ibase
-	      "as  if"	taken  into  account  at execution time, to reflect bc
-	      behavior. Indeed	zsbc  does  not  convert  strings  to  numeric
-	      objects  at execution time, it performs this conversion at func‐
-	      tion definition time, once and for all.
+	      as if taken into account at execution time, to reflect bc behav‐
+	      ior. Indeed zsbc does not convert strings to numeric objects  at
+	      execution  time, it performs this conversion at function defini‐
+	      tion time, once and for all.
 
 
 

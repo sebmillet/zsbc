@@ -85,7 +85,7 @@ YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 %token <num> INTEGER
 %type <enode> expression expression_no_assignment expression_assignment expression_or_empty function_call
 %token <str> IDENTIFIER STRING COMPARISON OP_AND_ASSIGN PLUSPLUS_MINMIN
-%type <prog> instruction_block instruction_inside_block instruction_list instruction
+%type <prog> instruction_block instruction_inside_block hacked_instruction_list instruction_list instruction
 %type <prog> my_instruction_non_empty instruction_non_empty instruction_expr_assignment
 %type <prog> loop_while loop_for ifseq instruction_string instruction_expr_no_assignment print_elem print_list
 %type <defargs> defargs_list_or_empty defargs_list defarg defargsbyval_list defargbyval
@@ -94,7 +94,7 @@ YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 %token QUIT SYMBOLS LIBSWITCH LIBLIST
 %token WHILE FOR BREAK CONTINUE IF ELSE
 %token DEFINE MYVOID RETURN AUTOLIST PRINT
-%token WARRANTY LIMITS
+%token WARRANTY LIMITS HELP
 
 %token NEWLINE
 
@@ -134,7 +134,7 @@ input:
 ;
 
 program:
-	instruction_list {
+	hacked_instruction_list {
 		exec_ctx_t *pexec_ctx = construct_exec_ctx_t();
 		int r = program_execute($1, NULL, pexec_ctx);
 		if (r != ERROR_NONE) {
@@ -152,6 +152,10 @@ instruction_block:
 instruction_inside_block:
 	instruction_list { $$ = $1; }
 	| instruction_inside_block NEWLINE instruction_list { $$ = program_chain($1, $3); }
+;
+
+hacked_instruction_list:
+	hackbc_enter instruction_list hackbc_terminate { $$ = $2; }
 ;
 
 instruction_list:
@@ -416,6 +420,12 @@ statement:
 		else
 			outstring_fmt(TRUE, "ZSBC_SCALE_MAX  = %d", num_scalemax());
 	}
+	| HELP {
+		help(NULL);
+	}
+	| HELP IDENTIFIER {
+		help($2);
+	}
 ;
 
 %%
@@ -429,7 +439,7 @@ void hackbc_enter()
 {
 	const numptr *pnum = vars_get_value(VARIBASE);
 	if (pnum == NULL) {
-		out_dbg("Entering function definition - no ibase variable set\n");
+		out_dbg("hackbc_enter() - no ibase variable set\n");
 		save_ibase_is_set = FALSE;
 	} else {
 
@@ -442,7 +452,7 @@ void hackbc_enter()
 			*/
 		save_ibase = (int)num_getlongint(*pnum);
 
-		out_dbg("Entering function definition - ibase set, value: %d\n", save_ibase);
+		out_dbg("hackbc_enter() - ibase set, value: %d\n", save_ibase);
 		save_ibase_is_set = TRUE;
 	}
 	hackbc_has_entered = TRUE;
@@ -455,11 +465,11 @@ void hackbc_terminate()
 		return;
 
 	if (save_ibase_is_set) {
-		out_dbg("Terminating function definition - ibase set back to %d\n", save_ibase);
+		out_dbg("hackbc_terminate() - ibase set back to %d\n", save_ibase);
 		const numptr *pvar;
 		vars_set_value(VARIBASE, num_construct_from_int(save_ibase), &pvar);
 	} else {
-		out_dbg("Terminating function definition - ibase is deleted\n");
+		out_dbg("hackbc_terminate() - ibase is deleted\n");
 		var_delete(VARIBASE);
 	}
 	hackbc_has_entered = FALSE;
@@ -482,8 +492,21 @@ void hackbc_check(const char *name, expr_t *e)
 	if (!hackbc_has_entered || varname_cmp(name, VARIBASE))
 		return;
 
-	if (hackbc_nested_level != 1) {
-		out_dbg("hackbc_check(): eligible assignment but not at correct nested level\n");
+	if (hackbc_nested_level > 1) {
+			/*
+			 * Level 1 corresponds to a function definition.
+			 * Level 0 correeponds to a simple instruction on the console.
+			 *         It is necessary to catch this situation as well to
+			 *         correctly manage the following case:
+			 *           ibase=2;111
+			 *         The above would produce 111 (decimal) if executed without
+			 *         hackbc*, while it should produce 7 (decimal) to stick to bc
+			 *         behavior.
+			 * Note that level 0 is bit special: at the end of the execution,
+			 * there is no need to revert ibase to its original value.
+			 *
+			 * */
+		out_dbg("hackbc_check(): eligible assignment but not at correct nested level (%d)\n", hackbc_nested_level);
 		return;
 	}
 

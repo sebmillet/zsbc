@@ -145,6 +145,7 @@ quit			return QUIT;
 libswitch|lib	return LIBSWITCH;
 liblist			return LIBLIST;
 symbols			return SYMBOLS;
+help			return HELP;
 warranty|ouarantie		return WARRANTY;
 limits			return LIMITS;
 while			return WHILE;

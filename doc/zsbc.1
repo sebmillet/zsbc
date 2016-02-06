@@ -225,7 +225,7 @@ Written by Sébastien Millet <milletseb@laposte.net>
 zsbc re-uses bc language and if started with option \fB-n bc\fP, it passes the same tests as bc and in real life situations it'll produce the exact same results. On the other hand zsbc is not meant as a substitute or fork of bc. zsbc uses code of its own except bc numeric library (taken as is) and some interface functions, to work with bc numeric library, that got copied over.
 .br
 .br
-The file \fIFAQ\fP provided with zsbc source gives details about the "code take aways" found in zsbc, copied from bc source.
+The file \fIFAQ\fP provided with zsbc source gives details about the code take aways found in zsbc, copied from bc source.
 .br
-It also goes in depth about the hack implemented to manage \fIibase\fP "as if" taken into account at execution time, to reflect bc behavior. Indeed zsbc does not convert strings to numeric objects at execution time, it performs this conversion at function definition time, once and for all.
+It also goes in depth about the hack implemented to manage \fIibase\fP as if taken into account at execution time, to reflect bc behavior. Indeed zsbc does not convert strings to numeric objects at execution time, it performs this conversion at function definition time, once and for all.
 .RE

@@ -68,12 +68,13 @@ extern int yydebug;
     PRINT = 278,
     WARRANTY = 279,
     LIMITS = 280,
-    NEWLINE = 281,
-    LOGIC_OR = 282,
-    LOGIC_AND = 283,
-    LOGIC_NOT = 284,
-    NEG = 285,
-    LOWER_THAN_ELSE = 286
+    HELP = 281,
+    NEWLINE = 282,
+    LOGIC_OR = 283,
+    LOGIC_AND = 284,
+    LOGIC_NOT = 285,
+    NEG = 286,
+    LOWER_THAN_ELSE = 287
   };
 #endif
 /* Tokens.  */
@@ -100,12 +101,13 @@ extern int yydebug;
 #define PRINT 278
 #define WARRANTY 279
 #define LIMITS 280
-#define NEWLINE 281
-#define LOGIC_OR 282
-#define LOGIC_AND 283
-#define LOGIC_NOT 284
-#define NEG 285
-#define LOWER_THAN_ELSE 286
+#define HELP 281
+#define NEWLINE 282
+#define LOGIC_OR 283
+#define LOGIC_AND 284
+#define LOGIC_NOT 285
+#define NEG 286
+#define LOWER_THAN_ELSE 287
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -121,7 +123,7 @@ union YYSTYPE
 	defargs_t *defargs;
 	callargs_t *callargs;
 
-#line 125 "parser.h" /* yacc.c:1909  */
+#line 127 "parser.h" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
@@ -160,6 +162,6 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 YY_BUFFER_STATE yy_scan_buffer(char *bytes, size_t len);
 
-#line 164 "parser.h" /* yacc.c:1909  */
+#line 166 "parser.h" /* yacc.c:1909  */
 
 #endif /* !YY_YY_PARSER_H_INCLUDED  */

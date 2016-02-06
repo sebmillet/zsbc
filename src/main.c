@@ -76,6 +76,9 @@ extern char libbc_libmath[];
 extern const size_t libbc_libmath_len;
 #endif
 
+extern const char *zsbcman[];
+extern const char *bcman[];
+
 FILE *rl_instream = NULL;
 int yywrap();
 
@@ -627,17 +630,20 @@ void outln_exec_error(int e, exec_ctx_t *pexec_ctx, int is_warning)
 static void usage()
 {
 	fprintf(stderr, "Usage: %s [options] [file ...]\n", PACKAGE_NAME);
-	fprintf(stderr, "  -h  --help     print this usage and exit\n");
-	fprintf(stderr, "  -V  --verbose  verbose output\n");
-	fprintf(stderr, "  -q  --quiet    don't print initial banner\n");
-	fprintf(stderr, "  -v  --version  print version information and exit\n");
-	fprintf(stderr, "  -n  --numlib   (also -lib) defines number library to start with\n");
-	fprintf(stderr, "  -t  --liblist  lists number libraries available and exit\n");
-	fprintf(stderr, "  -l  --mathlib  use the predefined math routines (same as bc)\n");
-	fprintf(stderr, "  --             end of parameters, next options are file names\n");
-	fprintf(stderr, "\n");
-	fprintf(stderr, "%s will also read environment variable %s to parse options from,\n", PACKAGE_NAME, ENV_ARGS);
-	fprintf(stderr, "using same format as command-line options.\n");
+	fprintf(stderr, "  -h  --help         print this usage and exit\n"
+		"  -V  --verbose      verbose output\n"
+		"  -q  --quiet        don't print initial banner\n"
+		"  -v  --version      print version information and exit\n"
+		"  -i  --interactive  force interactive mode\n"
+		"  -n  --numlib       (also -lib) defines number library to start with\n"
+		"  -t  --liblist      lists number libraries available and exit\n"
+		"  -l  --mathlib      use the predefined math routines (same as bc)\n"
+		"      --             end of parameters, next options are file names\n"
+		"\n"
+	);
+	fprintf(stderr, "%s reads the environment variable %s for options,\n"
+			"interpreted in the same way as command-line options.\n", PACKAGE_NAME, ENV_ARGS
+	);
 	exit(-1);
 }
 
@@ -650,6 +656,37 @@ static void version()
 #endif
 	printf("Copyright 2015 Sébastien Millet.\n");
 	printf("This is free software with ABSOLUTELY NO WARRANTY.\n");
+}
+
+static void out_array_of_strings(const char **a)
+{
+	for (; *a; a++) {
+		outstring(TRUE, *a);
+	}
+}
+
+void help(const char *id)
+{
+	if (id && (!strcmp(id, "man") || !strcmp(id, "zsbcman") || !strcmp(id, "zsbc"))) {
+		out_array_of_strings(zsbcman);
+		return;
+	} else if (id && (!strcmp(id, "bcman") || !strcmp(id, "bcman") || !strcmp(id, "bc"))) {
+		out_array_of_strings(bcman);
+		return;
+	} else if (id) {
+		outstring(TRUE, "Unknown help topic");
+	}
+	outstring(TRUE, "The following commands are available:\n"
+		"help       display this help\n"
+		"help man   display the manual of zsbc\n"
+		"help bcman display the manual of bc\n"
+		"quit       exit program\n"
+		"symbols    display the list of variables, arrays and functions\n"
+		"libswitch  display / set the numeric library\n"
+		"liblist    display the list of available numeric libraries\n"
+		"warranty   display a warranty disclaimer\n"
+		"limits     display some program limits"
+	);
 }
 
 static void output_count_ref_report(const char *name, int count_ref)

@@ -1,10 +1,17 @@
 #!/bin/sh
 
+# prepb.sh
+
 # Script to be used for zsbc compilation
 
-# Takes one argument (the source .b file) and create a .c
-# file, ready to be compiled and used as a data source inside
-# zsbc.
+# Takes one argument (the source .b file) and creates a .c file, ready to be
+# compiled and used as a data source inside zsbc.
+
+# The target file is a succession of 'char'-type values, and that's it.
+#   => that means, there is not intermediate structure like array of null-char
+#      terminated strings.
+#      The only null-char found are a succession of 2 '\0', appearing at the
+#      end of the char list.
 
 VAR=$1
 S=$2
@@ -26,7 +33,7 @@ sed -r ':a; s%(.*)/\*.*\*/%\1%; ta; /\/\*/ !b; N; ba' "$S" | sed 's/^\s*//' | se
 
 # See http://flex.sourceforge.net/manual/Multiple-Input-Buffers.html
 #   The input buffer (when used in read-only mode) needs have two
-#   nul characters at the end.
+#   null characters at the end.
 echo "'\\\\0', '\\\\0'" >> $T
 
 echo "};" >> $T

@@ -1,0 +1,10 @@
+CREDITS
+  The text below is the original manual page of bc.
+  Manual source: bc version 1.06.95.
+  It is displayed here for your convenience.
+  On a unix/linux system it is best displayed with the command
+    man bc
+
+  bc homepage: https://www.gnu.org/software/bc
+  bc manuals: https://www.gnu.org/software/bc/manual/bc.html
+------------------------------------------------------------------------------
