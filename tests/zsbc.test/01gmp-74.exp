@@ -1,0 +1,28 @@
+# tests/zsbc.test/01gmp-74.exp
+
+set timeout 3
+send_user "***   GMP - bug fix -void function call causes undef num last variable assignment-\n"
+
+spawn "$ZSBC" --SCM
+
+set test "Test last variable assignment after a call to a void function"
+send "define void f() { print \"hello world\\n\" }\nf()\nprint last, \":\", 123, \"\\n\"\n"
+expect {
+	"0:123" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Test last variable assignment after a call to a void function (2)"
+send "f()\nprint last, \":\", 456, \"\\n\"\n"
+expect {
+	"123:456" { pass "$test" }
+	default { fail "$test" }
+}
+
+set test "Checking object count ref is null"
+send "quit\n"
+expect {
+	-re "OK.*number count.*should be 0.*: 0\[^0-9\]+OK.*expr_t.*count.*should be 0.*: 0\[^0-9\]+" { pass "$test" }
+	default { fail "$test" }
+}
+

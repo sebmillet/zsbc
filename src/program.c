@@ -280,8 +280,7 @@ int program_execute(program_t *p, numptr *pval, exec_ctx_t *pexec_ctx)
 					}
 					pnext = NULL;
 				} else {
-/*                    if (r == ERROR_NONE && !num_is_not_initialized(num)) {*/
-					if (r == ERROR_NONE) {
+					if (r == ERROR_NONE && !num_is_not_initialized(num)) {
 						const numptr *ppvarnum;
 						vars_set_value(VAR_LAST, num, &ppvarnum);
 					}
