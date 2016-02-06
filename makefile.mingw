@@ -21,6 +21,11 @@ LIBGMP = C:\libgmp
 CPPFLAGS = -Wall -I$(LIBGMP)\include -Ih -DHAS_LIB_GMP -DHAS_LIB_LIBBC
 LINKERFLAGS = -Wall -L$(LIBGMP)\lib -lgmp
 
+OBJS = $(BUILD)\lexer.o $(BUILD)\parser.o $(BUILD)\main.o $(BUILD)\expr.o \
+		$(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o \
+		$(BUILD)\array.o $(BUILD)\libmath.o $(BUILD)\libbc.a \
+		$(BUILD)\zsbcman.o $(BUILD)\bcman.o
+
 all : build libgmpwarning
 
 libgmpwarning :
@@ -43,13 +48,8 @@ build :
 
 all : $(BUILD)\zsbc.exe
 
-$(BUILD)\zsbc.exe : $(BUILD)\lexer.o $(BUILD)\parser.o $(BUILD)\main.o \
-		$(BUILD)\expr.o $(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o $(BUILD)\array.o \
-		$(BUILD)\libmath.o \
-		$(BUILD)\libbc.a
-	$(GCC) $(BUILD)\lexer.o $(BUILD)\parser.o $(BUILD)\main.o \
-		$(BUILD)\expr.o $(BUILD)\numwrap.o $(BUILD)\program.o $(BUILD)\vars.o $(BUILD)\array.o \
-		$(BUILD)\libmath.o $(BUILD)\libbc.a -o $(BUILD)\zsbc.exe $(LINKERFLAGS)
+$(BUILD)\zsbc.exe : $(OBJS)
+	$(GCC) $(OBJS) -o $(BUILD)\zsbc.exe $(LINKERFLAGS)
 
 $(BUILD)\lexer.o : src\lexer.c
 	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
@@ -81,6 +81,12 @@ $(BUILD)\libbc.a : lib\number.c
 	del h\config.h
 
 $(BUILD)\libmath.o : src\bc\libmath.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
+
+$(BUILD)\zsbcman.o : src\man\zsbcman.c
+	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
+
+$(BUILD)\bcman.o : src\man\bcman.c
 	$(GCC) -c $< -o $@ $(CPPFLAGS) $(DEBCPP)
 
 mrproper : clean

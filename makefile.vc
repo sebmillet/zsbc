@@ -27,7 +27,10 @@ DEBCL = /MDd /Od /Zi /D_DEBUG /DDEBUG
 DEBLINK = /DEBUG
 !endif
 
-OBJS = $(BUILD)\main.obj $(BUILD)\expr.obj $(BUILD)\program.obj $(BUILD)\vars.obj $(BUILD)\lexer.obj $(BUILD)\parser.obj $(BUILD)\array.obj $(BUILD)\libmath.obj $(BUILD)\numwrap.obj $(BUILD)\number.obj
+OBJS = $(BUILD)\main.obj $(BUILD)\expr.obj $(BUILD)\program.obj $(BUILD)\vars.obj \
+	$(BUILD)\lexer.obj $(BUILD)\parser.obj $(BUILD)\array.obj $(BUILD)\libmath.obj \
+	$(BUILD)\numwrap.obj $(BUILD)\number.obj \
+	$(BUILD)\zsbcman.obj $(BUILD)\bcman.obj
 
 all: build libmpirwarning
 
@@ -87,6 +90,12 @@ $(BUILD)\libmath.obj: src\bc\libmath.c
 
 $(BUILD)\number.obj: lib\number.c
 	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) lib\number.c
+
+$(BUILD)\zsbcman.obj: src\man\zsbcman.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\man\zsbcman.c
+
+$(BUILD)\bcman.obj: src\man\bcman.c
+	cl /c /nologo /Fo$@ $(CPPFLAGS) $(DEBCL) src\man\bcman.c
 
 clean:
 	-if exist $(BUILD)\*.obj del $(BUILD)\*.obj
