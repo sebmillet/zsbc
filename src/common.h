@@ -55,7 +55,7 @@ const char *VAR_LAST;
 
 #define VARIBASE "ibase"
 #define VAROBASE "obase"
-#define VARMORE  "more"
+#define VARMORE  "pager"
 
 	/*
 	 * The constants below, in this order, are used to define corresponding error

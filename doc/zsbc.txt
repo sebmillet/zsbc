@@ -63,26 +63,36 @@ LANGUAGE
 	      (they are not found in bc).
 
 	      libswitch
+	      (statement)
 	      Can be shortened as lib. With no argument, display  the  current
 	      numeric  library.  With  a  string  (must  be  surrounded by "),
 	      defines the numeric library to switch to.
 
 	      liblist
+	      (statement)
 	      Display the list of available numeric libraries
 
 	      symbols
+	      (statement)
 	      Display the list of symbols (all	variables,  arrays  and  func‐
 	      tions)
 
+	      help [zsbc|bc]
+	      (statement)
+	      Display manual of zsbc or bc
+
 	      gmpversion()
+	      (function)
 	      Display  the gmp numeric library version in the form of a simple
 	      integer - libgmp only
 
 	      bcversion()
+	      (function)
 	      Display the bc numeric library version in the form of  a	simple
 	      integer - libbc only
 
 	      check_functions()
+	      (function)
 	      Examine  functions  and  display warnings if inconsistencies are
 	      found, like a call to a non-existent function, a wrong number or
 	      wrong type of argument in a function call, etc.
@@ -90,16 +100,18 @@ LANGUAGE
 	      files listed in command-line arguments.
 
 	      autoinvmod
+	      (variable)
 	      Only when using the gmp numeric library.
 	      Default: 1
 	      When set to 1, a division inside a mod operation will be	calcu‐
 	      lated  as  a  modulo invert. Otherwise a division is a euclidian
 	      division. See below for more details.
 
-	      more
+	      pager
+	      (variable)
 	      Default: 1
 	      When set to 1, use a built-in minimalistic pager remotely  simi‐
-	      lar to the "more" program.
+	      lar to the 'more' program.
 
        bc compatibility
 	      zsbc is fully compatible with bc when started with option -n bc

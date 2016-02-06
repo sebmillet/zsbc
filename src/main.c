@@ -667,25 +667,18 @@ static void out_array_of_strings(const char **a)
 
 void help(const char *id)
 {
-	if (id && (!strcmp(id, "man") || !strcmp(id, "zsbcman") || !strcmp(id, "zsbc"))) {
+	if (id && (!strcmp(id, "zsbc"))) {
 		out_array_of_strings(zsbcman);
 		return;
-	} else if (id && (!strcmp(id, "bcman") || !strcmp(id, "bcman") || !strcmp(id, "bc"))) {
+	} else if (id && !strcmp(id, "bc")) {
 		out_array_of_strings(bcman);
 		return;
 	} else if (id) {
 		outstring(TRUE, "Unknown help topic");
 	}
-	outstring(TRUE, "The following commands are available:\n"
-		"help       display this help\n"
-		"help man   display the manual of zsbc\n"
-		"help bcman display the manual of bc\n"
-		"quit       exit program\n"
-		"symbols    display the list of variables, arrays and functions\n"
-		"libswitch  display / set the numeric library\n"
-		"liblist    display the list of available numeric libraries\n"
-		"warranty   display a warranty disclaimer\n"
-		"limits     display some program limits"
+	outstring(TRUE, "The following help commands are available:\n"
+		"help zsbc   display zsbc manual\n"
+		"help bc     display bc manual"
 	);
 }
 
@@ -1124,8 +1117,10 @@ int main(int argc, char *argv[])
 		out_dbg("No environment variable '%s'\n", ENV_ARGS);
 	}
 
-	if (out_level >= L_NORMAL && is_interactive)
+	if (out_level >= L_NORMAL && is_interactive) {
 		version();
+		outstring(TRUE, "Type `help' for more information.");
+	}
 
 	out_dbg("DEBUG mode activated\n");
 

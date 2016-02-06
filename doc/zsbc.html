@@ -101,30 +101,56 @@ Some instructions, functions and variables are specific to zsbc (they are not fo
 <DD>
 <I>libswitch</I>
 
+(statement)
+<BR>
+
 Can be shortened as <I>lib</I>. With no argument, display the current numeric library. With a string (must be surrounded by &quot;), defines the numeric library to switch to.
 <DT>
 <DD>
 <I>liblist</I>
+
+(statement)
+<BR>
 
 Display the list of available numeric libraries
 <DT>
 <DD>
 <I>symbols</I>
 
+(statement)
+<BR>
+
 Display the list of symbols (all variables, arrays and functions)
 <DT>
 <DD>
+<I>help [zsbc|bc]</I>
+
+(statement)
+<BR>
+
+Display manual of zsbc or bc
+<DT>
+<DD>
 <I>gmpversion()</I>
+
+(function)
+<BR>
 
 Display the gmp numeric library version in the form of a simple integer - libgmp only
 <DT>
 <DD>
 <I>bcversion()</I>
 
+(function)
+<BR>
+
 Display the bc numeric library version in the form of a simple integer - libbc only
 <DT>
 <DD>
 <I>check_functions()</I>
+
+(function)
+<BR>
 
 Examine functions and display warnings if inconsistencies are found, like a call to a non-existent function, a wrong number or wrong type of argument in a function call, etc.
 <BR>
@@ -133,6 +159,9 @@ Note this function is called at zsbc startup, after loading files listed in comm
 <DT>
 <DD>
 <I>autoinvmod</I>
+
+(variable)
+<BR>
 
 Only when using the gmp numeric library.
 <BR>
@@ -143,12 +172,15 @@ Default: 1
 When set to 1, a division inside a mod operation will be calculated as a <B>modulo invert</B>. Otherwise a division is a euclidian division. See below for more details.
 <DT>
 <DD>
-<I>more</I>
+<I>pager</I>
+
+(variable)
+<BR>
 
 Default: 1
 <BR>
 
-When set to 1, use a built-in minimalistic pager remotely similar to the &quot;more&quot; program.
+When set to 1, use a built-in minimalistic pager remotely similar to the 'more' program.
 <DT><B>bc compatibility</B>
 
 <DD>
@@ -343,6 +375,6 @@ It also goes in depth about the hack implemented to manage <I>ibase</I> as if ta
 This document was created by
 <A HREF="/cgi-bin/man/man2html">man2html</A>,
 using the manual pages.<BR>
-Time: 15:21:08 GMT, February 06, 2016
+Time: 21:41:16 GMT, February 06, 2016
 </BODY>
 </HTML>

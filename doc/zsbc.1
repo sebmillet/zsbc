@@ -59,32 +59,52 @@ Some instructions, functions and variables are specific to zsbc (they are not fo
 .TP
 .RE
 .I libswitch
+(statement)
+.br
 Can be shortened as \fIlib\fP. With no argument, display the current numeric library. With a string (must be surrounded by "), defines the numeric library to switch to.
 .TP
 .RE
 .I liblist
+(statement)
+.br
 Display the list of available numeric libraries
 .TP
 .RE
 .I symbols
+(statement)
+.br
 Display the list of symbols (all variables, arrays and functions)
 .TP
 .RE
+.I help [zsbc|bc]
+(statement)
+.br
+Display manual of zsbc or bc
+.TP
+.RE
 .I gmpversion()
+(function)
+.br
 Display the gmp numeric library version in the form of a simple integer - libgmp only
 .TP
 .RE
 .I bcversion()
+(function)
+.br
 Display the bc numeric library version in the form of a simple integer - libbc only
 .TP
 .RE
 .I check_functions()
+(function)
+.br
 Examine functions and display warnings if inconsistencies are found, like a call to a non-existent function, a wrong number or wrong type of argument in a function call, etc.
 .br
 Note this function is called at zsbc startup, after loading files listed in command-line arguments.
 .TP
 .RE
 .I autoinvmod
+(variable)
+.br
 Only when using the gmp numeric library.
 .br
 Default: 1
@@ -92,10 +112,12 @@ Default: 1
 When set to 1, a division inside a mod operation will be calculated as a \fBmodulo invert\fP. Otherwise a division is a euclidian division. See below for more details.
 .TP
 .RE
-.I more
+.I pager
+(variable)
+.br
 Default: 1
 .br
-When set to 1, use a built-in minimalistic pager remotely similar to the "more" program.
+When set to 1, use a built-in minimalistic pager remotely similar to the 'more' program.
 .TP
 .B bc compatibility
 zsbc is fully compatible with bc when started with option \fB-n bc\fP

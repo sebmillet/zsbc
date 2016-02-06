@@ -1,14 +1,16 @@
 2016-02-06 Sébastien Millet <milletseb@laposte.net>
 
 	* Release 0.2 built
-	* Provides a manual
+	* Provides a manual for zsbc
+	* Embeds the manual in zsbc (help zsbc command)
+	* Embeds bc manual in zsbc (help bc command)
 	* Fully compatible with bc
 	* Provides autoinvmod feature
-	* Automatically calculates with powmod (if exponentation within pow)
+	* Automatically calculates with powmod (if exponentation within mod)
 	* Windows: works with both mingw and msvc
 	* Linux: uses readline
 	* Manages CTRL-C gracefully
-	* Pager-like display with more variable (set by default)
+	* Pager-like display with pager variable, set by default
 
 2015-06-03 Sébastien Millet <milletseb@laposte.net>
 
