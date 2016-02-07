@@ -29,7 +29,7 @@ echo "const char *${VAR}[] = {" >> $T
 
 # the s/\xE2\x80\x90/-/ translation sequence is to replace '-' characters produced by
 # 'nroff -man' (they are UTF-8) by simple '-' characters (plain ascii code).
-sed 's/\xE2\x80\x90/-/; s/\\/\\\\/g; s/"/\\"/g; s/^\(.*\)$/\t"\1",/' "$S" >> $T
+sed 's/\xE2\x80\x90/-/g; s/\\/\\\\/g; s/"/\\"/g; s/^\(.*\)$/\t"\1",/' "$S" >> $T
 
 echo "\tNULL" >> $T
 echo "};" >> $T
