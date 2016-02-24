@@ -150,12 +150,23 @@ char *s_strncpy(char *dest, const char *src, size_t n)
 	/*
 	 * Same comment as s_strncpy above: safe version of strncat
 	 * */
-char *s_strncat(char *dest, const char *src, size_t n)
+char *s_strncat(char *dest, const char *src, size_t dest_len)
 {
-	char *r = strncat(dest, src, n);
-	dest[n - 1] = '\0';
-	return r;
+	size_t l = strlen(dest);
+	assert(l < dest_len);
+
+	size_t n = dest_len - l - 1;
+	if (n >= 1)
+		strncat(dest, src, n);
+
+		/* strncat manual says dest will always get a null byte at the end
+		 * but I want something robust across systems and time... */
+	dest[dest_len - 1] = '\0';
+
+	return dest;
 }
+	/* The define below triggers an error if usual strncat is used */
+#define strncat(a, b, c) ErrorDontUse_strncat_Use_s_strncat_Instead
 
 	/*
 	 * Returns a copied, allocated string. Uses s_strncpy for the string

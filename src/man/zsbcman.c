@@ -239,7 +239,7 @@ const char *zsbcman[] = {
 	"",
 	"",
 	"",
-	"February 2016			  version 0.2			       zsbc(1)",
+	"February 2016			 version 0.2.1			       zsbc(1)",
 	NULL
 };
 

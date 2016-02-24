@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 
-AC_INIT([zsbc], [0.2], [milletseb@laposte.net])
+AC_INIT([zsbc], [0.2.1], [milletseb@laposte.net])
 
 AC_CONFIG_SRCDIR([src/common.h])
 AC_CONFIG_AUX_DIR([admin])
